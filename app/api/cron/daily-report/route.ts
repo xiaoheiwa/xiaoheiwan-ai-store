@@ -35,20 +35,28 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Get today's date range (China timezone UTC+8)
+    // Get yesterday's date range (China timezone UTC+8)
+    // When cron runs at 00:00, we report the previous day's data
     const now = new Date()
     const chinaOffset = 8 * 60 * 60 * 1000
     const chinaTime = new Date(now.getTime() + chinaOffset)
     
-    // Get start and end of today in China time
-    const todayStart = new Date(chinaTime)
-    todayStart.setUTCHours(0, 0, 0, 0)
-    const todayEnd = new Date(chinaTime)
-    todayEnd.setUTCHours(23, 59, 59, 999)
+    // Get yesterday in China time
+    const yesterday = new Date(chinaTime)
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+    
+    // Get start and end of yesterday in China time
+    const yesterdayStart = new Date(yesterday)
+    yesterdayStart.setUTCHours(0, 0, 0, 0)
+    const yesterdayEnd = new Date(yesterday)
+    yesterdayEnd.setUTCHours(23, 59, 59, 999)
     
     // Convert back to UTC for database query
-    const startUTC = new Date(todayStart.getTime() - chinaOffset)
-    const endUTC = new Date(todayEnd.getTime() - chinaOffset)
+    const startUTC = new Date(yesterdayStart.getTime() - chinaOffset)
+    const endUTC = new Date(yesterdayEnd.getTime() - chinaOffset)
+    
+    // Format date for display (yesterday's date)
+    const dateStr = `${yesterday.getUTCFullYear()}-${String(yesterday.getUTCMonth() + 1).padStart(2, "0")}-${String(yesterday.getUTCDate()).padStart(2, "0")}`
 
     // Query today's paid orders
     const orders = await sql`
@@ -95,15 +103,14 @@ export async function GET(request: Request) {
       channelStats[channel].revenue += parseFloat(order.amount || "0")
     })
 
-    // Format date for display
-    const dateStr = `${chinaTime.getFullYear()}-${String(chinaTime.getMonth() + 1).padStart(2, "0")}-${String(chinaTime.getDate()).padStart(2, "0")}`
+
 
     // Build message
     let message = `
 <b>📊 每日销售报告</b>
 <b>日期:</b> ${dateStr}
 
-<b>📈 今日概况</b>
+<b>📈 昨日概况</b>
 • 订单数: ${totalOrders} 笔
 • 销售额: ¥${totalRevenue.toFixed(2)}
 • 销售数量: ${totalQuantity} 个
@@ -126,7 +133,7 @@ export async function GET(request: Request) {
           message += `• ${channelName}: ${stats.count}笔 / ¥${stats.revenue.toFixed(2)}\n`
         })
     } else {
-      message += `\n<i>今日暂无订单</i>`
+      message += `\n<i>昨日暂无订单</i>`
     }
 
     // Send to Telegram
