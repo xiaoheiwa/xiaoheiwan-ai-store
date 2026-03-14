@@ -1,0 +1,59 @@
+{
+  "name": "小黑丸 - AI激活码商城",
+  "short_name": "小黑丸",
+  "description": "ChatGPT Plus充值、Claude Pro订阅、GPT Team兑换 - AI服务激活码购买平台，付款后自动发货至邮箱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "zh-CN",
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "购买激活码",
+      "short_name": "购买",
+      "description": "浏览并购买AI服务激活码",
+      "url": "/purchase"
+    },
+    {
+      "name": "Claude Pro 激活",
+      "short_name": "Claude",
+      "description": "使用激活码开通Claude Pro",
+      "url": "/activate"
+    },
+    {
+      "name": "ChatGPT Plus 激活",
+      "short_name": "ChatGPT",
+      "description": "使用卡密充值ChatGPT Plus",
+      "url": "/activate/gpt"
+    },
+    {
+      "name": "GPT Team 兑换",
+      "short_name": "Team",
+      "description": "使用兑换码加入GPT Team",
+      "url": "/activate/team"
+    },
+    {
+      "name": "使用指南",
+      "short_name": "指南",
+      "description": "查看详细使用教程",
+      "url": "/guide"
+    }
+  ]
+}
