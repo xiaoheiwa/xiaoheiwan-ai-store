@@ -29,7 +29,7 @@ export default function Footer() {
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-6">
             {quickLinks.map((link) => (
               <Link
-                key={link.href}
+                key={link.label}
                 href={link.href}
                 className="text-sm text-foreground/70 hover:text-accent transition-colors"
               >
