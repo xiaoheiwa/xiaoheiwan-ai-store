@@ -101,7 +101,7 @@ export default function Navbar() {
                           <div className="bg-popover border border-border rounded-xl shadow-xl p-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
                             {item.children.map((child) => (
                               <Link
-                                key={child.href}
+                                key={child.label}
                                 href={child.href}
                                 className={`flex flex-col px-3 py-2.5 rounded-lg transition-colors ${
                                   isActive(child.href)
@@ -180,7 +180,7 @@ export default function Navbar() {
                         <div className="ml-6 mt-1 space-y-1">
                           {item.children.map((child) => (
                               <Link
-                              key={child.href}
+                              key={child.label}
                               href={child.href}
                               className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
                                 isActive(child.href)
