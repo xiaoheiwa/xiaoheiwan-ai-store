@@ -7,6 +7,7 @@ import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown } from "luci
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
 
+// Navigation items with unique labels for proper React key handling
 const navItems = [
   { 
     label: "购买", 
