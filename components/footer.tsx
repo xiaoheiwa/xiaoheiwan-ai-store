@@ -41,6 +41,13 @@ export default function Footer() {
           {/* Social links */}
           <div className="flex justify-center gap-6 mb-6">
             <Link 
+              href="https://github.com/xiaoheiwa/upgrade-xiaoheiwan-com" 
+              target="_blank"
+              className="text-sm text-foreground/60 hover:text-accent transition-colors"
+            >
+              GitHub
+            </Link>
+            <Link 
               href="https://t.me/jialiao2025" 
               target="_blank"
               className="text-sm text-foreground/60 hover:text-accent transition-colors"
@@ -103,6 +110,13 @@ export default function Footer() {
               &copy; {currentYear} {"小黑丸. All rights reserved."}
             </p>
             <div className="flex items-center gap-6">
+              <Link 
+                href="https://github.com/xiaoheiwa/upgrade-xiaoheiwan-com" 
+                target="_blank"
+                className="text-sm text-foreground/60 hover:text-accent transition-colors"
+              >
+                GitHub
+              </Link>
               <Link 
                 href="https://t.me/jialiao2025" 
                 target="_blank"
