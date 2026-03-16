@@ -2653,7 +2653,7 @@ export default function AdminPage() {
         body: JSON.stringify({ id }),
       })
       if (response.ok) {
-        setMessage("产品已删除")
+        setMessage("产品已���除")
         loadData()
       } else {
         setMessage("删除产品失败")
@@ -3070,22 +3070,22 @@ export default function AdminPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setProductForm({ ...productForm, region_options: [...productForm.region_options, { code: "", name: "", price: undefined }] })}
+                      onClick={() => setProductForm({ ...productForm, region_options: [...(productForm.region_options || []), { code: "", name: "", price: undefined }] })}
                     >
                       <Plus className="w-3 h-3 mr-1" />
                       {"添加区域"}
                     </Button>
                   </div>
-                  {productForm.region_options.length > 0 && (
+                  {(productForm.region_options?.length || 0) > 0 && (
                     <div className="space-y-2">
-                      {productForm.region_options.map((region, index) => (
+                      {(productForm.region_options || []).map((region, index) => (
                         <div key={index} className="flex items-center gap-2 p-2 bg-background rounded border border-border">
                           <div className="flex-1 grid grid-cols-3 gap-2">
                             <input
                               type="text"
                               value={region.code}
                               onChange={(e) => {
-                                const newRegions = [...productForm.region_options]
+                                const newRegions = [...(productForm.region_options || [])]
                                 newRegions[index] = { ...newRegions[index], code: e.target.value }
                                 setProductForm({ ...productForm, region_options: newRegions })
                               }}
@@ -3096,7 +3096,7 @@ export default function AdminPage() {
                               type="text"
                               value={region.name}
                               onChange={(e) => {
-                                const newRegions = [...productForm.region_options]
+                                const newRegions = [...(productForm.region_options || [])]
                                 newRegions[index] = { ...newRegions[index], name: e.target.value }
                                 setProductForm({ ...productForm, region_options: newRegions })
                               }}
@@ -3108,7 +3108,7 @@ export default function AdminPage() {
                               step="0.01"
                               value={region.price ?? ""}
                               onChange={(e) => {
-                                const newRegions = [...productForm.region_options]
+                                const newRegions = [...(productForm.region_options || [])]
                                 newRegions[index] = { ...newRegions[index], price: e.target.value ? parseFloat(e.target.value) : undefined }
                                 setProductForm({ ...productForm, region_options: newRegions })
                               }}
@@ -3120,7 +3120,7 @@ export default function AdminPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => setProductForm({ ...productForm, region_options: productForm.region_options.filter((_, i) => i !== index) })}
+                            onClick={() => setProductForm({ ...productForm, region_options: (productForm.region_options || []).filter((_, i) => i !== index) })}
                             className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                           >
                             <X className="w-3 h-3" />
@@ -3129,7 +3129,7 @@ export default function AdminPage() {
                       ))}
                     </div>
                   )}
-                  {productForm.region_options.length === 0 && (
+                  {(productForm.region_options?.length || 0) === 0 && (
                     <p className="text-xs text-amber-600">{"请添加至少一个区域选项"}</p>
                   )}
                 </>
