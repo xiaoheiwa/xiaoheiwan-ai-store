@@ -7,7 +7,7 @@ import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown } from "luci
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
 
-// Navigation items with unique labels for proper React key handling
+// Navigation items - using label as unique key since some items share the same href
 const navItems = [
   { 
     label: "购买", 
@@ -50,7 +50,6 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false)
     setOpenDropdown(null)
@@ -69,13 +68,11 @@ export default function Navbar() {
       >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
-            {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
               <Logo size={28} className="transition-transform group-hover:scale-105" />
               <span className="font-semibold text-foreground hidden sm:block">{"小黑丸"}</span>
             </Link>
 
-            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-1">
               {navItems.map((item) => (
                 <div key={item.label} className="relative">
@@ -96,7 +93,6 @@ export default function Navbar() {
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === item.label ? "rotate-180" : ""}`} />
                       </button>
                       
-                      {/* Dropdown */}
                       {openDropdown === item.label && (
                         <div className="absolute top-full left-0 pt-2 w-48">
                           <div className="bg-popover border border-border rounded-xl shadow-xl p-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -134,7 +130,6 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* Right side */}
             <div className="flex items-center gap-2">
               <Link href="/order-lookup" className="hidden sm:block">
                 <Button variant="ghost" size="sm" className="text-foreground/80 hover:text-foreground">
@@ -147,7 +142,6 @@ export default function Navbar() {
                 </Button>
               </Link>
               
-              {/* Mobile menu button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="md:hidden p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary/50 transition-colors"
@@ -159,7 +153,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-border bg-background animate-in slide-in-from-top-2 duration-200">
             <div className="max-w-5xl mx-auto px-4 py-4 space-y-1">
@@ -180,7 +173,7 @@ export default function Navbar() {
                       {openDropdown === item.label && (
                         <div className="ml-6 mt-1 space-y-1">
                           {item.children.map((child) => (
-                              <Link
+                            <Link
                               key={child.label}
                               href={child.href}
                               className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
@@ -228,7 +221,6 @@ export default function Navbar() {
         )}
       </nav>
 
-      {/* Spacer for fixed navbar */}
       <div className="h-14 sm:h-16" />
     </>
   )
