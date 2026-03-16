@@ -1,6 +1,8 @@
-# AI Service Activation Code Platform
+# 小黑丸 AI Store
 
-一个现代化的 AI 服务激活码销售平台，支持 Claude Pro、ChatGPT Plus、Grok Premium 等 AI 服务的激活码自动发货。
+> XiaoHeiWan AI Store - 一站式 AI 服务激活码销售平台
+
+支持 Claude Pro、ChatGPT Plus、Grok Premium 等 AI 服务的激活码自动发货，开箱即用的开源商城系统。
 
 ![License](https://img.shields.io/badge/license-Commercial-red.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
