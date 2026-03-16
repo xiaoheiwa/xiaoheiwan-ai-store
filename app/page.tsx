@@ -115,15 +115,15 @@ export default function HomePage() {
             
             {/* Category Navigation */}
             {categories.length > 0 && (
-              <div className="mb-8 -mx-4 sm:mx-0">
-                <div className="overflow-x-auto scrollbar-hide px-4 sm:px-0">
-                  <div className="flex items-center justify-start sm:justify-center gap-2 p-1.5 bg-secondary/50 backdrop-blur-sm rounded-2xl border border-border/50 w-max sm:w-auto mx-auto">
+              <div className="mb-8 max-w-4xl mx-auto">
+                <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <div className="flex items-center justify-start sm:justify-center gap-2 flex-wrap">
                     <button
                       onClick={() => handleCategoryChange("all")}
                       className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                         selectedCategory === "all"
                           ? "bg-accent text-accent-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/70"
                       }`}
                     >
                       <LayoutGrid className="w-4 h-4" />
@@ -136,7 +136,7 @@ export default function HomePage() {
                         className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                           selectedCategory === category.id
                             ? "bg-accent text-accent-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/70"
                         }`}
                       >
                         {category.icon && <span>{category.icon}</span>}
