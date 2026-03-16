@@ -7,7 +7,7 @@ import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown } from "luci
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
 
-// Navigation items - using label as unique key since Claude and Grok share the same /activate href
+// Navigation items - IMPORTANT: Using child.label as key because Claude and Grok share same /activate href
 const navItems = [
   { 
     label: "购买", 
