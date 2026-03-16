@@ -18,8 +18,8 @@ const navItems = [
     label: "激活",
     icon: Zap,
     children: [
-      { label: "Claude 激活", href: "/activate", description: "Claude Pro 会员激活" },
-      { label: "Grok 激活", href: "/activate", description: "Grok Premium 会员激活" },
+      { label: "Claude 激活", href: "/activate/claude", description: "Claude Pro 会员激活" },
+      { label: "Grok 激活", href: "/activate/grok", description: "Grok Premium 会员激活" },
       { label: "ChatGPT 激活", href: "/activate/gpt", description: "ChatGPT Plus 会员激活" },
       { label: "Team 兑换", href: "/activate/team", description: "GPT Team 邀请兑换" },
     ]
