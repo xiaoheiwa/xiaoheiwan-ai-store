@@ -31,8 +31,15 @@ async function verifyLicenseEdge(licenseKey: string, currentDomain: string): Pro
   if (
     currentDomain === "localhost" ||
     currentDomain.includes("localhost:") ||
+    currentDomain.includes("127.0.0.1") ||
     currentDomain.endsWith(".vercel.app") ||
-    currentDomain.endsWith(".v0.build")
+    currentDomain.endsWith(".v0.build") ||
+    currentDomain.endsWith(".v0.dev") ||
+    currentDomain.includes("v0-") ||
+    currentDomain.includes("-v0") ||
+    process.env.NODE_ENV === "development" ||
+    process.env.VERCEL_ENV === "preview" ||
+    process.env.VERCEL_ENV === "development"
   ) {
     return true
   }
