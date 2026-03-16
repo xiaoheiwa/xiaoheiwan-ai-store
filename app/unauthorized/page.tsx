@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, Mail, MessageCircle, ShieldX } from "lucide-react"
+import { AlertTriangle, MessageCircle, ShieldX } from "lucide-react"
 import Link from "next/link"
 
 export default function UnauthorizedPage() {
@@ -41,20 +41,13 @@ export default function UnauthorizedPage() {
           <p className="text-sm text-muted-foreground">联系开发者购买授权：</p>
           <div className="flex flex-col gap-2">
             <a
-              href="mailto:contact@example.com"
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary hover:bg-secondary/80 rounded-xl transition-colors"
-            >
-              <Mail className="w-4 h-4" />
-              <span>contact@example.com</span>
-            </a>
-            <a
-              href="https://t.me/your_telegram"
+              href="https://t.me/jialiao2025"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 px-4 py-3 bg-[#0088cc] hover:bg-[#0088cc]/90 text-white rounded-xl transition-colors"
             >
               <MessageCircle className="w-4 h-4" />
-              <span>Telegram 联系</span>
+              <span>Telegram: @jialiao2025</span>
             </a>
           </div>
         </div>
