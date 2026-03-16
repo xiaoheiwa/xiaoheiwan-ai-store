@@ -245,6 +245,23 @@ CRON_SECRET=your_cron_secret
 - **购买授权** / **技术支持**: Telegram [@jialiao2025](https://t.me/jialiao2025)
 - **问题反馈**: [GitHub Issues](https://github.com/xiaoheiwa/upgrade-xiaoheiwan-com/issues)
 
+## 二次开发说明
+
+如果你购买源码进行二次开发/销售，请修改以下内容：
+
+1. **授权密钥** - 修改 `INTERNAL_SECRET` 为你自己的私密字符串
+   - `lib/license.ts`
+   - `middleware.ts`
+   - `scripts/generate-license.js`
+
+2. **开发者域名** - 修改 `DEVELOPER_DOMAINS` 为你的域名
+   - `middleware.ts`
+
+3. **联系方式** - 修改 Telegram、GitHub 链接
+   - `app/unauthorized/page.tsx`
+   - `components/footer.tsx`
+   - `README.md`
+
 ## License
 
 本项目为商业授权软件，未经授权不得用于商业用途。详情请联系开发者。
