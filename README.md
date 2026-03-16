@@ -5,6 +5,12 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-v4-38B2AC)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791)
+
+## 演示
+
+- 在线演示: [upgrade.xiaoheiwan.com](https://upgrade.xiaoheiwan.com)
+- 购买授权: Telegram [@jialiao2025](https://t.me/jialiao2025)
 
 ## 功能特性
 
@@ -30,6 +36,7 @@
 - **Webhook** - 支持 Telegram Bot 命令交互
 
 ### 其他特性
+- **域名授权** - 内置授权验证系统，保护源代码
 - **在线客服** - 内置实时聊天客服系统
 - **SEO 优化** - 完整的 SEO 配置和结构化数据
 - **响应式设计** - 完美支持移动端和桌面端
@@ -45,13 +52,36 @@
 - **支付**: 虎皮椒 / ZPayz / EPay / USDT (TRC20)
 - **部署**: Vercel
 
+## 授权说明
+
+本项目采用域名授权机制，需要购买授权后方可使用。
+
+### 获取授权
+
+联系开发者购买授权：**Telegram [@jialiao2025](https://t.me/jialiao2025)**
+
+### 授权方式
+
+购买后您将获得一个授权码（LICENSE_KEY），只需在 Vercel 环境变量中设置：
+
+```env
+LICENSE_KEY=您的授权码
+```
+
+### 免授权环境
+
+以下环境无需授权，方便开发测试：
+- `localhost` 本地开发
+- `*.vercel.app` Vercel 预览域名
+- `*.v0.build` / `*.v0.dev` v0 预览环境
+
 ## 快速开始
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/ai-activation-platform.git
-cd ai-activation-platform
+git clone https://github.com/xiaoheiwa/upgrade-xiaoheiwan-com.git
+cd upgrade-xiaoheiwan-com
 ```
 
 ### 2. 安装依赖
@@ -93,13 +123,24 @@ npm run dev
 
 ## 环境变量说明
 
-### 必需配置
+### 授权配置（必需）
+
+| 变量名 | 说明 |
+|--------|------|
+| `LICENSE_KEY` | 域名授权码（联系开发者获取） |
+
+### 数据库配置（必需）
 
 | 变量名 | 说明 |
 |--------|------|
 | `DATABASE_URL` | PostgreSQL 数据库连接字符串 (Neon) |
+
+### 管理员配置（必需）
+
+| 变量名 | 说明 |
+|--------|------|
 | `ADMIN_PASSWORD` | 后台管理员密码 |
-| `JWT_SECRET` | JWT 签名密钥 (至少32字符) |
+| `JWT_SECRET` | JWT 签名密钥（至少32字符） |
 
 ### 邮件服务
 
@@ -155,16 +196,21 @@ npm run dev
 │   ├── activate/          # 激活页面
 │   ├── blog/              # 博客页面
 │   ├── purchase/          # 购买页面
+│   ├── unauthorized/      # 授权提示页面
 │   └── ...
 ├── components/            # React 组件
 │   ├── ui/               # shadcn/ui 组件
 │   └── ...
 ├── lib/                   # 工具函数和配置
 │   ├── database.ts       # 数据库操作
+│   ├── license.ts        # 授权验证
 │   ├── telegram.tsx      # Telegram 通知
 │   ├── resend.tsx        # 邮件发送
 │   └── ...
-├── scripts/               # 数据库迁移脚本
+├── middleware.ts          # 授权验证中间件
+├── scripts/               # 数据库迁移和工具脚本
+│   ├── generate-license.js  # 授权码生成工具
+│   └── *.sql             # 数据库迁移脚本
 └── public/               # 静态资源
 ```
 
@@ -223,25 +269,19 @@ npm run dev
 1. Fork 本项目到你的 GitHub
 2. 在 [Vercel](https://vercel.com) 导入项目
 3. 添加 Neon 数据库集成
-4. 配置环境变量
+4. 配置环境变量（包括 LICENSE_KEY）
 5. 部署完成
 
 ### 数据库
 
 推荐使用 [Neon](https://neon.tech) 免费 PostgreSQL 数据库，支持 serverless 连接。
 
-## 截图
-
-### 首页
-商品展示、分类筛选、响应式布局
-
-### 购买页面
-产品选择、区域选择、数量选择、多支付方式
-
-### 后台管理
-订单管理、商品管理、数据统计
-
 ## 更新日志
+
+### v1.3.0 (2026-03-16)
+- 新增域名授权系统
+- 优化代码安全性，移除硬编码密钥
+- 新增授权提示页面
 
 ### v1.2.0
 - 新增区域选择功能（适用于 Apple ID 等多区域商品）
@@ -261,13 +301,15 @@ npm run dev
 - 自动/人工发货
 - Telegram 通知系统
 
+## 联系方式
+
+- **购买授权**: Telegram [@jialiao2025](https://t.me/jialiao2025)
+- **技术支持**: Telegram [@jialiao2025](https://t.me/jialiao2025)
+- **问题反馈**: [GitHub Issues](https://github.com/xiaoheiwa/upgrade-xiaoheiwan-com/issues)
+
 ## License
 
-[MIT](LICENSE)
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
+本项目需要购买授权后使用，详情请联系开发者。
 
 ## 致谢
 
