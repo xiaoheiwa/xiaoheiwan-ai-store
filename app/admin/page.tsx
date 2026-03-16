@@ -54,6 +54,8 @@ interface Order {
   subject?: string
   delivery_type?: string
   quantity?: number
+  selected_region?: string
+  region_name?: string
 }
 
 interface Stats {
@@ -1243,8 +1245,9 @@ export default function AdminPage() {
                         <td className="p-3 hidden md:table-cell">
                           <div className="space-y-0.5">
                             <span className="text-xs text-muted-foreground">{order.product_name || "通用"}</span>
-                            {(order.quantity > 1 || order.delivery_type === "manual") && (
-                              <div className="flex items-center gap-1">
+                            {(order.quantity > 1 || order.delivery_type === "manual" || order.region_name) && (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {order.region_name && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">{order.region_name}</span>}
                                 {order.quantity > 1 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">x{order.quantity}</span>}
                                 {order.delivery_type === "manual" && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">{"人工"}</span>}
                               </div>
@@ -1335,6 +1338,7 @@ export default function AdminPage() {
                                   <p><span className="text-muted-foreground">{"订单号:"}</span> <span className="font-mono text-xs">{order.out_trade_no}</span></p>
                                   <p><span className="text-muted-foreground">{"邮箱:"}</span> {order.email || "-"}</p>
                                   <p><span className="text-muted-foreground">{"产品:"}</span> {order.product_name || "通用"}</p>
+                                  {order.region_name && <p><span className="text-muted-foreground">{"区域:"}</span> <span className="text-purple-600 dark:text-purple-400 font-medium">{order.region_name}</span></p>}
                                   <p><span className="text-muted-foreground">{"数量:"}</span> {order.quantity || 1}</p>
                                   <p><span className="text-muted-foreground">{"发货方式:"}</span> {order.delivery_type === "manual" ? "人工发货" : "自动发货"}</p>
                                   <p><span className="text-muted-foreground">{"支付渠道:"}</span> {order.pay_channel || "-"}</p>
@@ -2653,7 +2657,7 @@ export default function AdminPage() {
         body: JSON.stringify({ id }),
       })
       if (response.ok) {
-        setMessage("产品已���除")
+        setMessage("产品已�����除")
         loadData()
       } else {
         setMessage("删除产品失败")
