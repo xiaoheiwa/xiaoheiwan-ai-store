@@ -29,9 +29,9 @@ export interface PaymentResponse {
 }
 
 export class EPay {
-  private static readonly API_URL = "https://code.ymyu.cn/mapi.php"
-  private static readonly PID = "2729"
-  private static readonly KEY = "iDLNnOrrbAddsm8mjJSFsWpwxtIUALky"
+  private static readonly API_URL = process.env.EPAY_API_URL || "https://code.ymyu.cn/mapi.php"
+  private static readonly PID = process.env.EPAY_PID || ""
+  private static readonly KEY = process.env.EPAY_KEY || ""
 
   static generateSign(params: Record<string, string>, key: string): string {
     // Remove sign and sign_type from params
