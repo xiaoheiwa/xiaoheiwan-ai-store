@@ -19,8 +19,8 @@ export interface ZPayzApiPaymentParams extends ZPayzPaymentParams {
 
 export class ZPayz {
   private static readonly BASE_URL = "https://zpayz.cn"
-  private static readonly PID = process.env.ZPAYZ_PID || "2025032818242721"
-  private static readonly PKEY = process.env.ZPAYZ_PKEY || "0bx8oz5MgnHk4OXZIGAh5P9h9HpE1eK3"
+  private static readonly PID = process.env.ZPAYZ_PID || ""
+  private static readonly PKEY = process.env.ZPAYZ_PKEY || ""
 
   static generateSign(params: Record<string, string>): string {
     // Remove sign, sign_type and empty values
