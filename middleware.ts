@@ -25,6 +25,12 @@ function normalizeDomain(domain: string): string {
   return normalized
 }
 
+// 开发者自己的域名白名单（永久授权）
+const DEVELOPER_DOMAINS = [
+  "upgrade.xiaoheiwan.com",
+  "xiaoheiwan.com",
+]
+
 // 使用 Web Crypto API 验证授权（边缘函数兼容）
 async function verifyLicenseEdge(licenseKey: string, currentDomain: string): Promise<boolean> {
   // 开发环境或特殊域名始终通过
@@ -41,6 +47,11 @@ async function verifyLicenseEdge(licenseKey: string, currentDomain: string): Pro
     process.env.VERCEL_ENV === "preview" ||
     process.env.VERCEL_ENV === "development"
   ) {
+    return true
+  }
+
+  // 开发者域名白名单 - 永久授权
+  if (DEVELOPER_DOMAINS.includes(currentDomain)) {
     return true
   }
 
