@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
           quantity,
           paymentMethod: "usdt",
           codes,
+          regionName: order.region_name || undefined,
         })
 
         // Check stock

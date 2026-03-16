@@ -73,6 +73,12 @@ interface ActivationCode {
   locked_at?: string // Added for locked codes
 }
 
+interface RegionOption {
+  code: string
+  name: string
+  price?: number
+}
+
 interface Product {
   id: string
   name: string
@@ -83,6 +89,8 @@ interface Product {
   status: "active" | "inactive"
   sort_order: number
   stock_count?: number
+  region_options?: RegionOption[] | null
+  require_region_selection?: boolean
   created_at: string
   updated_at: string
 }
@@ -196,7 +204,7 @@ export default function AdminPage() {
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [showProductForm, setShowProductForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [productForm, setProductForm] = useState({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined })
+  const [productForm, setProductForm] = useState({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined, region_options: [] as RegionOption[], require_region_selection: false })
   const [productLoading, setProductLoading] = useState(false)
   const [importProductId, setImportProductId] = useState("")
   const [importBatchName, setImportBatchName] = useState("")
@@ -2601,7 +2609,7 @@ export default function AdminPage() {
       if (response.ok) {
         setMessage("产品创建成功")
         setShowProductForm(false)
-        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined })
+        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false })
         loadData()
       } else {
         setMessage("创建产品失败")
@@ -2625,7 +2633,7 @@ export default function AdminPage() {
         setMessage("产品更新成功")
         setEditingProduct(null)
         setShowProductForm(false)
-        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined })
+        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false })
         loadData()
       } else {
         setMessage("更新产品失败")
@@ -2685,6 +2693,8 @@ export default function AdminPage() {
       delivery_type: (product as any).delivery_type || "auto",
       price_tiers: (product as any).price_tiers || [],
       category_id: (product as any).category_id || undefined,
+      region_options: product.region_options || [],
+      require_region_selection: product.require_region_selection || false,
     })
     setShowProductForm(true)
   }
@@ -3036,6 +3046,93 @@ export default function AdminPage() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* Region Options */}
+            <div className="p-3 rounded-lg bg-secondary/50 border border-border space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={productForm.require_region_selection}
+                    onCheckedChange={(checked) => setProductForm({ ...productForm, require_region_selection: checked })}
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{"区域选择（适用于 Apple ID 等多区域商品）"}</p>
+                    <p className="text-xs text-muted-foreground">{"开启后用户需选择区域才能下单"}</p>
+                  </div>
+                </div>
+              </div>
+              {productForm.require_region_selection && (
+                <>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setProductForm({ ...productForm, region_options: [...productForm.region_options, { code: "", name: "", price: undefined }] })}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      {"添加区域"}
+                    </Button>
+                  </div>
+                  {productForm.region_options.length > 0 && (
+                    <div className="space-y-2">
+                      {productForm.region_options.map((region, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 bg-background rounded border border-border">
+                          <div className="flex-1 grid grid-cols-3 gap-2">
+                            <input
+                              type="text"
+                              value={region.code}
+                              onChange={(e) => {
+                                const newRegions = [...productForm.region_options]
+                                newRegions[index] = { ...newRegions[index], code: e.target.value }
+                                setProductForm({ ...productForm, region_options: newRegions })
+                              }}
+                              placeholder="区域代码 (如 US)"
+                              className="px-2 py-1.5 border border-input bg-background rounded text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            />
+                            <input
+                              type="text"
+                              value={region.name}
+                              onChange={(e) => {
+                                const newRegions = [...productForm.region_options]
+                                newRegions[index] = { ...newRegions[index], name: e.target.value }
+                                setProductForm({ ...productForm, region_options: newRegions })
+                              }}
+                              placeholder="显示名称 (如 美国)"
+                              className="px-2 py-1.5 border border-input bg-background rounded text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            />
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={region.price ?? ""}
+                              onChange={(e) => {
+                                const newRegions = [...productForm.region_options]
+                                newRegions[index] = { ...newRegions[index], price: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setProductForm({ ...productForm, region_options: newRegions })
+                              }}
+                              placeholder="价格 (留空用默认)"
+                              className="px-2 py-1.5 border border-input bg-background rounded text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setProductForm({ ...productForm, region_options: productForm.region_options.filter((_, i) => i !== index) })}
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {productForm.region_options.length === 0 && (
+                    <p className="text-xs text-amber-600">{"请添加至少一个区域选项"}</p>
+                  )}
+                </>
               )}
             </div>
 

@@ -161,6 +161,7 @@ export async function POST(request: Request) {
                 quantity,
                 paymentMethod: "usdt",
                 codes,
+                regionName: order.region_name || undefined,
               })
 
               // Check stock
@@ -201,6 +202,7 @@ export async function POST(request: Request) {
             productName: order.product_name || order.subject,
             quantity,
             paymentMethod: "usdt",
+            regionName: order.region_name || undefined,
           })
         } catch (tgErr) {
           console.error("Telegram notification failed:", tgErr)

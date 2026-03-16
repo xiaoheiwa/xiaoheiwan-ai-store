@@ -14,8 +14,8 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const { email, paymentMethod, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto" } = body
-    console.log("[v0] Order creation request:", { email, paymentMethod, amount, productId, productName, quantity, deliveryType, hasQueryPassword: !!queryPassword })
+    const { email, paymentMethod, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName } = body
+    console.log("[v0] Order creation request:", { email, paymentMethod, amount, productId, productName, quantity, deliveryType, selectedRegion, regionName, hasQueryPassword: !!queryPassword })
 
     if (!email || !paymentMethod || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
@@ -78,6 +78,8 @@ export async function POST(req: Request) {
       query_password_hash: queryPasswordHash,
       quantity,
       delivery_type: deliveryType,
+      selected_region: selectedRegion || null,
+      region_name: regionName || null,
     })
     console.log("[v0] Order created:", order.out_trade_no)
 

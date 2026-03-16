@@ -12,6 +12,12 @@ interface PriceTier {
   price: number
 }
 
+interface RegionOption {
+  code: string
+  name: string
+  price?: number
+}
+
 interface Product {
   id: string
   name: string
@@ -22,6 +28,8 @@ interface Product {
   stock_count: number
   delivery_type: "auto" | "manual"
   price_tiers: PriceTier[] | null
+  region_options?: RegionOption[] | null
+  require_region_selection?: boolean
 }
 
 function getUnitPrice(product: Product, qty: number): number {
@@ -46,6 +54,7 @@ function PurchaseContent() {
   const [pageLoading, setPageLoading] = useState(true)
   const [products, setProducts] = useState<Product[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [selectedRegion, setSelectedRegion] = useState<RegionOption | null>(null)
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
   const [paymentConfig, setPaymentConfig] = useState({ alipay: true, usdt: true })
 
@@ -106,10 +115,22 @@ function PurchaseContent() {
   }
 
   const isManual = selectedProduct?.delivery_type === "manual"
-  const unitPrice = selectedProduct ? getUnitPrice(selectedProduct, quantity) : fallbackPrice
+  const requiresRegion = selectedProduct?.require_region_selection && selectedProduct?.region_options && selectedProduct.region_options.length > 0
+  // Use region-specific price if available, otherwise use product price
+  const basePrice = selectedRegion?.price ?? selectedProduct?.price ?? fallbackPrice
+  const unitPrice = selectedProduct ? getUnitPrice({ ...selectedProduct, price: basePrice }, quantity) : fallbackPrice
   const currentPrice = Number((unitPrice * quantity).toFixed(2))
   const currentOriginalPrice = selectedProduct?.original_price || null
   const stockCount = isManual ? 999 : (selectedProduct ? Number(selectedProduct.stock_count) : fallbackStock)
+
+  // Reset region when product changes
+  useEffect(() => {
+    if (selectedProduct?.require_region_selection && selectedProduct?.region_options?.length) {
+      setSelectedRegion(null)
+    } else {
+      setSelectedRegion(null)
+    }
+  }, [selectedProduct?.id])
 
   const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -134,6 +155,11 @@ function PurchaseContent() {
       return
     }
 
+    if (requiresRegion && !selectedRegion) {
+      setMessage({ text: "请选择区域", type: "error" })
+      return
+    }
+
     setLoading(true)
     setMessage(null)
 
@@ -151,6 +177,8 @@ function PurchaseContent() {
             queryPassword,
             quantity,
             deliveryType: selectedProduct?.delivery_type || "auto",
+            selectedRegion: selectedRegion?.code || null,
+            regionName: selectedRegion?.name || null,
           }),
         })
 
@@ -183,6 +211,8 @@ function PurchaseContent() {
           queryPassword,
           quantity,
           deliveryType: selectedProduct?.delivery_type || "auto",
+          selectedRegion: selectedRegion?.code || null,
+          regionName: selectedRegion?.name || null,
         }),
       })
 
@@ -393,6 +423,41 @@ function PurchaseContent() {
               </div>
             </div>
 
+            {/* Region Selection */}
+            {requiresRegion && (
+              <>
+                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-4" />
+                <div className="space-y-3">
+                  <span className="text-muted-foreground text-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                    选择区域
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {selectedProduct?.region_options?.map((region) => (
+                      <button
+                        key={region.code}
+                        type="button"
+                        onClick={() => setSelectedRegion(region)}
+                        className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                          selectedRegion?.code === region.code
+                            ? "border-accent bg-accent/10 shadow-md"
+                            : "border-border hover:border-muted-foreground/50"
+                        }`}
+                      >
+                        <div className="font-medium text-foreground text-sm">{region.name}</div>
+                        {region.price !== undefined && (
+                          <div className="text-xs text-accent mt-0.5">{"\u00a5"}{region.price}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {!selectedRegion && (
+                    <p className="text-xs text-amber-500">请选择一个区域后继续</p>
+                  )}
+                </div>
+              </>
+            )}
+
             <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-4" />
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -539,7 +604,7 @@ function PurchaseContent() {
 
             <button
               type="submit"
-              disabled={loading || (!isManual && stockCount < quantity)}
+              disabled={loading || (!isManual && stockCount < quantity) || (requiresRegion && !selectedRegion)}
               className="w-full bg-accent hover:bg-accent/90 disabled:bg-muted disabled:cursor-not-allowed text-accent-foreground py-5 rounded-2xl font-semibold text-lg transition-all duration-300 hover:shadow-xl hover:shadow-accent/30 active:scale-[0.98] flex items-center justify-center gap-3 ripple opacity-0 animate-fade-up delay-300"
               style={{ animationFillMode: "forwards" }}
             >
@@ -550,8 +615,10 @@ function PurchaseContent() {
                 </>
               ) : (!isManual && stockCount < quantity) ? (
                 <span>{"库存不足"}</span>
+              ) : (requiresRegion && !selectedRegion) ? (
+                <span>{"请选择区域"}</span>
               ) : (
-                <span>{"立即支付"} {"\u00a5"}{currentPrice}{quantity > 1 ? ` (${quantity}个)` : ""}</span>
+                <span>{"立即支付"} {"\u00a5"}{currentPrice}{quantity > 1 ? ` (${quantity}个)` : ""}{selectedRegion ? ` - ${selectedRegion.name}` : ""}</span>
               )}
             </button>
           </form>
