@@ -1,29 +1,36 @@
 import { createHmac } from "crypto"
 
-// 授权验证系统
-// 你需要保管好这个密钥，用于生成客户的授权码
-// 建议将此密钥设置为环境变量 LICENSE_SECRET_KEY
-const SECRET_KEY = process.env.LICENSE_SECRET_KEY || "your-super-secret-key-change-this"
+// 内置密钥 - 仅你知道，不要分享给客户
+// 重要：修改为你自己的唯一密钥！
+const INTERNAL_SECRET = "XHW-2024-SECRET-KEY-CHANGE-THIS-TO-YOUR-OWN"
 
 export interface LicenseInfo {
   isValid: boolean
   domain: string
+  expiresAt?: Date
   message: string
 }
 
 /**
  * 生成授权码（你在本地使用，为客户生成授权码）
+ * 授权码格式：base64(domain|expiry|signature)
  * @param domain 授权的域名（如 example.com）
- * @param secretKey 你的私钥
+ * @param expiryDays 授权有效期天数（默认365天，设为0表示永久）
  * @returns 授权码
  */
-export function generateLicenseKey(domain: string, secretKey: string = SECRET_KEY): string {
+export function generateLicenseKey(domain: string, expiryDays: number = 365): string {
   const normalizedDomain = normalizeDomain(domain)
-  const signature = createHmac("sha256", secretKey)
-    .update(normalizedDomain)
+  const expiry = expiryDays > 0 
+    ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+    : "permanent"
+  
+  const data = `${normalizedDomain}|${expiry}`
+  const signature = createHmac("sha256", INTERNAL_SECRET)
+    .update(data)
     .digest("hex")
-  // 返回 base64 编码的授权码（域名:签名）
-  return Buffer.from(`${normalizedDomain}:${signature}`).toString("base64")
+    .substring(0, 16) // 只取前16位，让授权码更短
+  
+  return Buffer.from(`${data}|${signature}`).toString("base64")
 }
 
 /**
@@ -35,7 +42,7 @@ export function generateLicenseKey(domain: string, secretKey: string = SECRET_KE
 export function verifyLicense(licenseKey: string, currentDomain: string): LicenseInfo {
   const normalizedCurrentDomain = normalizeDomain(currentDomain)
   
-  // 开发环境或 localhost 始终通过
+  // 开发环境、localhost、Vercel预览域名始终通过
   if (
     process.env.NODE_ENV === "development" ||
     normalizedCurrentDomain === "localhost" ||
@@ -61,9 +68,9 @@ export function verifyLicense(licenseKey: string, currentDomain: string): Licens
   try {
     // 解码授权码
     const decoded = Buffer.from(licenseKey, "base64").toString("utf-8")
-    const [licensedDomain, signature] = decoded.split(":")
+    const parts = decoded.split("|")
     
-    if (!licensedDomain || !signature) {
+    if (parts.length !== 3) {
       return {
         isValid: false,
         domain: normalizedCurrentDomain,
@@ -71,10 +78,14 @@ export function verifyLicense(licenseKey: string, currentDomain: string): Licens
       }
     }
 
+    const [licensedDomain, expiry, signature] = parts
+
     // 验证签名
-    const expectedSignature = createHmac("sha256", SECRET_KEY)
-      .update(licensedDomain)
+    const data = `${licensedDomain}|${expiry}`
+    const expectedSignature = createHmac("sha256", INTERNAL_SECRET)
+      .update(data)
       .digest("hex")
+      .substring(0, 16)
     
     if (signature !== expectedSignature) {
       return {
@@ -93,10 +104,29 @@ export function verifyLicense(licenseKey: string, currentDomain: string): Licens
       }
     }
 
+    // 验证有效期
+    if (expiry !== "permanent") {
+      const expiryDate = new Date(expiry)
+      if (expiryDate < new Date()) {
+        return {
+          isValid: false,
+          domain: normalizedCurrentDomain,
+          expiresAt: expiryDate,
+          message: `授权已于 ${expiry} 过期，请联系开发者续费`
+        }
+      }
+      return {
+        isValid: true,
+        domain: normalizedCurrentDomain,
+        expiresAt: expiryDate,
+        message: `授权有效，到期日期：${expiry}`
+      }
+    }
+
     return {
       isValid: true,
       domain: normalizedCurrentDomain,
-      message: "授权验证通过"
+      message: "永久授权验证通过"
     }
   } catch {
     return {
@@ -112,11 +142,8 @@ export function verifyLicense(licenseKey: string, currentDomain: string): Licens
  */
 function normalizeDomain(domain: string): string {
   let normalized = domain.toLowerCase()
-  // 去除协议
   normalized = normalized.replace(/^https?:\/\//, "")
-  // 去除尾部斜杠和路径
   normalized = normalized.split("/")[0]
-  // 去除 www 前缀
   normalized = normalized.replace(/^www\./, "")
   return normalized
 }

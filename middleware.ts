@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-// 授权验证中间件
-// 在边缘函数中验证域名授权
+// 授权验证中间件 - 简化版，客户只需设置 LICENSE_KEY
+
+// 内置密钥 - 与 lib/license.ts 和 scripts/generate-license.js 保持一致
+const INTERNAL_SECRET = "XHW-2024-SECRET-KEY-CHANGE-THIS-TO-YOUR-OWN"
 
 // 不需要授权验证的路径
 const PUBLIC_PATHS = [
@@ -23,8 +25,8 @@ function normalizeDomain(domain: string): string {
   return normalized
 }
 
-// 简化的授权验证（边缘函数不支持 Node.js crypto，使用 Web Crypto API）
-async function verifyLicenseEdge(licenseKey: string, currentDomain: string, secretKey: string): Promise<boolean> {
+// 使用 Web Crypto API 验证授权（边缘函数兼容）
+async function verifyLicenseEdge(licenseKey: string, currentDomain: string): Promise<boolean> {
   // 开发环境或特殊域名始终通过
   if (
     currentDomain === "localhost" ||
@@ -40,17 +42,32 @@ async function verifyLicenseEdge(licenseKey: string, currentDomain: string, secr
   }
 
   try {
-    // 解码授权码
+    // 解码授权码：格式为 base64(domain|expiry|signature)
     const decoded = atob(licenseKey)
-    const [licensedDomain, signature] = decoded.split(":")
+    const parts = decoded.split("|")
     
-    if (!licensedDomain || !signature) {
+    if (parts.length !== 3) {
       return false
+    }
+
+    const [licensedDomain, expiry, signature] = parts
+
+    // 验证域名匹配
+    if (licensedDomain !== currentDomain) {
+      return false
+    }
+
+    // 验证有效期
+    if (expiry !== "permanent") {
+      const expiryDate = new Date(expiry)
+      if (expiryDate < new Date()) {
+        return false
+      }
     }
 
     // 使用 Web Crypto API 验证签名
     const encoder = new TextEncoder()
-    const keyData = encoder.encode(secretKey)
+    const keyData = encoder.encode(INTERNAL_SECRET)
     const key = await crypto.subtle.importKey(
       "raw",
       keyData,
@@ -59,18 +76,19 @@ async function verifyLicenseEdge(licenseKey: string, currentDomain: string, secr
       ["sign"]
     )
     
+    const data = `${licensedDomain}|${expiry}`
     const signatureBuffer = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode(licensedDomain)
+      encoder.encode(data)
     )
     
     const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
       .map(b => b.toString(16).padStart(2, "0"))
       .join("")
+      .substring(0, 16)
 
-    // 验证签名和域名
-    return signature === expectedSignature && licensedDomain === currentDomain
+    return signature === expectedSignature
   } catch {
     return false
   }
@@ -88,12 +106,11 @@ export async function middleware(request: NextRequest) {
   const host = request.headers.get("host") || ""
   const currentDomain = normalizeDomain(host)
 
-  // 获取授权码和密钥
+  // 获取授权码
   const licenseKey = process.env.LICENSE_KEY || ""
-  const secretKey = process.env.LICENSE_SECRET_KEY || "your-super-secret-key-change-this"
 
   // 验证授权
-  const isValid = await verifyLicenseEdge(licenseKey, currentDomain, secretKey)
+  const isValid = await verifyLicenseEdge(licenseKey, currentDomain)
 
   if (!isValid) {
     // 重定向到未授权页面
@@ -107,13 +124,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * 匹配所有路径除了:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 }

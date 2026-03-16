@@ -1,20 +1,20 @@
+#!/usr/bin/env node
 /**
  * 授权码生成工具
  * 
- * 使用方法:
- * node scripts/generate-license.js <domain> [secret-key]
+ * 使用方法：
+ *   node scripts/generate-license.js <域名> [有效期天数]
  * 
- * 示例:
- * node scripts/generate-license.js example.com
- * node scripts/generate-license.js example.com my-super-secret-key
- * 
- * 生成的授权码需要客户设置到环境变量 LICENSE_KEY
+ * 示例：
+ *   node scripts/generate-license.js example.com        # 1年授权
+ *   node scripts/generate-license.js example.com 30     # 30天授权
+ *   node scripts/generate-license.js example.com 0      # 永久授权
  */
 
 const crypto = require("crypto")
 
-// 默认密钥（请更改为你自己的密钥，并保密！）
-const DEFAULT_SECRET_KEY = "your-super-secret-key-change-this"
+// 重要：与 lib/license.ts 中的 INTERNAL_SECRET 保持一致！
+const INTERNAL_SECRET = "XHW-2024-SECRET-KEY-CHANGE-THIS-TO-YOUR-OWN"
 
 function normalizeDomain(domain) {
   let normalized = domain.toLowerCase()
@@ -24,13 +24,19 @@ function normalizeDomain(domain) {
   return normalized
 }
 
-function generateLicenseKey(domain, secretKey) {
+function generateLicenseKey(domain, expiryDays = 365) {
   const normalizedDomain = normalizeDomain(domain)
-  const signature = crypto
-    .createHmac("sha256", secretKey)
-    .update(normalizedDomain)
+  const expiry = expiryDays > 0 
+    ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+    : "permanent"
+  
+  const data = `${normalizedDomain}|${expiry}`
+  const signature = crypto.createHmac("sha256", INTERNAL_SECRET)
+    .update(data)
     .digest("hex")
-  return Buffer.from(`${normalizedDomain}:${signature}`).toString("base64")
+    .substring(0, 16)
+  
+  return Buffer.from(`${data}|${signature}`).toString("base64")
 }
 
 // 命令行参数
@@ -38,47 +44,49 @@ const args = process.argv.slice(2)
 
 if (args.length === 0) {
   console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                    授权码生成工具                              ║
-╠══════════════════════════════════════════════════════════════╣
-║  使用方法:                                                    ║
-║  node scripts/generate-license.js <domain> [secret-key]      ║
-║                                                              ║
-║  示例:                                                        ║
-║  node scripts/generate-license.js example.com                ║
-║  node scripts/generate-license.js shop.example.com my-key    ║
-╚══════════════════════════════════════════════════════════════╝
+授权码生成工具
+==============
+
+使用方法：
+  node scripts/generate-license.js <域名> [有效期天数]
+
+参数说明：
+  域名          客户的网站域名（如 example.com）
+  有效期天数    授权有效期，默认365天，设为0表示永久授权
+
+示例：
+  node scripts/generate-license.js shop.example.com        # 1年授权
+  node scripts/generate-license.js shop.example.com 30     # 30天试用
+  node scripts/generate-license.js shop.example.com 0      # 永久授权
 `)
-  process.exit(1)
+  process.exit(0)
 }
 
 const domain = args[0]
-const secretKey = args[1] || DEFAULT_SECRET_KEY
+const expiryDays = parseInt(args[1]) || 365
 
+const licenseKey = generateLicenseKey(domain, expiryDays)
 const normalizedDomain = normalizeDomain(domain)
-const licenseKey = generateLicenseKey(domain, secretKey)
+const expiryText = expiryDays > 0 
+  ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+  : "永久"
 
 console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                    授权码生成成功                              ║
-╠══════════════════════════════════════════════════════════════╣
-║  域名: ${normalizedDomain.padEnd(52)}║
-║  密钥: ${(secretKey.length > 20 ? secretKey.slice(0, 17) + "..." : secretKey).padEnd(52)}║
-╠══════════════════════════════════════════════════════════════╣
-║  授权码 (LICENSE_KEY):                                        ║
-╚══════════════════════════════════════════════════════════════╝
+============================================
+           授权码生成成功
+============================================
 
+授权域名：${normalizedDomain}
+有效期至：${expiryText}
+
+授权码：
 ${licenseKey}
 
-╔══════════════════════════════════════════════════════════════╗
-║  客户需要在 Vercel 项目中设置以下环境变量:                      ║
-╠══════════════════════════════════════════════════════════════╣
-║  LICENSE_KEY=${licenseKey.slice(0, 40)}...
-║  LICENSE_SECRET_KEY=${secretKey.slice(0, 35)}...
-╚══════════════════════════════════════════════════════════════╝
+--------------------------------------------
 
-注意: 
-- LICENSE_SECRET_KEY 必须与生成授权码时使用的密钥一致
-- 建议为每个客户使用相同的 LICENSE_SECRET_KEY
-- 请妥善保管你的密钥，不要泄露给客户
+客户配置方法：
+在 Vercel 环境变量中添加：
+  LICENSE_KEY = ${licenseKey}
+
+============================================
 `)
