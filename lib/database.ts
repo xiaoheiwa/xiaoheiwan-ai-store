@@ -68,6 +68,8 @@ export interface Order {
   code?: string
   quantity: number
   delivery_type: "auto" | "manual"
+  selected_region?: string
+  region_name?: string
   created_at: Date
   paid_at?: Date
   fulfilled_at?: Date
@@ -82,6 +84,12 @@ export interface PriceTier {
   price: number
 }
 
+export interface RegionOption {
+  code: string
+  name: string
+  price?: number
+}
+
 export interface Product {
   id: string
   name: string
@@ -94,6 +102,8 @@ export interface Product {
   sort_order: number
   delivery_type: "auto" | "manual"
   price_tiers: PriceTier[] | null
+  region_options: RegionOption[] | null
+  require_region_selection: boolean
   stock_count?: number
   created_at: Date
   updated_at: Date
@@ -164,12 +174,15 @@ export class Database {
     delivery_type?: "auto" | "manual"
     price_tiers?: PriceTier[] | null
     category_id?: string | null
+    region_options?: RegionOption[] | null
+    require_region_selection?: boolean
   }): Promise<Product> {
     return this.executeQuery(async () => {
       const s = getSql()
       const priceTiersJson = data.price_tiers ? JSON.stringify(data.price_tiers) : null
+      const regionOptionsJson = data.region_options ? JSON.stringify(data.region_options) : null
       const result = await s`
-        INSERT INTO products (id, name, description, details, price, original_price, sku, status, sort_order, delivery_type, price_tiers, category_id, created_at, updated_at)
+        INSERT INTO products (id, name, description, details, price, original_price, sku, status, sort_order, delivery_type, price_tiers, category_id, region_options, require_region_selection, created_at, updated_at)
         VALUES (
           gen_random_uuid(),
           ${data.name},
@@ -183,6 +196,8 @@ export class Database {
           ${data.delivery_type || "auto"},
           ${priceTiersJson}::jsonb,
           ${data.category_id || null},
+          ${regionOptionsJson}::jsonb,
+          ${data.require_region_selection || false},
           NOW(), NOW()
         )
         RETURNING *
@@ -203,6 +218,8 @@ export class Database {
     delivery_type?: "auto" | "manual"
     price_tiers?: PriceTier[] | null
     category_id?: string | null
+    region_options?: RegionOption[] | null
+    require_region_selection?: boolean
   }): Promise<Product | null> {
     return this.executeQuery(async () => {
       const s = getSql()
@@ -210,7 +227,10 @@ export class Database {
       const hasDetails = "details" in data
       const hasPriceTiers = "price_tiers" in data
       const hasCategoryId = "category_id" in data
+      const hasRegionOptions = "region_options" in data
+      const hasRequireRegionSelection = "require_region_selection" in data
       const priceTiersJson = hasPriceTiers ? (data.price_tiers ? JSON.stringify(data.price_tiers) : null) : null
+      const regionOptionsJson = hasRegionOptions ? (data.region_options ? JSON.stringify(data.region_options) : null) : null
       const result = await s`
         UPDATE products SET
           name = COALESCE(${data.name ?? null}, name),
@@ -224,6 +244,8 @@ export class Database {
           delivery_type = COALESCE(${data.delivery_type ?? null}, delivery_type),
           price_tiers = CASE WHEN ${hasPriceTiers} THEN ${priceTiersJson}::jsonb ELSE price_tiers END,
           category_id = CASE WHEN ${hasCategoryId} THEN ${hasCategoryId ? (data.category_id ?? null) : null}::uuid ELSE category_id END,
+          region_options = CASE WHEN ${hasRegionOptions} THEN ${regionOptionsJson}::jsonb ELSE region_options END,
+          require_region_selection = CASE WHEN ${hasRequireRegionSelection} THEN ${hasRequireRegionSelection ? (data.require_region_selection ?? false) : false}::boolean ELSE require_region_selection END,
           updated_at = NOW()
         WHERE id = ${id}
         RETURNING *
@@ -459,12 +481,13 @@ export class Database {
       const result = await s`
         INSERT INTO orders (
           out_trade_no, email, amount, subject, status, pay_channel, product_id, code,
-          quantity, delivery_type,
+          quantity, delivery_type, selected_region, region_name,
           paid_at, fulfilled_at, gateway_resp, notify_raw, query_password_hash, created_at, updated_at
         ) VALUES (
           ${order.out_trade_no}, ${order.email}, ${order.amount}, ${order.subject},
           ${order.status}, ${order.pay_channel}, ${order.product_id || null}, ${order.code || null},
           ${order.quantity || 1}, ${order.delivery_type || "auto"},
+          ${order.selected_region || null}, ${order.region_name || null},
           ${order.paid_at || null}, ${order.fulfilled_at || null},
           ${order.gateway_resp || null}, ${order.notify_raw || null},
           ${order.query_password_hash || null},

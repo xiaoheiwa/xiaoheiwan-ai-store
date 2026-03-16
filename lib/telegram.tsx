@@ -13,6 +13,7 @@ interface OrderNotification {
   quantity: number
   paymentMethod: string
   codes?: string[]
+  regionName?: string
 }
 
 interface StockNotification {
@@ -98,13 +99,14 @@ export async function notifyOrderSuccess(data: OrderNotification): Promise<boole
   const codesPreview = data.codes?.length 
     ? `\n<b>激活码:</b> <code>${data.codes.slice(0, 3).join(", ")}${data.codes.length > 3 ? ` (+${data.codes.length - 3}个)` : ""}</code>` 
     : ""
+  const regionLine = data.regionName ? `\n<b>区域:</b> ${data.regionName}` : ""
 
   const message = `
 <b>🎉 新订单成功</b>
 
 <b>订单号:</b> <code>${data.orderNo}</code>
 <b>邮箱:</b> ${data.email}
-<b>产品:</b> ${data.productName || "激活码"}
+<b>产品:</b> ${data.productName || "激活码"}${regionLine}
 <b>数量:</b> ${data.quantity}
 <b>金额:</b> ¥${data.amount}
 <b>支付方式:</b> ${paymentLabel}${codesPreview}

@@ -147,6 +147,7 @@ async function handle(params: Record<string, string>) {
           productName,
           quantity: orderQuantity,
           paymentMethod: "alipay",
+          regionName: order.region_name || undefined,
         })
       } catch (tgError) {
         console.error("[v0] Telegram notification failed:", tgError)
@@ -263,6 +264,7 @@ async function handle(params: Record<string, string>) {
         quantity: orderQuantity,
         paymentMethod: "alipay",
         codes: allCodes,
+        regionName: order.region_name || undefined,
       })
 
       // Check stock and send low stock alert if needed

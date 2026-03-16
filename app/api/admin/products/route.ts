@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (authError) return authError
   try {
     const body = await request.json()
-    const { name, description, details, price, original_price, sku, sort_order, delivery_type, price_tiers, category_id } = body
+    const { name, description, details, price, original_price, sku, sort_order, delivery_type, price_tiers, category_id, region_options, require_region_selection } = body
 
     if (!name || !price) {
       return NextResponse.json({ error: "Name and price are required" }, { status: 400 })
@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
       delivery_type: delivery_type || "auto",
       price_tiers: price_tiers || null,
       category_id: category_id || null,
+      region_options: region_options || null,
+      require_region_selection: require_region_selection || false,
     })
 
     return NextResponse.json(product)
@@ -63,6 +65,8 @@ export async function PUT(request: NextRequest) {
     if (updates.sort_order !== undefined) updates.sort_order = Number.parseInt(updates.sort_order)
     if (updates.price_tiers !== undefined) updates.price_tiers = updates.price_tiers || null
     if (updates.category_id !== undefined) updates.category_id = updates.category_id || null
+    if (updates.region_options !== undefined) updates.region_options = updates.region_options || null
+    if (updates.require_region_selection !== undefined) updates.require_region_selection = !!updates.require_region_selection
 
     const product = await Database.updateProduct(id, updates)
     return NextResponse.json(product)

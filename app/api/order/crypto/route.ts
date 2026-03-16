@@ -25,7 +25,7 @@ async function getUsdtRate(): Promise<number> {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
-    const { email, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto" } = body
+    const { email, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName } = body
 
     if (!email || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
@@ -88,6 +88,8 @@ export async function POST(req: Request) {
       query_password_hash: queryPasswordHash,
       quantity,
       delivery_type: deliveryType,
+      selected_region: selectedRegion || null,
+      region_name: regionName || null,
     })
 
     return NextResponse.json({
