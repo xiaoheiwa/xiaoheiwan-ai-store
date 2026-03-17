@@ -1,15 +1,14 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Trash2, GripVertical, Type, ImageIcon, ArrowUp, ArrowDown, Upload, Loader2, Link, Plus, X, Check, Copy } from "lucide-react"
+import { ImageIcon, Loader2, Bold, Italic, List, ListOrdered, Heading1, Heading2, Undo, Redo, Link as LinkIcon } from "lucide-react"
 
 export interface DetailBlock {
   id: string
   type: "text" | "image"
   content: string
-  caption?: string // for images
+  caption?: string
 }
 
 interface RichDetailsEditorProps {
@@ -18,457 +17,500 @@ interface RichDetailsEditorProps {
 }
 
 export function RichDetailsEditor({ value, onChange }: RichDetailsEditorProps) {
-  const [imageUrlInput, setImageUrlInput] = useState("")
-  const [showUrlInput, setShowUrlInput] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState("")
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
-  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState("")
+  const [isInitialized, setIsInitialized] = useState(false)
 
-  const generateId = () => Math.random().toString(36).substring(2, 9)
+  // Convert blocks to HTML for editing
+  const blocksToHtml = useCallback((blocks: DetailBlock[]): string => {
+    return blocks.map(block => {
+      if (block.type === "text") {
+        return block.content
+      } else if (block.type === "image") {
+        const caption = block.caption ? `<figcaption>${block.caption}</figcaption>` : ""
+        return `<figure data-type="image"><img src="${block.content}" alt="${block.caption || "图片"}" />${caption}</figure>`
+      }
+      return ""
+    }).join("")
+  }, [])
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Convert HTML to blocks for storage
+  const htmlToBlocks = useCallback((html: string): DetailBlock[] => {
+    const blocks: DetailBlock[] = []
+    const tempDiv = document.createElement("div")
+    tempDiv.innerHTML = html
+
+    const processNode = (node: Node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement
+        
+        if (el.tagName === "FIGURE" && el.dataset.type === "image") {
+          const img = el.querySelector("img")
+          const figcaption = el.querySelector("figcaption")
+          if (img?.src) {
+            blocks.push({
+              id: Math.random().toString(36).substring(2, 9),
+              type: "image",
+              content: img.src,
+              caption: figcaption?.textContent || ""
+            })
+          }
+          return
+        }
+
+        if (el.tagName === "IMG") {
+          blocks.push({
+            id: Math.random().toString(36).substring(2, 9),
+            type: "image",
+            content: el.getAttribute("src") || "",
+            caption: el.getAttribute("alt") || ""
+          })
+          return
+        }
+      }
+
+      if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && !["FIGURE", "IMG"].includes((node as HTMLElement).tagName))) {
+        const text = node.nodeType === Node.TEXT_NODE 
+          ? node.textContent 
+          : (node as HTMLElement).outerHTML
+        if (text && text.trim()) {
+          // Merge with previous text block if exists
+          const lastBlock = blocks[blocks.length - 1]
+          if (lastBlock?.type === "text") {
+            lastBlock.content += text
+          } else {
+            blocks.push({
+              id: Math.random().toString(36).substring(2, 9),
+              type: "text",
+              content: text
+            })
+          }
+        }
+      }
+    }
+
+    // Process all child nodes
+    Array.from(tempDiv.childNodes).forEach(node => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement
+        if (el.tagName === "FIGURE" || el.tagName === "IMG") {
+          processNode(node)
+        } else {
+          // For other elements, keep the HTML
+          const html = el.outerHTML
+          if (html && html.trim()) {
+            const lastBlock = blocks[blocks.length - 1]
+            if (lastBlock?.type === "text") {
+              lastBlock.content += html
+            } else {
+              blocks.push({
+                id: Math.random().toString(36).substring(2, 9),
+                type: "text",
+                content: html
+              })
+            }
+          }
+        }
+      } else if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+        const lastBlock = blocks[blocks.length - 1]
+        if (lastBlock?.type === "text") {
+          lastBlock.content += node.textContent
+        } else {
+          blocks.push({
+            id: Math.random().toString(36).substring(2, 9),
+            type: "text",
+            content: node.textContent
+          })
+        }
+      }
+    })
+
+    return blocks
+  }, [])
+
+  // Initialize editor content
+  useEffect(() => {
+    if (editorRef.current && !isInitialized) {
+      editorRef.current.innerHTML = blocksToHtml(value)
+      setIsInitialized(true)
+    }
+  }, [value, blocksToHtml, isInitialized])
+
+  // Reset when value is empty (new product form)
+  useEffect(() => {
+    if (value.length === 0 && editorRef.current && isInitialized) {
+      editorRef.current.innerHTML = ""
+    }
+  }, [value, isInitialized])
+
+  // Handle content changes
+  const handleInput = useCallback(() => {
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML
+      const blocks = htmlToBlocks(html)
+      onChange(blocks)
+    }
+  }, [htmlToBlocks, onChange])
+
+  // Upload image to server
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "上传失败")
+      }
+
+      return data.url
+    } catch (error) {
+      console.error("Upload error:", error)
+      return null
+    }
+  }
+
+  // Insert image at cursor position
+  const insertImageAtCursor = useCallback((url: string, alt: string = "图片") => {
+    if (!editorRef.current) return
+
+    const figure = document.createElement("figure")
+    figure.setAttribute("data-type", "image")
+    figure.contentEditable = "false"
+    figure.className = "my-4 relative group"
+    
+    const img = document.createElement("img")
+    img.src = url
+    img.alt = alt
+    img.className = "max-w-full h-auto rounded-lg border border-border mx-auto cursor-pointer"
+    
+    figure.appendChild(img)
+    
+    // Insert at cursor or at end
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        range.deleteContents()
+        range.insertNode(figure)
+        range.setStartAfter(figure)
+        range.collapse(true)
+        selection.removeAllRanges()
+        selection.addRange(range)
+      } else {
+        editorRef.current.appendChild(figure)
+      }
+    } else {
+      editorRef.current.appendChild(figure)
+    }
+
+    // Add a paragraph after for continued typing
+    const p = document.createElement("p")
+    p.innerHTML = "<br>"
+    figure.after(p)
+
+    handleInput()
+  }, [handleInput])
+
+  // Handle paste event
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault()
+        const file = item.getAsFile()
+        if (file) {
+          setUploading(true)
+          setUploadProgress("正在上传粘贴的图片...")
+          const url = await uploadImage(file)
+          if (url) {
+            insertImageAtCursor(url, file.name)
+          }
+          setUploading(false)
+          setUploadProgress("")
+        }
+        return
+      }
+    }
+  }, [insertImageAtCursor])
+
+  // Handle drag and drop
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const files = e.dataTransfer?.files
+    if (!files || files.length === 0) return
+
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith("image/"))
+    if (imageFiles.length === 0) return
+
+    setUploading(true)
+    setUploadProgress(`正在上传 ${imageFiles.length} 张图片...`)
+
+    for (let i = 0; i < imageFiles.length; i++) {
+      setUploadProgress(`正在上传第 ${i + 1}/${imageFiles.length} 张图片...`)
+      const url = await uploadImage(imageFiles[i])
+      if (url) {
+        insertImageAtCursor(url, imageFiles[i].name)
+      }
+    }
+
+    setUploading(false)
+    setUploadProgress("")
+  }, [insertImageAtCursor])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  // Handle file input change
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
     setUploading(true)
-    setUploadError("")
+    setUploadProgress(`正在上传 ${files.length} 张图片...`)
 
-    try {
-      // Support multiple file uploads
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData()
-        formData.append("file", file)
-
-        const response = await fetch("/api/upload/image", {
-          method: "POST",
-          body: formData,
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || "上传失败")
-        }
-
-        return { id: generateId(), type: "image" as const, content: data.url, caption: "" }
-      })
-
-      const newBlocks = await Promise.all(uploadPromises)
-      onChange([...value, ...newBlocks])
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "上传失败")
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgress(`正在上传第 ${i + 1}/${files.length} 张图片...`)
+      const url = await uploadImage(files[i])
+      if (url) {
+        insertImageAtCursor(url, files[i].name)
       }
     }
-  }
 
-  const addTextBlock = () => {
-    onChange([...value, { id: generateId(), type: "text", content: "" }])
-  }
-
-  const addImageBlock = () => {
-    if (!imageUrlInput.trim()) return
-    onChange([...value, { id: generateId(), type: "image", content: imageUrlInput.trim(), caption: "" }])
-    setImageUrlInput("")
-    setShowUrlInput(false)
-  }
-
-  const updateBlock = (id: string, updates: Partial<DetailBlock>) => {
-    onChange(value.map(block => block.id === id ? { ...block, ...updates } : block))
-  }
-
-  const removeBlock = (id: string) => {
-    onChange(value.filter(block => block.id !== id))
-  }
-
-  const duplicateBlock = (block: DetailBlock) => {
-    const newBlock = { ...block, id: generateId() }
-    const index = value.findIndex(b => b.id === block.id)
-    const newBlocks = [...value]
-    newBlocks.splice(index + 1, 0, newBlock)
-    onChange(newBlocks)
-    setCopiedId(block.id)
-    setTimeout(() => setCopiedId(null), 1000)
-  }
-
-  const moveBlock = (index: number, direction: "up" | "down") => {
-    if (direction === "up" && index === 0) return
-    if (direction === "down" && index === value.length - 1) return
+    setUploading(false)
+    setUploadProgress("")
     
-    const newBlocks = [...value]
-    const targetIndex = direction === "up" ? index - 1 : index + 1
-    ;[newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]]
-    onChange(newBlocks)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
   }
 
-  // Drag and drop handlers
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index)
+  // Toolbar formatting commands
+  const execCommand = (command: string, value: string | undefined = undefined) => {
+    document.execCommand(command, false, value)
+    editorRef.current?.focus()
+    handleInput()
   }
 
-  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
-    e.preventDefault()
-    if (draggedIndex !== null && draggedIndex !== index) {
-      setDragOverIndex(index)
-    }
-  }, [draggedIndex])
-
-  const handleDragEnd = () => {
-    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
-      const newBlocks = [...value]
-      const [draggedBlock] = newBlocks.splice(draggedIndex, 1)
-      newBlocks.splice(dragOverIndex, 0, draggedBlock)
-      onChange(newBlocks)
-    }
-    setDraggedIndex(null)
-    setDragOverIndex(null)
+  const formatBlock = (tag: string) => {
+    document.execCommand("formatBlock", false, tag)
+    editorRef.current?.focus()
+    handleInput()
   }
 
-  // Insert block at specific position
-  const insertBlockAt = (index: number, type: "text" | "image") => {
-    const newBlock: DetailBlock = {
-      id: generateId(),
-      type,
-      content: "",
-      ...(type === "image" ? { caption: "" } : {})
+  const insertLink = () => {
+    const url = prompt("请输入链接地址:", "https://")
+    if (url) {
+      execCommand("createLink", url)
     }
-    const newBlocks = [...value]
-    newBlocks.splice(index, 0, newBlock)
-    onChange(newBlocks)
   }
 
   return (
-    <div className="space-y-2">
-      {/* Block list */}
-      {value.length > 0 && (
-        <div className="space-y-1">
-          {value.map((block, index) => (
-            <div key={block.id}>
-              {/* Insert indicator between blocks */}
-              {index === 0 && (
-                <div className="group/insert relative h-2 -mb-1">
-                  <div className="absolute inset-x-0 top-1/2 h-0.5 bg-transparent group-hover/insert:bg-primary/30 transition-colors rounded" />
-                  <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 opacity-0 group-hover/insert:opacity-100 transition-opacity flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => insertBlockAt(index, "text")}
-                      className="p-1 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
-                      title="插入文本块"
-                    >
-                      <Type className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => insertBlockAt(index, "image")}
-                      className="p-1 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
-                      title="插入图片块"
-                    >
-                      <ImageIcon className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-                className={`group relative border rounded-lg transition-all duration-200 ${
-                  draggedIndex === index
-                    ? "opacity-50 border-primary bg-primary/5"
-                    : dragOverIndex === index
-                    ? "border-primary border-2 bg-primary/5"
-                    : "border-border bg-background hover:border-muted-foreground/30"
-                }`}
-              >
-                {/* Block header - more compact */}
-                <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-muted/30 rounded-t-lg">
-                  <div className="cursor-grab active:cursor-grabbing p-0.5 hover:bg-muted rounded">
-                    <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                  </div>
-                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    {block.type === "text" ? (
-                      <>
-                        <Type className="w-3 h-3" />
-                        <span className="hidden sm:inline">文本</span>
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className="w-3 h-3" />
-                        <span className="hidden sm:inline">图片</span>
-                      </>
-                    )}
-                  </span>
-                  <span className="text-xs text-muted-foreground/50 ml-1">#{index + 1}</span>
-                  
-                  <div className="ml-auto flex items-center gap-0.5">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => duplicateBlock(block)}
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="复制块"
-                    >
-                      {copiedId === block.id ? (
-                        <Check className="w-3 h-3 text-green-500" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => moveBlock(index, "up")}
-                      disabled={index === 0}
-                      className="h-6 w-6 p-0"
-                      title="上移"
-                    >
-                      <ArrowUp className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => moveBlock(index, "down")}
-                      disabled={index === value.length - 1}
-                      className="h-6 w-6 p-0"
-                      title="下移"
-                    >
-                      <ArrowDown className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeBlock(block.id)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      title="删除"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Block content */}
-                <div className="p-2.5">
-                  {block.type === "text" ? (
-                    <textarea
-                      value={block.content}
-                      onChange={(e) => updateBlock(block.id, { content: e.target.value })}
-                      placeholder="输入文本内容，支持多行..."
-                      className="w-full min-h-[80px] p-2.5 border border-input bg-background text-sm rounded-md resize-y focus:outline-none focus:ring-2 focus:ring-ring font-sans leading-relaxed"
-                      rows={3}
-                    />
-                  ) : (
-                    <div className="space-y-2">
-                      {block.content ? (
-                        <div className="relative group/img">
-                          <img
-                            src={block.content}
-                            alt={block.caption || "教程图片"}
-                            className="max-w-full max-h-[300px] object-contain rounded-lg border border-border mx-auto"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='100'%3E%3Crect fill='%23f1f5f9' width='200' height='100'/%3E%3Ctext fill='%2394a3b8' x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-size='14'%3E图片加载失败%3C/text%3E%3C/svg%3E"
-                            }}
-                          />
-                          {/* Quick actions overlay */}
-                          <div className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="h-7 text-xs shadow-md"
-                            >
-                              <Upload className="w-3 h-3 mr-1" />
-                              替换
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div 
-                          className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
-                          <p className="text-sm text-muted-foreground">点击上传图片</p>
-                          <p className="text-xs text-muted-foreground/70 mt-1">或在下方输入图片 URL</p>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <Input
-                          value={block.content}
-                          onChange={(e) => updateBlock(block.id, { content: e.target.value })}
-                          placeholder="图片 URL"
-                          className="text-xs h-8"
-                        />
-                        <Input
-                          value={block.caption || ""}
-                          onChange={(e) => updateBlock(block.id, { caption: e.target.value })}
-                          placeholder="图片说明（可选）"
-                          className="text-xs h-8"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Insert indicator after block */}
-              <div className="group/insert relative h-2 -mt-1">
-                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-transparent group-hover/insert:bg-primary/30 transition-colors rounded" />
-                <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 opacity-0 group-hover/insert:opacity-100 transition-opacity flex gap-1 z-10">
-                  <button
-                    type="button"
-                    onClick={() => insertBlockAt(index + 1, "text")}
-                    className="p-1 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors shadow-sm"
-                    title="插入文本块"
-                  >
-                    <Type className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => insertBlockAt(index + 1, "image")}
-                    className="p-1 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors shadow-sm"
-                    title="插入图片块"
-                  >
-                    <ImageIcon className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Add block area */}
-      <div className="p-3 border border-dashed border-border rounded-lg bg-muted/10 space-y-2">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addTextBlock}
-            className="flex-1 min-w-[120px] h-9"
-          >
-            <Type className="w-4 h-4 mr-2" />
-            添加文本
-          </Button>
-          
-          {/* Hidden file input - support multiple */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            onChange={handleFileUpload}
-            className="hidden"
-            multiple
-          />
-          
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="flex-1 min-w-[120px] h-9"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                上传中...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4 mr-2" />
-                上传图片
-              </>
-            )}
-          </Button>
-          
-          <Button
-            type="button"
-            variant={showUrlInput ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setShowUrlInput(!showUrlInput)}
-            className="h-9 px-3"
-          >
-            {showUrlInput ? <X className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-          </Button>
-        </div>
+    <div className="border border-border rounded-lg overflow-hidden bg-background">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-border bg-muted/30">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand("bold")}
+          className="h-8 w-8 p-0"
+          title="粗体 (Ctrl+B)"
+        >
+          <Bold className="w-4 h-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand("italic")}
+          className="h-8 w-8 p-0"
+          title="斜体 (Ctrl+I)"
+        >
+          <Italic className="w-4 h-4" />
+        </Button>
         
-        {/* URL input (collapsible) */}
-        {showUrlInput && (
-          <div className="flex gap-2 pt-1">
-            <Input
-              value={imageUrlInput}
-              onChange={(e) => setImageUrlInput(e.target.value)}
-              placeholder="输入图片 URL，按回车添加"
-              className="flex-1 h-9 text-sm"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  addImageBlock()
-                }
-                if (e.key === "Escape") {
-                  setShowUrlInput(false)
-                }
-              }}
-              autoFocus
-            />
-            <Button
-              type="button"
-              size="sm"
-              onClick={addImageBlock}
-              disabled={!imageUrlInput.trim()}
-              className="h-9"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              添加
-            </Button>
-          </div>
-        )}
+        <div className="w-px h-5 bg-border mx-1" />
         
-        {/* Upload error message */}
-        {uploadError && (
-          <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 px-2 py-1.5 rounded">
-            <X className="w-3 h-3" />
-            {uploadError}
-            <button 
-              type="button"
-              onClick={() => setUploadError("")}
-              className="ml-auto hover:text-destructive/80"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => formatBlock("h1")}
+          className="h-8 w-8 p-0"
+          title="大标题"
+        >
+          <Heading1 className="w-4 h-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => formatBlock("h2")}
+          className="h-8 w-8 p-0"
+          title="小标题"
+        >
+          <Heading2 className="w-4 h-4" />
+        </Button>
+        
+        <div className="w-px h-5 bg-border mx-1" />
+        
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand("insertUnorderedList")}
+          className="h-8 w-8 p-0"
+          title="无序列表"
+        >
+          <List className="w-4 h-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand("insertOrderedList")}
+          className="h-8 w-8 p-0"
+          title="有序列表"
+        >
+          <ListOrdered className="w-4 h-4" />
+        </Button>
+        
+        <div className="w-px h-5 bg-border mx-1" />
+        
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={insertLink}
+          className="h-8 w-8 p-0"
+          title="插入链接"
+        >
+          <LinkIcon className="w-4 h-4" />
+        </Button>
+        
+        <div className="w-px h-5 bg-border mx-1" />
+        
+        {/* Image upload button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          onChange={handleFileChange}
+          className="hidden"
+          multiple
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="h-8 px-2 gap-1.5"
+          title="上传图片"
+        >
+          {uploading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <ImageIcon className="w-4 h-4" />
+          )}
+          <span className="text-xs hidden sm:inline">插入图片</span>
+        </Button>
+        
+        <div className="w-px h-5 bg-border mx-1" />
+        
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand("undo")}
+          className="h-8 w-8 p-0"
+          title="撤销 (Ctrl+Z)"
+        >
+          <Undo className="w-4 h-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand("redo")}
+          className="h-8 w-8 p-0"
+          title="重做 (Ctrl+Y)"
+        >
+          <Redo className="w-4 h-4" />
+        </Button>
+        
+        {uploadProgress && (
+          <span className="ml-2 text-xs text-muted-foreground flex items-center gap-1.5">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            {uploadProgress}
+          </span>
         )}
       </div>
 
-      {/* Empty state */}
-      {value.length === 0 && (
-        <div className="text-center py-6 text-muted-foreground">
-          <div className="flex justify-center gap-4 mb-3">
-            <div className="p-3 rounded-full bg-muted">
-              <Type className="w-5 h-5" />
-            </div>
-            <div className="p-3 rounded-full bg-muted">
-              <ImageIcon className="w-5 h-5" />
-            </div>
-          </div>
-          <p className="text-sm">点击上方按钮添加文本或图片</p>
-          <p className="text-xs mt-1 text-muted-foreground/70">支持拖拽排序、多图上传</p>
-        </div>
-      )}
+      {/* Editor area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        onPaste={handlePaste}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        className="min-h-[300px] max-h-[600px] overflow-y-auto p-4 focus:outline-none prose prose-sm max-w-none
+          [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-4
+          [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3
+          [&_p]:mb-2 [&_p]:leading-relaxed
+          [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2
+          [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2
+          [&_li]:mb-1
+          [&_a]:text-primary [&_a]:underline
+          [&_figure]:my-4 [&_figure]:text-center
+          [&_figure_img]:max-w-full [&_figure_img]:h-auto [&_figure_img]:rounded-lg [&_figure_img]:border [&_figure_img]:border-border [&_figure_img]:mx-auto
+          [&_figcaption]:text-xs [&_figcaption]:text-muted-foreground [&_figcaption]:mt-2 [&_figcaption]:italic
+          [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-border [&_img]:my-3"
+        data-placeholder="在此编写产品详情...&#10;&#10;提示:&#10;- 直接输入文字即可&#10;- 粘贴或拖拽图片自动上传&#10;- 点击工具栏按钮格式化文本"
+        suppressContentEditableWarning
+      />
+
+      {/* Placeholder styles */}
+      <style jsx global>{`
+        [contenteditable]:empty:before {
+          content: attr(data-placeholder);
+          color: #9ca3af;
+          pointer-events: none;
+          white-space: pre-wrap;
+        }
+        [contenteditable] figure {
+          position: relative;
+        }
+        [contenteditable] figure:hover::after {
+          content: "点击图片可选中";
+          position: absolute;
+          bottom: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(0,0,0,0.7);
+          color: white;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+      `}</style>
     </div>
   )
 }
@@ -487,9 +529,9 @@ export function parseDetailsToBlocks(details: string | null): DetailBlock[] {
     // Not JSON, convert from plain text
   }
   
-  // Convert plain text to a single text block
+  // Convert plain text to a single text block (wrap in paragraph)
   if (details.trim()) {
-    return [{ id: Math.random().toString(36).substring(2, 9), type: "text", content: details }]
+    return [{ id: Math.random().toString(36).substring(2, 9), type: "text", content: `<p>${details.replace(/\n/g, "</p><p>")}</p>` }]
   }
   
   return []
