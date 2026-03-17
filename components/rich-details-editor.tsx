@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Trash2, GripVertical, Type, ImageIcon, ArrowUp, ArrowDown } from "lucide-react"
+import { Trash2, GripVertical, Type, ImageIcon, ArrowUp, ArrowDown, Upload, Loader2, Link } from "lucide-react"
 
 export interface DetailBlock {
   id: string
@@ -19,8 +19,46 @@ interface RichDetailsEditorProps {
 
 export function RichDetailsEditor({ value, onChange }: RichDetailsEditorProps) {
   const [imageUrlInput, setImageUrlInput] = useState("")
+  const [showUrlInput, setShowUrlInput] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const generateId = () => Math.random().toString(36).substring(2, 9)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    setUploadError("")
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "上传失败")
+      }
+
+      // Add image block with uploaded URL
+      onChange([...value, { id: generateId(), type: "image", content: data.url, caption: "" }])
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "上传失败")
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
+  }
 
   const addTextBlock = () => {
     onChange([...value, { id: generateId(), type: "text", content: "" }])
@@ -150,41 +188,93 @@ export function RichDetailsEditor({ value, onChange }: RichDetailsEditorProps) {
       )}
 
       {/* Add block buttons */}
-      <div className="flex flex-col sm:flex-row gap-2 p-3 border border-dashed border-border rounded-lg bg-muted/20">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addTextBlock}
-          className="flex-1"
-        >
-          <Type className="w-4 h-4 mr-2" />
-          添加文本块
-        </Button>
-        <div className="flex gap-2 flex-1">
-          <Input
-            value={imageUrlInput}
-            onChange={(e) => setImageUrlInput(e.target.value)}
-            placeholder="输入图片 URL"
-            className="flex-1 text-sm"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                addImageBlock()
-              }
-            }}
-          />
+      <div className="space-y-2 p-3 border border-dashed border-border rounded-lg bg-muted/20">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={addImageBlock}
-            disabled={!imageUrlInput.trim()}
+            onClick={addTextBlock}
+            className="flex-1"
           >
-            <ImageIcon className="w-4 h-4 mr-1" />
-            添加
+            <Type className="w-4 h-4 mr-2" />
+            添加文本块
+          </Button>
+          
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex-1"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                上传中...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                上传图片
+              </>
+            )}
+          </Button>
+          
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowUrlInput(!showUrlInput)}
+            className="sm:w-auto"
+          >
+            <Link className="w-4 h-4 mr-2" />
+            URL
           </Button>
         </div>
+        
+        {/* URL input (collapsible) */}
+        {showUrlInput && (
+          <div className="flex gap-2">
+            <Input
+              value={imageUrlInput}
+              onChange={(e) => setImageUrlInput(e.target.value)}
+              placeholder="输入图片 URL"
+              className="flex-1 text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  addImageBlock()
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addImageBlock}
+              disabled={!imageUrlInput.trim()}
+            >
+              <ImageIcon className="w-4 h-4 mr-1" />
+              添加
+            </Button>
+          </div>
+        )}
+        
+        {/* Upload error message */}
+        {uploadError && (
+          <p className="text-xs text-destructive">{uploadError}</p>
+        )}
       </div>
 
       {value.length === 0 && (
