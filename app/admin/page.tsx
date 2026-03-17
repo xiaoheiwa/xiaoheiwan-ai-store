@@ -13,6 +13,7 @@ import { BlogManager } from "@/components/blog-manager"
 import { AffiliateManager } from "@/components/affiliate-manager"
 import { FinancePanel } from "@/components/finance-panel"
 import { MarkdownEditor } from "@/components/markdown-editor"
+import { RichDetailsEditor, parseDetailsToBlocks, blocksToString, type DetailBlock } from "@/components/rich-details-editor"
 import {
   AlertCircle,
   BarChart3,
@@ -206,7 +207,7 @@ export default function AdminPage() {
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [showProductForm, setShowProductForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [productForm, setProductForm] = useState({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined, region_options: [] as RegionOption[], require_region_selection: false, image_url: "" })
+  const [productForm, setProductForm] = useState({ name: "", description: "", details: [] as DetailBlock[], price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined, region_options: [] as RegionOption[], require_region_selection: false, image_url: "" })
   const [productLoading, setProductLoading] = useState(false)
   const [importProductId, setImportProductId] = useState("")
   const [importBatchName, setImportBatchName] = useState("")
@@ -2487,7 +2488,7 @@ export default function AdminPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">客服微信号</Label>
+                    <Label className="text-sm font-medium">客��微信号</Label>
                     <Input
                       value={emailTemplate.wechat_id}
                       onChange={(e) => setEmailTemplate({ ...emailTemplate, wechat_id: e.target.value })}
@@ -2605,15 +2606,19 @@ export default function AdminPage() {
     }
     setProductLoading(true)
     try {
+      const dataToSend = {
+        ...productForm,
+        details: blocksToString(productForm.details),
+      }
       const response = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-        body: JSON.stringify(productForm),
+        body: JSON.stringify(dataToSend),
       })
       if (response.ok) {
         setMessage("产品创建成功")
         setShowProductForm(false)
-        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
+        setProductForm({ name: "", description: "", details: [], price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
         loadData()
       } else {
         setMessage("创建产品失败")
@@ -2628,16 +2633,21 @@ export default function AdminPage() {
     if (!editingProduct) return
     setProductLoading(true)
     try {
+      const dataToSend = {
+        id: editingProduct.id,
+        ...productForm,
+        details: blocksToString(productForm.details),
+      }
       const response = await fetch("/api/admin/products", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-        body: JSON.stringify({ id: editingProduct.id, ...productForm }),
+        body: JSON.stringify(dataToSend),
       })
       if (response.ok) {
         setMessage("产品更新成功")
         setEditingProduct(null)
         setShowProductForm(false)
-        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
+        setProductForm({ name: "", description: "", details: [], price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
         loadData()
       } else {
         setMessage("更新产品失败")
@@ -2689,7 +2699,7 @@ export default function AdminPage() {
     setProductForm({
       name: product.name,
       description: product.description || "",
-      details: (product as any).details || "",
+      details: parseDetailsToBlocks((product as any).details || ""),
       price: product.price.toString(),
       original_price: product.original_price?.toString() || "",
       sku: product.sku || "",
@@ -2901,7 +2911,7 @@ export default function AdminPage() {
           <h2 className="text-lg font-semibold">产品列表</h2>
           <p className="text-sm text-muted-foreground">管理可销售的产品品类</p>
         </div>
-        <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" }); setShowProductForm(true) }}>
+        <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: [], price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" }); setShowProductForm(true) }}>
           <Plus className="w-4 h-4 mr-2" />
           添加产品
         </Button>
@@ -3169,13 +3179,11 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <Label>产品详情</Label>
-              <p className="text-xs text-muted-foreground mb-1.5">详细介绍产品信息，支持多行文本，将显示在产品详情页</p>
-              <textarea
+              <Label>产品详情（图文教程）</Label>
+              <p className="text-xs text-muted-foreground mb-2">添加文本和图片块来构建图文教程，支持自由排列</p>
+              <RichDetailsEditor
                 value={productForm.details}
-                onChange={(e) => setProductForm({ ...productForm, details: e.target.value })}
-                placeholder={"例如：\n- 适用平台：ChatGPT 官网\n- 有效期：1个月\n- 使用方式：登录后在设置中输入激活码\n- 注意事项：请确保当前账号没有活跃订阅"}
-                className="w-full h-40 p-3 border border-input bg-background text-sm rounded-md resize-y focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                onChange={(blocks) => setProductForm({ ...productForm, details: blocks })}
               />
             </div>
             <div className="flex gap-3">
