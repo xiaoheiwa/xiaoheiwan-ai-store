@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
-import { sendTelegramMessageWithId } from "@/lib/telegram.tsx"
+import { sendTelegramMessageWithId } from "@/lib/telegram"
 
 const sql = neon(process.env.DATABASE_URL!)
 

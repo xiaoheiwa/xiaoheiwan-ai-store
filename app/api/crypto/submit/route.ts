@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
-import { notifyCryptoPending, notifyOrderSuccess, notifyLowStock } from "@/lib/telegram.tsx"
+import { notifyCryptoPending, notifyOrderSuccess, notifyLowStock } from "@/lib/telegram"
 import { verifyUsdtTransaction } from "@/lib/tron-verify"
 import { sendCodeMail } from "@/lib/resend"
 
