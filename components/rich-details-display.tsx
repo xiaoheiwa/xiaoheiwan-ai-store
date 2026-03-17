@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import type { DetailBlock } from "./rich-details-editor"
 import { X, ZoomIn, ZoomOut, RotateCw } from "lucide-react"
 
 interface RichDetailsDisplayProps {
@@ -168,6 +167,35 @@ function ImageLightbox({
   )
 }
 
+// Parse old block format or HTML
+function parseDetailsContent(details: string): string {
+  // Try to parse as JSON blocks (old format)
+  try {
+    const parsed = JSON.parse(details)
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type) {
+      return parsed.map(block => {
+        if (block.type === "text") {
+          return `<p>${block.content.replace(/\n/g, '<br>')}</p>`
+        } else if (block.type === "image") {
+          const caption = block.caption ? `<figcaption>${block.caption}</figcaption>` : ""
+          return `<figure><img src="${block.content}" alt="${block.caption || "图片"}" />${caption}</figure>`
+        }
+        return ""
+      }).join("")
+    }
+  } catch {
+    // Not JSON
+  }
+
+  // If already HTML, return as-is
+  if (details.includes('<') && details.includes('>')) {
+    return details
+  }
+
+  // Plain text - convert to HTML
+  return `<p>${details.replace(/\n/g, '<br>')}</p>`
+}
+
 export function RichDetailsDisplay({ details }: RichDetailsDisplayProps) {
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -180,6 +208,7 @@ export function RichDetailsDisplay({ details }: RichDetailsDisplayProps) {
     const handleImageClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (target.tagName === "IMG") {
+        e.preventDefault()
         const img = target as HTMLImageElement
         setLightboxImage({ src: img.src, alt: img.alt || "图片" })
       }
@@ -191,53 +220,32 @@ export function RichDetailsDisplay({ details }: RichDetailsDisplayProps) {
 
   if (!details) return null
 
-  // Try to parse as JSON blocks
-  let blocks: DetailBlock[] = []
-  try {
-    const parsed = JSON.parse(details)
-    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type) {
-      blocks = parsed
-    }
-  } catch {
-    // Not JSON, render as plain text
-    return (
-      <>
-        <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed whitespace-pre-wrap break-words overflow-hidden">
-          {details}
-        </div>
-      </>
-    )
-  }
-
-  if (blocks.length === 0) return null
-
-  // Combine all blocks into HTML and render
-  const htmlContent = blocks.map(block => {
-    if (block.type === "text") {
-      return block.content
-    } else if (block.type === "image") {
-      const caption = block.caption ? `<figcaption class="text-xs text-center text-muted-foreground mt-2 italic">${block.caption}</figcaption>` : ""
-      return `<figure class="my-4 text-center"><img src="${block.content}" alt="${block.caption || "教程图片"}" class="max-w-full h-auto rounded-xl border border-border shadow-sm mx-auto cursor-pointer hover:shadow-md transition-shadow" loading="lazy" />${caption}</figure>`
-    }
-    return ""
-  }).join("")
+  const htmlContent = parseDetailsContent(details)
 
   return (
     <>
       <div 
         ref={containerRef}
         className="prose prose-sm max-w-none text-foreground
-          [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-foreground
-          [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-foreground
-          [&_p]:mb-3 [&_p]:leading-relaxed [&_p]:text-muted-foreground
-          [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ul]:text-muted-foreground
-          [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_ol]:text-muted-foreground
-          [&_li]:mb-1.5
+          [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:mt-6 [&_h1]:text-foreground
+          [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mb-3 [&_h2]:mt-5 [&_h2]:text-foreground
+          [&_h3]:text-lg [&_h3]:font-medium [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-foreground
+          [&_p]:mb-4 [&_p]:leading-relaxed [&_p]:text-muted-foreground
+          [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ul]:text-muted-foreground [&_ul]:space-y-1
+          [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_ol]:text-muted-foreground [&_ol]:space-y-1
+          [&_li]:leading-relaxed
           [&_a]:text-primary [&_a]:underline [&_a]:hover:text-primary/80
           [&_strong]:font-semibold [&_strong]:text-foreground
           [&_em]:italic
-          [&_figure]:my-4 [&_figure]:text-center
-          [&_img]:cursor-pointer [&_img]:hover:opacity-90 [&_img]:transition-opacity"
+          [&_u]:underline
+          [&_s]:line-through
+          [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono
+          [&_pre]:bg-muted [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-4
+          [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_blockquote]:my-4
+          [&_hr]:border-border [&_hr]:my-6
+          [&_figure]:my-4
+          [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:text-muted-foreground [&_figcaption]:mt-2 [&_figcaption]:italic
+          [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:cursor-pointer [&_img]:hover:shadow-lg [&_img]:transition-shadow [&_img]:my-4 [&_img]:mx-auto [&_img]:block"
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
 

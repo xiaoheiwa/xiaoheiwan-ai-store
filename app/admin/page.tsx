@@ -13,7 +13,7 @@ import { BlogManager } from "@/components/blog-manager"
 import { AffiliateManager } from "@/components/affiliate-manager"
 import { FinancePanel } from "@/components/finance-panel"
 import { MarkdownEditor } from "@/components/markdown-editor"
-import { RichDetailsEditor, parseDetailsToBlocks, blocksToString, type DetailBlock } from "@/components/rich-details-editor"
+import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
 import {
   AlertCircle,
   BarChart3,
@@ -207,7 +207,7 @@ export default function AdminPage() {
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [showProductForm, setShowProductForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [productForm, setProductForm] = useState({ name: "", description: "", details: [] as DetailBlock[], price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined, region_options: [] as RegionOption[], require_region_selection: false, image_url: "" })
+  const [productForm, setProductForm] = useState({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined, region_options: [] as RegionOption[], require_region_selection: false, image_url: "" })
   const [productLoading, setProductLoading] = useState(false)
   const [importProductId, setImportProductId] = useState("")
   const [importBatchName, setImportBatchName] = useState("")
@@ -1481,7 +1481,7 @@ export default function AdminPage() {
 
               {/* Cost recording */}
               <div className="p-3 rounded-lg bg-secondary/50 border border-border space-y-2.5">
-                <p className="text-xs font-medium text-muted-foreground">{"采购成本（选填，计入财务统计）"}</p>
+                <p className="text-xs font-medium text-muted-foreground">{"采购成本（选填，计入���务统计）"}</p>
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <Label className="text-xs">{"单���成本 (元)"}</Label>
@@ -2606,19 +2606,15 @@ export default function AdminPage() {
     }
     setProductLoading(true)
     try {
-      const dataToSend = {
-        ...productForm,
-        details: blocksToString(productForm.details),
-      }
       const response = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-        body: JSON.stringify(dataToSend),
+        body: JSON.stringify(productForm),
       })
       if (response.ok) {
         setMessage("产品创建成功")
         setShowProductForm(false)
-        setProductForm({ name: "", description: "", details: [], price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
+        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
         loadData()
       } else {
         setMessage("创建产品失败")
@@ -2633,21 +2629,16 @@ export default function AdminPage() {
     if (!editingProduct) return
     setProductLoading(true)
     try {
-      const dataToSend = {
-        id: editingProduct.id,
-        ...productForm,
-        details: blocksToString(productForm.details),
-      }
       const response = await fetch("/api/admin/products", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-        body: JSON.stringify(dataToSend),
+        body: JSON.stringify({ id: editingProduct.id, ...productForm }),
       })
       if (response.ok) {
         setMessage("产品更新成功")
         setEditingProduct(null)
         setShowProductForm(false)
-        setProductForm({ name: "", description: "", details: [], price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
+        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
         loadData()
       } else {
         setMessage("更新产品失败")
@@ -2699,7 +2690,7 @@ export default function AdminPage() {
     setProductForm({
       name: product.name,
       description: product.description || "",
-      details: parseDetailsToBlocks((product as any).details || ""),
+      details: parseDetailsToHtml((product as any).details || ""),
       price: product.price.toString(),
       original_price: product.original_price?.toString() || "",
       sku: product.sku || "",
@@ -2911,7 +2902,7 @@ export default function AdminPage() {
           <h2 className="text-lg font-semibold">产品列表</h2>
           <p className="text-sm text-muted-foreground">管理可销售的产品品类</p>
         </div>
-        <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: [], price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" }); setShowProductForm(true) }}>
+        <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" }); setShowProductForm(true) }}>
           <Plus className="w-4 h-4 mr-2" />
           添加产品
         </Button>
@@ -3180,10 +3171,11 @@ export default function AdminPage() {
             </div>
             <div>
               <Label>产品详情（图文教程）</Label>
-              <p className="text-xs text-muted-foreground mb-2">添加文本和图片块来构建图文教程，支持自由排列</p>
-              <RichDetailsEditor
+              <p className="text-xs text-muted-foreground mb-2">支持直接粘贴或拖拽图片，可使用 Markdown 快捷键</p>
+              <TiptapEditor
                 value={productForm.details}
-                onChange={(blocks) => setProductForm({ ...productForm, details: blocks })}
+                onChange={(html) => setProductForm({ ...productForm, details: html })}
+                placeholder="开始编写产品详情...&#10;&#10;可直接粘贴截图或拖拽图片上传"
               />
             </div>
             <div className="flex gap-3">
