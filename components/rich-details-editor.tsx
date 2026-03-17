@@ -37,7 +37,7 @@ export function RichDetailsEditor({ value, onChange }: RichDetailsEditorProps) {
       const formData = new FormData()
       formData.append("file", file)
 
-      const response = await fetch("/api/upload", {
+      const response = await fetch("/api/upload/image", {
         method: "POST",
         body: formData,
       })
