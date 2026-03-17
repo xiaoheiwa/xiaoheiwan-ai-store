@@ -45,12 +45,26 @@ export default function ChatWidget() {
   const [hasNewMessage, setHasNewMessage] = useState(false)
   const [waitingForReply, setWaitingForReply] = useState(false)
   const [showEmailReminder, setShowEmailReminder] = useState(false)
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const waitingTimerRef = useRef<NodeJS.Timeout | null>(null)
   const lastAdminCountRef = useRef(0)
   const lastUserMessageTimeRef = useRef<number>(0)
   const audioContextRef = useRef<AudioContext | null>(null)
+
+  // Listen for lightbox open/close via body class
+  useEffect(() => {
+    const checkLightbox = () => {
+      setIsLightboxOpen(document.body.classList.contains("lightbox-open"))
+    }
+    
+    // Use MutationObserver to watch for class changes on body
+    const observer = new MutationObserver(checkLightbox)
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] })
+    
+    return () => observer.disconnect()
+  }, [])
 
   // Play notification sound using Web Audio API (more reliable)
   const playNotificationSound = useCallback(() => {
@@ -252,6 +266,9 @@ export default function ChatWidget() {
     setSessionId(newId)
     setMessages([])
   }
+
+  // Hide chat widget when lightbox is open
+  if (isLightboxOpen) return null
 
   return (
     <>

@@ -45,7 +45,7 @@ function ImageLightbox({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [onClose])
 
-  // Prevent body scroll and fix iOS Safari issues
+  // Prevent body scroll and fix iOS Safari issues, hide other floating elements
   useEffect(() => {
     const scrollY = window.scrollY
     const body = document.body
@@ -59,6 +59,9 @@ function ImageLightbox({
     body.style.overflow = "hidden"
     html.style.overflow = "hidden"
     
+    // Add a class to body to signal lightbox is open (for other components to hide)
+    body.classList.add("lightbox-open")
+    
     return () => {
       body.style.position = ""
       body.style.top = ""
@@ -66,6 +69,7 @@ function ImageLightbox({
       body.style.right = ""
       body.style.overflow = ""
       html.style.overflow = ""
+      body.classList.remove("lightbox-open")
       window.scrollTo(0, scrollY)
     }
   }, [])
