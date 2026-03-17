@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ArrowLeft, ArrowRight, ShoppingCart, CheckCircle, Package, Loader2, AlertCircle, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getActivationRoute } from "@/lib/activation-routes"
+import { RichDetailsDisplay } from "@/components/rich-details-display"
 
 interface PriceTier {
   min_qty: number
@@ -261,9 +262,7 @@ export default function ProductDetailPage() {
                 <Sparkles className="w-4 h-4 text-accent" />
                 <h2 className="text-lg font-semibold text-foreground">{"产品详情"}</h2>
               </div>
-              <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed whitespace-pre-wrap break-words overflow-hidden">
-                {product.details}
-              </div>
+<RichDetailsDisplay details={product.details} />
             </div>
           )}
 

@@ -104,6 +104,7 @@ export interface Product {
   price_tiers: PriceTier[] | null
   region_options: RegionOption[] | null
   require_region_selection: boolean
+  image_url: string | null
   stock_count?: number
   created_at: Date
   updated_at: Date
@@ -176,13 +177,14 @@ export class Database {
     category_id?: string | null
     region_options?: RegionOption[] | null
     require_region_selection?: boolean
+    image_url?: string | null
   }): Promise<Product> {
     return this.executeQuery(async () => {
       const s = getSql()
       const priceTiersJson = data.price_tiers ? JSON.stringify(data.price_tiers) : null
       const regionOptionsJson = data.region_options ? JSON.stringify(data.region_options) : null
       const result = await s`
-        INSERT INTO products (id, name, description, details, price, original_price, sku, status, sort_order, delivery_type, price_tiers, category_id, region_options, require_region_selection, created_at, updated_at)
+        INSERT INTO products (id, name, description, details, price, original_price, sku, status, sort_order, delivery_type, price_tiers, category_id, region_options, require_region_selection, image_url, created_at, updated_at)
         VALUES (
           gen_random_uuid(),
           ${data.name},
@@ -198,6 +200,7 @@ export class Database {
           ${data.category_id || null},
           ${regionOptionsJson}::jsonb,
           ${data.require_region_selection || false},
+          ${data.image_url || null},
           NOW(), NOW()
         )
         RETURNING *
@@ -220,6 +223,7 @@ export class Database {
     category_id?: string | null
     region_options?: RegionOption[] | null
     require_region_selection?: boolean
+    image_url?: string | null
   }): Promise<Product | null> {
     return this.executeQuery(async () => {
       const s = getSql()
@@ -229,6 +233,7 @@ export class Database {
       const hasCategoryId = "category_id" in data
       const hasRegionOptions = "region_options" in data
       const hasRequireRegionSelection = "require_region_selection" in data
+      const hasImageUrl = "image_url" in data
       const priceTiersJson = hasPriceTiers ? (data.price_tiers ? JSON.stringify(data.price_tiers) : null) : null
       const regionOptionsJson = hasRegionOptions ? (data.region_options ? JSON.stringify(data.region_options) : null) : null
       const result = await s`
@@ -246,6 +251,7 @@ export class Database {
           category_id = CASE WHEN ${hasCategoryId} THEN ${hasCategoryId ? (data.category_id ?? null) : null}::uuid ELSE category_id END,
           region_options = CASE WHEN ${hasRegionOptions} THEN ${regionOptionsJson}::jsonb ELSE region_options END,
           require_region_selection = CASE WHEN ${hasRequireRegionSelection} THEN ${hasRequireRegionSelection ? (data.require_region_selection ?? false) : false}::boolean ELSE require_region_selection END,
+          image_url = CASE WHEN ${hasImageUrl} THEN ${hasImageUrl ? (data.image_url ?? null) : null}::text ELSE image_url END,
           updated_at = NOW()
         WHERE id = ${id}
         RETURNING *
