@@ -8,6 +8,21 @@ import { Database } from "@/lib/database"
 import { getEnv } from "@/lib/env"
 import { ZPayz } from "@/lib/zpayz-client"
 
+interface PriceTier {
+  min_qty: number
+  price: number
+}
+
+// Calculate unit price based on tier pricing (same logic as frontend)
+function getUnitPrice(basePrice: number, priceTiers: PriceTier[] | null, qty: number): number {
+  if (!priceTiers || priceTiers.length === 0) return basePrice
+  const sorted = [...priceTiers].sort((a, b) => b.min_qty - a.min_qty)
+  for (const tier of sorted) {
+    if (qty >= tier.min_qty) return tier.price
+  }
+  return basePrice
+}
+
 export async function POST(req: Request) {
   const t0 = Date.now()
   console.log("[v0] ============ ORDER CREATION START ============")
@@ -32,11 +47,12 @@ export async function POST(req: Request) {
       if (!product) {
         return NextResponse.json({ error: "商品不存在" }, { status: 400 })
       }
-      // Calculate expected price based on product price and quantity
-      const expectedAmount = Number(product.price) * quantity
+      // Calculate expected price based on tier pricing and quantity
+      const unitPrice = getUnitPrice(Number(product.price), product.price_tiers, quantity)
+      const expectedAmount = Number((unitPrice * quantity).toFixed(2))
       // Allow only exact match or slight floating point tolerance
       if (Math.abs(Number(amount) - expectedAmount) > 0.01) {
-        console.error("[v0] SECURITY: Price tampering detected!", { claimed: amount, expected: expectedAmount, productId })
+        console.error("[v0] SECURITY: Price tampering detected!", { claimed: amount, expected: expectedAmount, productId, unitPrice, quantity, priceTiers: product.price_tiers })
         return NextResponse.json({ error: "价格验证失败" }, { status: 400 })
       }
       verifiedAmount = expectedAmount
