@@ -27,10 +27,11 @@ export async function POST(request: NextRequest) {
     const filename = `product-details/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`
 
     const blob = await put(filename, file, {
-      access: 'public',
+      access: 'private',
     })
 
-    return NextResponse.json({ url: blob.url })
+    // Return the pathname for private blob access via our file route
+    return NextResponse.json({ url: `/api/file?pathname=${encodeURIComponent(blob.pathname)}` })
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json({ error: '上传失败，请重试' }, { status: 500 })
