@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { X, ZoomIn, ZoomOut, RotateCw } from "lucide-react"
 
 interface RichDetailsDisplayProps {
   details: string | null
 }
 
-// Image lightbox component
+// Image lightbox component - rendered via portal to ensure top-level rendering
 function ImageLightbox({ 
   src, 
   alt, 
@@ -22,7 +23,14 @@ function ImageLightbox({
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false)
+  const lastTouchDistance = useRef<number | null>(null)
+  const lastTouchCenter = useRef<{ x: number; y: number } | null>(null)
+
+  // Ensure portal is only rendered on client
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Handle keyboard events
   useEffect(() => {
@@ -37,21 +45,42 @@ function ImageLightbox({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [onClose])
 
-  // Prevent body scroll when lightbox is open
+  // Prevent body scroll and fix iOS Safari issues
   useEffect(() => {
-    document.body.style.overflow = "hidden"
-    return () => { document.body.style.overflow = "" }
+    const scrollY = window.scrollY
+    const body = document.body
+    const html = document.documentElement
+    
+    // Save current scroll position and lock body
+    body.style.position = "fixed"
+    body.style.top = `-${scrollY}px`
+    body.style.left = "0"
+    body.style.right = "0"
+    body.style.overflow = "hidden"
+    html.style.overflow = "hidden"
+    
+    return () => {
+      body.style.position = ""
+      body.style.top = ""
+      body.style.left = ""
+      body.style.right = ""
+      body.style.overflow = ""
+      html.style.overflow = ""
+      window.scrollTo(0, scrollY)
+    }
   }, [])
 
   // Mouse wheel zoom
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     const delta = e.deltaY > 0 ? -0.1 : 0.1
     setScale(s => Math.max(0.5, Math.min(4, s + delta)))
   }, [])
 
-  // Drag to move
+  // Drag to move (mouse)
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
     if (scale > 1) {
       setIsDragging(true)
       setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
@@ -71,9 +100,21 @@ function ImageLightbox({
     setIsDragging(false)
   }
 
-  // Touch events for mobile
+  // Touch events for mobile - support pinch to zoom and drag
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (scale > 1 && e.touches.length === 1) {
+    e.preventDefault()
+    
+    if (e.touches.length === 2) {
+      // Pinch start - calculate initial distance
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      lastTouchDistance.current = Math.sqrt(dx * dx + dy * dy)
+      lastTouchCenter.current = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+      }
+    } else if (e.touches.length === 1 && scale > 1) {
+      // Single finger drag when zoomed
       setIsDragging(true)
       setDragStart({ 
         x: e.touches[0].clientX - position.x, 
@@ -83,7 +124,18 @@ function ImageLightbox({
   }
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (isDragging && e.touches.length === 1) {
+    e.preventDefault()
+    
+    if (e.touches.length === 2 && lastTouchDistance.current !== null) {
+      // Pinch zoom
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const newDistance = Math.sqrt(dx * dx + dy * dy)
+      const delta = (newDistance - lastTouchDistance.current) * 0.01
+      setScale(s => Math.max(0.5, Math.min(4, s + delta)))
+      lastTouchDistance.current = newDistance
+    } else if (isDragging && e.touches.length === 1) {
+      // Single finger drag
       setPosition({
         x: e.touches[0].clientX - dragStart.x,
         y: e.touches[0].clientY - dragStart.y
@@ -91,66 +143,116 @@ function ImageLightbox({
     }
   }, [isDragging, dragStart])
 
-  return (
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      lastTouchDistance.current = null
+      lastTouchCenter.current = null
+    }
+    if (e.touches.length === 0) {
+      setIsDragging(false)
+    }
+  }
+
+  // Double tap to zoom
+  const lastTap = useRef<number>(0)
+  const handleDoubleTap = (e: React.TouchEvent) => {
+    const now = Date.now()
+    if (now - lastTap.current < 300) {
+      e.preventDefault()
+      if (scale > 1) {
+        setScale(1)
+        setPosition({ x: 0, y: 0 })
+      } else {
+        setScale(2)
+      }
+    }
+    lastTap.current = now
+  }
+
+  const lightboxContent = (
     <div 
-      className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 bg-black/95 flex items-center justify-center touch-none"
+      style={{ 
+        zIndex: 99999,
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: "100vw",
+        height: "100vh",
+        WebkitOverflowScrolling: "touch"
+      }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      {/* Controls */}
-      <div className="absolute top-4 right-4 flex items-center gap-2 z-[10000]">
+      {/* Controls - positioned at top */}
+      <div 
+        className="absolute top-2 right-2 sm:top-4 sm:right-4 flex items-center gap-1.5 sm:gap-2"
+        style={{ zIndex: 100000 }}
+      >
         <button
-          onClick={() => setScale(s => Math.min(s + 0.25, 4))}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-          title="放大 (+)"
+          onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(s + 0.5, 4)) }}
+          className="p-2.5 sm:p-2 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full text-white transition-colors"
+          title="放大"
         >
-          <ZoomIn className="w-5 h-5" />
+          <ZoomIn className="w-5 h-5 sm:w-5 sm:h-5" />
         </button>
         <button
-          onClick={() => setScale(s => Math.max(s - 0.25, 0.5))}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-          title="缩小 (-)"
+          onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(s - 0.5, 0.5)) }}
+          className="p-2.5 sm:p-2 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full text-white transition-colors"
+          title="缩小"
         >
-          <ZoomOut className="w-5 h-5" />
+          <ZoomOut className="w-5 h-5 sm:w-5 sm:h-5" />
         </button>
         <button
-          onClick={() => setRotation(r => r + 90)}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-          title="旋转 (R)"
+          onClick={(e) => { e.stopPropagation(); setRotation(r => r + 90) }}
+          className="p-2.5 sm:p-2 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full text-white transition-colors"
+          title="旋转"
         >
-          <RotateCw className="w-5 h-5" />
+          <RotateCw className="w-5 h-5 sm:w-5 sm:h-5" />
         </button>
         <button
-          onClick={onClose}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-          title="关闭 (Esc)"
+          onClick={(e) => { e.stopPropagation(); onClose() }}
+          className="p-2.5 sm:p-2 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full text-white transition-colors"
+          title="关闭"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5 sm:w-5 sm:h-5" />
         </button>
       </div>
 
       {/* Scale indicator */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/50 rounded-full text-white text-sm z-[10000]">
+      <div 
+        className="absolute bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/60 rounded-full text-white text-sm"
+        style={{ zIndex: 100000 }}
+      >
         {Math.round(scale * 100)}%
+      </div>
+
+      {/* Mobile hint */}
+      <div 
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-xs text-center sm:hidden"
+        style={{ zIndex: 100000 }}
+      >
+        双指缩放 | 双击放大/还原 | 点击空白关闭
       </div>
 
       {/* Image container */}
       <div 
-        ref={containerRef}
         className="w-full h-full flex items-center justify-center overflow-hidden"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
+        onTouchStart={(e) => { handleTouchStart(e); handleDoubleTap(e) }}
         onTouchMove={handleTouchMove}
-        onTouchEnd={handleMouseUp}
+        onTouchEnd={handleTouchEnd}
         style={{ cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "default" }}
       >
         <img
           src={src}
           alt={alt}
-          className="max-w-[90vw] max-h-[90vh] object-contain select-none"
+          className="max-w-[95vw] max-h-[85vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain select-none pointer-events-none"
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
             transition: isDragging ? "none" : "transform 0.2s ease-out"
@@ -159,12 +261,20 @@ function ImageLightbox({
         />
       </div>
 
-      {/* Help text */}
-      <div className="absolute bottom-4 right-4 text-white/50 text-xs hidden md:block z-[10000]">
+      {/* Desktop help text */}
+      <div 
+        className="absolute bottom-4 right-4 text-white/50 text-xs hidden md:block"
+        style={{ zIndex: 100000 }}
+      >
         滚轮缩放 | 拖动移动 | R 旋转 | Esc 关闭
       </div>
     </div>
   )
+
+  // Use portal to render at document body level to avoid z-index issues
+  if (!mounted) return null
+  
+  return createPortal(lightboxContent, document.body)
 }
 
 // Parse old block format or HTML
@@ -209,6 +319,7 @@ export function RichDetailsDisplay({ details }: RichDetailsDisplayProps) {
       const target = e.target as HTMLElement
       if (target.tagName === "IMG") {
         e.preventDefault()
+        e.stopPropagation()
         const img = target as HTMLImageElement
         setLightboxImage({ src: img.src, alt: img.alt || "图片" })
       }
@@ -249,7 +360,7 @@ export function RichDetailsDisplay({ details }: RichDetailsDisplayProps) {
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
 
-      {/* Lightbox */}
+      {/* Lightbox - rendered via portal */}
       {lightboxImage && (
         <ImageLightbox
           src={lightboxImage.src}
