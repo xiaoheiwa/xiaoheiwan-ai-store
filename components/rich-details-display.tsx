@@ -93,11 +93,11 @@ function ImageLightbox({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       {/* Controls */}
-      <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+      <div className="absolute top-4 right-4 flex items-center gap-2 z-[10000]">
         <button
           onClick={() => setScale(s => Math.min(s + 0.25, 4))}
           className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -129,7 +129,7 @@ function ImageLightbox({
       </div>
 
       {/* Scale indicator */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/50 rounded-full text-white text-sm">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/50 rounded-full text-white text-sm z-[10000]">
         {Math.round(scale * 100)}%
       </div>
 
@@ -160,7 +160,7 @@ function ImageLightbox({
       </div>
 
       {/* Help text */}
-      <div className="absolute bottom-4 right-4 text-white/50 text-xs hidden md:block">
+      <div className="absolute bottom-4 right-4 text-white/50 text-xs hidden md:block z-[10000]">
         滚轮缩放 | 拖动移动 | R 旋转 | Esc 关闭
       </div>
     </div>
