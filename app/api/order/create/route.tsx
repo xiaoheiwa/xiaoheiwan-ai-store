@@ -108,8 +108,11 @@ export async function POST(req: Request) {
     const notifyUrl = `${baseUrl}/api/pay/notify`
     const returnUrl = `${baseUrl}/success?orderNo=${orderNo}`
 
+    // Use generic name for payment to avoid content review issues
+    // Real product name is stored in database for Telegram notifications and admin
+    const safePaymentName = process.env.PAYMENT_PRODUCT_NAME || "数字商品"
     const paymentParams = {
-      name: productName || "小黑丸Plus激活码",
+      name: safePaymentName,
       money: verifiedAmount.toString(),
       type: paymentMethod as "alipay" | "wxpay",
       out_trade_no: orderNo,
