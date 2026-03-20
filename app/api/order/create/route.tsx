@@ -111,6 +111,7 @@ export async function POST(req: Request) {
     // Use generic name for payment to avoid content review issues
     // Real product name is stored in database for Telegram notifications and admin
     const safePaymentName = process.env.PAYMENT_PRODUCT_NAME || "数字商品"
+    console.log("[v0] Payment name being used:", safePaymentName, "| ENV value:", process.env.PAYMENT_PRODUCT_NAME)
     const paymentParams = {
       name: safePaymentName,
       money: verifiedAmount.toString(),
