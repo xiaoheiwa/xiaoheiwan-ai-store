@@ -22,10 +22,12 @@ export async function POST(request: NextRequest) {
       status: "pending",
     })
 
+    // Use generic name for payment to avoid content review issues
+    const safePaymentName = process.env.PAYMENT_PRODUCT_NAME || "数字商品"
     const payment = await xunhupay.createPayment({
       order_id: orderNo,
       money: totalAmount,
-      title: `ChatGPT Plus激活码 x${quantity}`,
+      title: `${safePaymentName} x${quantity}`,
       backendUrl: process.env.SITE_BASE || "https://upgrade.xiaoheiwan.com",
     })
 

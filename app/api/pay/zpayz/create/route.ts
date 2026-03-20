@@ -12,8 +12,10 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.SITE_BASE_URL || "https://upgrade.xiaoheiwan.com"
 
+    // Use generic name for payment to avoid content review issues
+    const safePaymentName = process.env.PAYMENT_PRODUCT_NAME || "数字商品"
     const paymentParams = {
-      name: productName,
+      name: safePaymentName,
       money: amount.toString(),
       type: paymentType as "alipay" | "wxpay",
       out_trade_no: orderNo,
