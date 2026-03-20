@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, description, icon, sort_order } = body
+    const { name, description, icon, sort_order, payment_name } = body
     
     if (!name) {
       return NextResponse.json({ error: "分类名称不能为空" }, { status: 400 })
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await sql`
-      INSERT INTO product_categories (name, slug, description, icon, sort_order)
-      VALUES (${name}, ${slug}, ${description || null}, ${icon || null}, ${sort_order || 0})
+      INSERT INTO product_categories (name, slug, description, icon, sort_order, payment_name)
+      VALUES (${name}, ${slug}, ${description || null}, ${icon || null}, ${sort_order || 0}, ${payment_name || null})
       RETURNING *
     `
 
@@ -73,7 +73,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, name, description, icon, sort_order } = body
+    const { id, name, description, icon, sort_order, payment_name } = body
 
     if (!id || !name) {
       return NextResponse.json({ error: "参数不完整" }, { status: 400 })
@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest) {
     const result = await sql`
       UPDATE product_categories 
       SET name = ${name}, slug = ${slug}, description = ${description || null}, 
-          icon = ${icon || null}, sort_order = ${sort_order || 0}, updated_at = NOW()
+          icon = ${icon || null}, sort_order = ${sort_order || 0}, payment_name = ${payment_name || null}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
     `
