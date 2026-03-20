@@ -7,6 +7,7 @@ import { NextResponse } from "next/server"
 import { Database } from "@/lib/database"
 import { getEnv } from "@/lib/env"
 import { ZPayz } from "@/lib/zpayz-client"
+import { neon } from "@neondatabase/serverless"
 
 interface PriceTier {
   min_qty: number
@@ -110,8 +111,26 @@ export async function POST(req: Request) {
 
     // Use generic name for payment to avoid content review issues
     // Real product name is stored in database for Telegram notifications and admin
-    const safePaymentName = process.env.PAYMENT_PRODUCT_NAME || "数字商品"
-    console.log("[v0] Payment name being used:", safePaymentName, "| ENV value:", process.env.PAYMENT_PRODUCT_NAME)
+    // Priority: category payment_name > env PAYMENT_PRODUCT_NAME > default "数字商品"
+    let safePaymentName = process.env.PAYMENT_PRODUCT_NAME || "数字商品"
+    
+    // Try to get payment_name from product's category
+    if (productId) {
+      try {
+        const sql = neon(process.env.DATABASE_URL!)
+        const categoryResult = await sql`
+          SELECT c.payment_name 
+          FROM products p 
+          JOIN product_categories c ON p.category_id = c.id 
+          WHERE p.id = ${productId} AND c.payment_name IS NOT NULL AND c.payment_name != ''
+        `
+        if (categoryResult.length > 0 && categoryResult[0].payment_name) {
+          safePaymentName = categoryResult[0].payment_name
+        }
+      } catch (e) {
+        console.log("[v0] Failed to get category payment_name, using default")
+      }
+    }
     const paymentParams = {
       name: safePaymentName,
       money: verifiedAmount.toString(),

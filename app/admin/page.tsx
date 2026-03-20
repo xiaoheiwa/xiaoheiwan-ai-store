@@ -202,8 +202,8 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [productCategories, setProductCategories] = useState<{ id: string; name: string; slug: string; icon?: string; product_count: number }[]>([])
   const [showCategoryForm, setShowCategoryForm] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string; slug: string; icon?: string } | null>(null)
-  const [categoryForm, setCategoryForm] = useState({ name: "", slug: "", icon: "", sort_order: "0" })
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string; slug: string; icon?: string; payment_name?: string } | null>(null)
+  const [categoryForm, setCategoryForm] = useState({ name: "", slug: "", icon: "", sort_order: "0", payment_name: "" })
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [showProductForm, setShowProductForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -2721,7 +2721,7 @@ export default function AdminPage() {
       if (response.ok) {
         setMessage("分类创建成功")
         setShowCategoryForm(false)
-        setCategoryForm({ name: "", slug: "", icon: "", sort_order: "0" })
+        setCategoryForm({ name: "", slug: "", icon: "", sort_order: "0", payment_name: "" })
         loadData()
       } else {
         const data = await response.json()
@@ -2746,7 +2746,7 @@ export default function AdminPage() {
         setMessage("分类更新成功")
         setEditingCategory(null)
         setShowCategoryForm(false)
-        setCategoryForm({ name: "", slug: "", icon: "", sort_order: "0" })
+        setCategoryForm({ name: "", slug: "", icon: "", sort_order: "0", payment_name: "" })
         loadData()
       } else {
         setMessage("更新分类失败")
@@ -2775,15 +2775,16 @@ export default function AdminPage() {
     }
   }
 
-  const startEditCategory = (category: { id: string; name: string; slug: string; icon?: string; sort_order?: number }) => {
-    setEditingCategory(category)
-    setCategoryForm({
-      name: category.name,
-      slug: category.slug,
-      icon: category.icon || "",
-      sort_order: category.sort_order?.toString() || "0",
-    })
-    setShowCategoryForm(true)
+const startEditCategory = (category: { id: string; name: string; slug: string; icon?: string; sort_order?: number; payment_name?: string }) => {
+  setEditingCategory(category)
+  setCategoryForm({
+  name: category.name,
+  slug: category.slug,
+  icon: category.icon || "",
+  sort_order: category.sort_order?.toString() || "0",
+  payment_name: category.payment_name || "",
+  })
+  setShowCategoryForm(true)
   }
 
   const renderCategories = () => (
@@ -2793,7 +2794,7 @@ export default function AdminPage() {
           <h2 className="text-lg font-semibold">{"分类列表"}</h2>
           <p className="text-sm text-muted-foreground">{"管理产品分类，方便用户快速筛选"}</p>
         </div>
-        <Button onClick={() => { setEditingCategory(null); setCategoryForm({ name: "", slug: "", icon: "", sort_order: "0" }); setShowCategoryForm(true) }}>
+        <Button onClick={() => { setEditingCategory(null); setCategoryForm({ name: "", slug: "", icon: "", sort_order: "0", payment_name: "" }); setShowCategoryForm(true) }}>
           <Plus className="w-4 h-4 mr-2" />
           {"添加分类"}
         </Button>
@@ -2839,6 +2840,15 @@ export default function AdminPage() {
                   onChange={(e) => setCategoryForm({ ...categoryForm, sort_order: e.target.value })}
                   placeholder="0"
                 />
+              </div>
+              <div className="md:col-span-2">
+                <Label>{"支付显示名称"}</Label>
+                <Input
+                  value={categoryForm.payment_name}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, payment_name: e.target.value })}
+                  placeholder="如：数字商品、会员服务（用于支付平台显示，避免内容审核）"
+                />
+                <p className="text-xs text-muted-foreground mt-1">{"该分类下产品在支付平台显示的通用名称，留空则使用全局默认值"}</p>
               </div>
             </div>
             <div className="flex gap-2">
