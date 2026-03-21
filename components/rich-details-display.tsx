@@ -281,6 +281,38 @@ function ImageLightbox({
   return createPortal(lightboxContent, document.body)
 }
 
+// Clean and normalize HTML content
+function cleanHtml(html: string): string {
+  return html
+    // Remove inline styles that mess up layout
+    .replace(/\s*style="[^"]*"/gi, '')
+    // Remove class attributes from external sources
+    .replace(/\s*class="[^"]*"/gi, '')
+    // Remove empty paragraphs
+    .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/<p><br\s*\/?><\/p>/gi, '')
+    .replace(/<p>&nbsp;<\/p>/gi, '')
+    // Remove empty divs
+    .replace(/<div>\s*<\/div>/gi, '')
+    // Remove empty spans
+    .replace(/<span>\s*<\/span>/gi, '')
+    // Clean up multiple br tags
+    .replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>')
+    // Replace nbsp with regular spaces
+    .replace(/&nbsp;/gi, ' ')
+    // Remove font tags
+    .replace(/<\/?font[^>]*>/gi, '')
+    // Convert b/i to strong/em
+    .replace(/<b>(.*?)<\/b>/gi, '<strong>$1</strong>')
+    .replace(/<i>(.*?)<\/i>/gi, '<em>$1</em>')
+    // Remove empty strong/em
+    .replace(/<strong>\s*<\/strong>/gi, '')
+    .replace(/<em>\s*<\/em>/gi, '')
+    // Remove data attributes
+    .replace(/\s*data-[a-z-]+="[^"]*"/gi, '')
+    .trim()
+}
+
 // Parse old block format or HTML
 function parseDetailsContent(details: string): string {
   // Try to parse as JSON blocks (old format)
@@ -301,9 +333,9 @@ function parseDetailsContent(details: string): string {
     // Not JSON
   }
 
-  // If already HTML, return as-is
+  // If already HTML, clean and return
   if (details.includes('<') && details.includes('>')) {
-    return details
+    return cleanHtml(details)
   }
 
   // Plain text - convert to HTML
