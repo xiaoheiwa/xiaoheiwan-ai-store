@@ -19,11 +19,57 @@ interface BlogPost {
   updated_at: string
 }
 
+// Clean and normalize HTML content
+function cleanHtml(html: string): string {
+  return html
+    // Remove inline styles that mess up layout
+    .replace(/\s*style="[^"]*"/gi, '')
+    // Remove class attributes from external sources
+    .replace(/\s*class="[^"]*"/gi, '')
+    // Remove empty paragraphs
+    .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/<p><br\s*\/?><\/p>/gi, '')
+    .replace(/<p>&nbsp;<\/p>/gi, '')
+    // Remove empty divs
+    .replace(/<div>\s*<\/div>/gi, '')
+    .replace(/<div><br\s*\/?><\/div>/gi, '')
+    // Remove empty spans
+    .replace(/<span>\s*<\/span>/gi, '')
+    .replace(/<span><br\s*\/?><\/span>/gi, '')
+    // Clean up multiple br tags
+    .replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>')
+    // Replace nbsp with regular spaces
+    .replace(/&nbsp;/gi, ' ')
+    // Clean up multiple spaces
+    .replace(/  +/g, ' ')
+    // Remove font tags
+    .replace(/<\/?font[^>]*>/gi, '')
+    // Convert divs to paragraphs where appropriate
+    .replace(/<div>([^<]+)<\/div>/gi, '<p>$1</p>')
+    // Clean up b and i tags to strong and em
+    .replace(/<b>(.*?)<\/b>/gi, '<strong>$1</strong>')
+    .replace(/<i>(.*?)<\/i>/gi, '<em>$1</em>')
+    // Remove empty strong/em
+    .replace(/<strong>\s*<\/strong>/gi, '')
+    .replace(/<em>\s*<\/em>/gi, '')
+    // Normalize headings that might have extra whitespace
+    .replace(/<(h[1-6])[^>]*>\s*/gi, '<$1>')
+    .replace(/\s*<\/(h[1-6])>/gi, '</$1>')
+    // Clean up paragraph whitespace
+    .replace(/<p[^>]*>\s*/gi, '<p>')
+    .replace(/\s*<\/p>/gi, '</p>')
+    // Remove data attributes
+    .replace(/\s*data-[a-z-]+="[^"]*"/gi, '')
+    // Ensure images are self-closing
+    .replace(/<img([^>]*)(?<!\/)>/gi, '<img$1 />')
+    .trim()
+}
+
 // Process content - handles both HTML from Tiptap and legacy Markdown
 function processContent(content: string): string {
-  // If content already looks like HTML (from Tiptap), just clean it up
+  // If content already looks like HTML (from Tiptap or pasted), clean it up
   if (content.trim().startsWith('<') && (content.includes('<p>') || content.includes('<h') || content.includes('<div'))) {
-    return content
+    return cleanHtml(content)
   }
   
   // Otherwise, treat as Markdown and convert to HTML
