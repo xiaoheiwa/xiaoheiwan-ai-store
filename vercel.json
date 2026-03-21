@@ -4,5 +4,10 @@
       "path": "/api/cron/daily-report",
       "schedule": "0 16 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/upload/image/route.ts": {
+      "maxDuration": 30
+    }
+  }
 }

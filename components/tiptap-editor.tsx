@@ -25,6 +25,13 @@ interface TiptapEditorProps {
 
 // 上传图片到服务器
 async function uploadImage(file: File): Promise<string | null> {
+  // Vercel has a 4.5MB body limit, check before upload
+  const maxSize = 4 * 1024 * 1024 // 4MB to be safe
+  if (file.size > maxSize) {
+    alert(`图片太大 (${(file.size / 1024 / 1024).toFixed(1)}MB)，请压缩到 4MB 以下`)
+    return null
+  }
+  
   const formData = new FormData()
   formData.append('file', file)
   
@@ -35,14 +42,24 @@ async function uploadImage(file: File): Promise<string | null> {
     })
     
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || '上传失败')
+      let errorMsg = '上传失败'
+      try {
+        const error = await response.json()
+        errorMsg = error.error || errorMsg
+      } catch {
+        if (response.status === 413) {
+          errorMsg = '图片太大，请压缩后重试'
+        }
+      }
+      alert(errorMsg)
+      return null
     }
     
     const data = await response.json()
     return data.url
   } catch (error) {
     console.error('Upload failed:', error)
+    alert('上传失败，请重试')
     return null
   }
 }
