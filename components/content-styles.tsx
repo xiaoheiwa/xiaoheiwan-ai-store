@@ -40,7 +40,7 @@ const imgStyles = "[&_img]:my-5 [&_img]:mx-auto [&_img]:block [&_img]:max-w-full
 const tableStyles = "[&_table]:my-5 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_table]:rounded-xl [&_table]:overflow-hidden [&_th]:bg-muted/60 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_th]:border-b [&_th]:border-border [&_td]:px-4 [&_td]:py-3 [&_td]:border-b [&_td]:border-border/50 [&_td]:text-muted-foreground [&_tr:last-child_td]:border-b-0 [&_tr:hover]:bg-muted/30"
 
 // 高亮和对齐
-const miscStyles = "[&_mark]:bg-yellow-200/70 [&_mark]:dark:bg-yellow-500/30 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:rounded [&_[style*='text-align:_center']]:text-center [&_[style*='text-align:_right']]:text-right [&_[style*='text-align:_justify']]:text-justify [&_.text-center]:text-center [&_.text-right]:text-right [&_.text-justify]:text-justify [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+const miscStyles = "[&_mark]:bg-yellow-200/70 [&_mark]:dark:bg-yellow-500/30 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:rounded [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
 
 export const contentStyles = [
   baseStyles,
