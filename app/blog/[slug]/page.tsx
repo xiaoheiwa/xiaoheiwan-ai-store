@@ -19,48 +19,49 @@ interface BlogPost {
   updated_at: string
 }
 
-// Simple markdown renderer
-function renderMarkdown(md: string): string {
-  let html = md
+// Process content - handles both HTML from Tiptap and legacy Markdown
+function processContent(content: string): string {
+  // If content already looks like HTML (from Tiptap), just clean it up
+  if (content.trim().startsWith('<') && (content.includes('<p>') || content.includes('<h') || content.includes('<div'))) {
+    return content
+  }
+  
+  // Otherwise, treat as Markdown and convert to HTML
+  let html = content
     // Code blocks (``` ... ```)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="blog-code-block"><code class="language-$1">$2</code></pre>')
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
     // Inline code
-    .replace(/`([^`]+)`/g, '<code class="blog-inline-code">$1</code>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
     // Markdown images: ![alt](url)
-    .replace(/!\[([^\]]*)\]\(([^)\s]+(?:\?[^)\s]*)?)\)/g, '<img src="$2" alt="$1" class="blog-img" loading="lazy" />')
-    // Bare image URLs on their own line (png, jpg, jpeg, gif, webp, svg, with optional query params)
-    .replace(/^(https?:\/\/[^\s]+\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?[^\s]*)?)$/gim, '<img src="$1" alt="" class="blog-img" loading="lazy" />')
-    // HTML img tags (passthrough, ensure they get the class)
-    .replace(/<img\s+([^>]*?)(?:\s*\/?)>/gi, (match, attrs) => {
-      if (!attrs.includes('class=')) return `<img ${attrs} class="blog-img" loading="lazy" />`
-      return match
-    })
+    .replace(/!\[([^\]]*)\]\(([^)\s]+(?:\?[^)\s]*)?)\)/g, '<img src="$2" alt="$1" loading="lazy" />')
+    // Bare image URLs on their own line
+    .replace(/^(https?:\/\/[^\s]+\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?[^\s]*)?)$/gim, '<img src="$1" alt="" loading="lazy" />')
     // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="blog-link" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     // H3
-    .replace(/^### (.+)$/gm, '<h3 class="blog-h3">$1</h3>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     // H2
-    .replace(/^## (.+)$/gm, '<h2 class="blog-h2">$1</h2>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     // H1
-    .replace(/^# (.+)$/gm, '<h1 class="blog-h1">$1</h1>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
     // Bold
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     // Italic
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     // Blockquote
-    .replace(/^> (.+)$/gm, '<blockquote class="blog-blockquote">$1</blockquote>')
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
     // Unordered list
-    .replace(/^- (.+)$/gm, '<li class="blog-li">$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
     // Ordered list
-    .replace(/^\d+\. (.+)$/gm, '<li class="blog-li blog-li-ordered">$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li class="ordered">$1</li>')
     // Horizontal rule
-    .replace(/^---$/gm, '<hr class="blog-hr" />')
-    // Paragraphs: wrap remaining lines (skip lines that are already HTML tags)
-    .replace(/^(?!<[a-z/])((?!<\/)[^\n]+)$/gm, '<p class="blog-p">$1</p>')
-    // Wrap consecutive <li> in <ul>
-    .replace(/(<li class="blog-li">[\s\S]*?<\/li>(\n)?)+/g, (match) => {
-      if (match.includes('blog-li-ordered')) return `<ol class="blog-ol">${match}</ol>`
-      return `<ul class="blog-ul">${match}</ul>`
+    .replace(/^---$/gm, '<hr />')
+    // Paragraphs
+    .replace(/^(?!<[a-z/])((?!<\/)[^\n]+)$/gm, '<p>$1</p>')
+    // Wrap consecutive <li> in <ul> or <ol>
+    .replace(/(<li[^>]*>[\s\S]*?<\/li>(\n)?)+/g, (match) => {
+      if (match.includes('class="ordered"')) return `<ol>${match}</ol>`
+      return `<ul>${match}</ul>`
     })
 
   return html
@@ -87,7 +88,7 @@ export default function BlogPostPage() {
 
   const htmlContent = useMemo(() => {
     if (!post?.content) return ""
-    return renderMarkdown(post.content)
+    return processContent(post.content)
   }, [post?.content])
 
   const formatDate = (d: string) => {
@@ -171,7 +172,28 @@ export default function BlogPostPage() {
 
         {/* Content */}
         <div
-          className="blog-content"
+          className="prose prose-lg max-w-none dark:prose-invert
+            prose-headings:text-foreground prose-headings:font-bold
+            prose-h1:text-3xl prose-h1:mb-6 prose-h1:mt-10
+            prose-h2:text-2xl prose-h2:mb-5 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b prose-h2:border-border
+            prose-h3:text-xl prose-h3:mb-4 prose-h3:mt-6
+            prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:mb-5
+            prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-a:font-medium
+            prose-strong:text-foreground prose-strong:font-semibold
+            prose-em:italic
+            prose-ul:my-5 prose-ul:pl-6 prose-ul:list-disc
+            prose-ol:my-5 prose-ol:pl-6 prose-ol:list-decimal
+            prose-li:text-muted-foreground prose-li:mb-2 prose-li:leading-relaxed
+            prose-blockquote:border-l-4 prose-blockquote:border-accent/50 prose-blockquote:bg-muted/30 prose-blockquote:pl-5 prose-blockquote:pr-4 prose-blockquote:py-3 prose-blockquote:my-6 prose-blockquote:rounded-r-lg prose-blockquote:italic prose-blockquote:text-muted-foreground
+            prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+            prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-pre:p-4 prose-pre:my-6 prose-pre:overflow-x-auto
+            prose-hr:border-border prose-hr:my-10
+            prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8 prose-img:cursor-pointer prose-img:hover:shadow-xl prose-img:transition-shadow prose-img:mx-auto
+            [&_mark]:bg-yellow-200/80 [&_mark]:dark:bg-yellow-500/30 [&_mark]:px-1 [&_mark]:rounded
+            [&_u]:underline [&_u]:decoration-2 [&_u]:underline-offset-2
+            [&_s]:line-through [&_s]:opacity-70
+            [&_sub]:text-sm [&_sup]:text-sm
+            [&_.text-left]:text-left [&_.text-center]:text-center [&_.text-right]:text-right [&_.text-justify]:text-justify"
           onClick={handleContentClick}
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
