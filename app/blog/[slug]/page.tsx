@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Clock, Eye, Tag, Share2, Check, Loader2, FileText } from "lucide-react"
+import { contentStyles } from "@/components/content-styles"
 
 interface BlogPost {
   id: string
@@ -218,35 +219,7 @@ export default function BlogPostPage() {
 
         {/* Content */}
         <div
-          className="prose prose-lg max-w-none dark:prose-invert leading-loose
-            prose-headings:text-foreground prose-headings:font-bold prose-headings:leading-snug
-            prose-h1:text-3xl prose-h1:mb-8 prose-h1:mt-14
-            prose-h2:text-2xl prose-h2:mb-6 prose-h2:mt-12 prose-h2:pb-3 prose-h2:border-b prose-h2:border-border
-            prose-h3:text-xl prose-h3:mb-5 prose-h3:mt-10
-            prose-h4:text-lg prose-h4:mb-4 prose-h4:mt-8
-            prose-p:text-muted-foreground prose-p:leading-loose prose-p:mb-6 prose-p:text-base
-            prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-a:font-medium
-            prose-strong:text-foreground prose-strong:font-semibold
-            prose-em:italic
-            prose-ul:my-6 prose-ul:pl-6 prose-ul:list-disc prose-ul:space-y-2
-            prose-ol:my-6 prose-ol:pl-6 prose-ol:list-decimal prose-ol:space-y-2
-            prose-li:text-muted-foreground prose-li:mb-3 prose-li:leading-relaxed prose-li:pl-2
-            prose-blockquote:border-l-4 prose-blockquote:border-accent/50 prose-blockquote:bg-muted/30 prose-blockquote:pl-6 prose-blockquote:pr-5 prose-blockquote:py-4 prose-blockquote:my-8 prose-blockquote:rounded-r-lg prose-blockquote:italic prose-blockquote:text-muted-foreground prose-blockquote:leading-relaxed
-            prose-code:bg-muted prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
-            prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-xl prose-pre:p-5 prose-pre:my-8 prose-pre:overflow-x-auto prose-pre:leading-relaxed
-            prose-hr:border-border prose-hr:my-12
-            prose-img:rounded-xl prose-img:shadow-lg prose-img:my-10 prose-img:cursor-pointer prose-img:hover:shadow-xl prose-img:transition-shadow prose-img:mx-auto prose-img:block
-            prose-figure:my-10
-            prose-figcaption:text-center prose-figcaption:text-sm prose-figcaption:text-muted-foreground prose-figcaption:mt-3
-            prose-table:my-8 prose-table:border-collapse
-            prose-th:border prose-th:border-border prose-th:px-4 prose-th:py-3 prose-th:bg-muted/50
-            prose-td:border prose-td:border-border prose-td:px-4 prose-td:py-3
-            [&_mark]:bg-yellow-200/80 [&_mark]:dark:bg-yellow-500/30 [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:rounded
-            [&_u]:underline [&_u]:decoration-2 [&_u]:underline-offset-4
-            [&_s]:line-through [&_s]:opacity-70
-            [&_sub]:text-sm [&_sup]:text-sm
-            [&_.text-left]:text-left [&_.text-center]:text-center [&_.text-right]:text-right [&_.text-justify]:text-justify
-            [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+          className={`max-w-none ${contentStyles}`}
           onClick={handleContentClick}
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />

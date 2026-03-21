@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { X, ZoomIn, ZoomOut, RotateCw } from "lucide-react"
+import { contentStyles } from "./content-styles"
 
 interface RichDetailsDisplayProps {
   details: string | null
@@ -373,26 +374,7 @@ export function RichDetailsDisplay({ details }: RichDetailsDisplayProps) {
     <>
       <div 
         ref={containerRef}
-        className="prose prose-sm max-w-none text-foreground
-          [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:mt-6 [&_h1]:text-foreground
-          [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mb-3 [&_h2]:mt-5 [&_h2]:text-foreground
-          [&_h3]:text-lg [&_h3]:font-medium [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-foreground
-          [&_p]:mb-4 [&_p]:leading-relaxed [&_p]:text-muted-foreground
-          [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ul]:text-muted-foreground [&_ul]:space-y-1
-          [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_ol]:text-muted-foreground [&_ol]:space-y-1
-          [&_li]:leading-relaxed
-          [&_a]:text-primary [&_a]:underline [&_a]:hover:text-primary/80
-          [&_strong]:font-semibold [&_strong]:text-foreground
-          [&_em]:italic
-          [&_u]:underline
-          [&_s]:line-through
-          [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono
-          [&_pre]:bg-muted [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-4
-          [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_blockquote]:my-4
-          [&_hr]:border-border [&_hr]:my-6
-          [&_figure]:my-4
-          [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:text-muted-foreground [&_figcaption]:mt-2 [&_figcaption]:italic
-          [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:cursor-pointer [&_img]:hover:shadow-lg [&_img]:transition-shadow [&_img]:my-4 [&_img]:mx-auto [&_img]:block"
+        className={`max-w-none ${contentStyles}`}
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
 
