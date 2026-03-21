@@ -617,7 +617,82 @@ export function TiptapEditor({ value, onChange, placeholder = "开始编写产�
       <EditorContent 
         editor={editor} 
         style={{ '--editor-min-height': minHeight } as React.CSSProperties}
-        className="[&_.ProseMirror]:min-h-[var(--editor-min-height,300px)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:opacity-50 [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
+        className={`
+          [&_.ProseMirror]:min-h-[var(--editor-min-height,300px)]
+          [&_.ProseMirror]:p-4
+          [&_.ProseMirror]:focus:outline-none
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground/50
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0
+          
+          /* 基础排版 */
+          [&_.ProseMirror]:text-foreground [&_.ProseMirror]:leading-[1.8] [&_.ProseMirror]:text-[15px]
+          
+          /* 标题 */
+          [&_.ProseMirror_h1]:text-[1.75rem] [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:tracking-tight
+          [&_.ProseMirror_h1]:text-foreground [&_.ProseMirror_h1]:mt-8 [&_.ProseMirror_h1]:mb-4
+          [&_.ProseMirror_h1]:pb-2 [&_.ProseMirror_h1]:border-b-2 [&_.ProseMirror_h1]:border-accent/30
+          
+          [&_.ProseMirror_h2]:text-[1.375rem] [&_.ProseMirror_h2]:font-semibold
+          [&_.ProseMirror_h2]:text-foreground [&_.ProseMirror_h2]:mt-7 [&_.ProseMirror_h2]:mb-3
+          [&_.ProseMirror_h2]:pl-3 [&_.ProseMirror_h2]:border-l-[3px] [&_.ProseMirror_h2]:border-accent
+          
+          [&_.ProseMirror_h3]:text-[1.125rem] [&_.ProseMirror_h3]:font-semibold
+          [&_.ProseMirror_h3]:text-foreground [&_.ProseMirror_h3]:mt-6 [&_.ProseMirror_h3]:mb-2
+          
+          /* 段落 */
+          [&_.ProseMirror_p]:text-muted-foreground [&_.ProseMirror_p]:mb-4 [&_.ProseMirror_p]:leading-[1.85]
+          
+          /* 链接 */
+          [&_.ProseMirror_a]:text-accent [&_.ProseMirror_a]:font-medium
+          [&_.ProseMirror_a]:border-b [&_.ProseMirror_a]:border-accent/30
+          
+          /* 粗体斜体 */
+          [&_.ProseMirror_strong]:font-semibold [&_.ProseMirror_strong]:text-foreground
+          [&_.ProseMirror_em]:italic
+          [&_.ProseMirror_u]:underline [&_.ProseMirror_u]:decoration-2 [&_.ProseMirror_u]:underline-offset-4
+          [&_.ProseMirror_s]:line-through [&_.ProseMirror_s]:opacity-60
+          
+          /* 列表 */
+          [&_.ProseMirror_ul]:my-4 [&_.ProseMirror_ul]:pl-6 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:space-y-1
+          [&_.ProseMirror_ol]:my-4 [&_.ProseMirror_ol]:pl-6 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:space-y-1
+          [&_.ProseMirror_li]:text-muted-foreground [&_.ProseMirror_li]:leading-[1.75]
+          [&_.ProseMirror_li_p]:mb-0
+          
+          /* 引用 */
+          [&_.ProseMirror_blockquote]:my-5 [&_.ProseMirror_blockquote]:py-3 [&_.ProseMirror_blockquote]:px-4
+          [&_.ProseMirror_blockquote]:rounded-lg [&_.ProseMirror_blockquote]:bg-muted/40
+          [&_.ProseMirror_blockquote]:border-l-4 [&_.ProseMirror_blockquote]:border-accent
+          [&_.ProseMirror_blockquote]:italic [&_.ProseMirror_blockquote_p]:mb-0
+          
+          /* 代码 */
+          [&_.ProseMirror_code]:bg-muted [&_.ProseMirror_code]:px-1.5 [&_.ProseMirror_code]:py-0.5
+          [&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:text-sm [&_.ProseMirror_code]:font-mono
+          [&_.ProseMirror_code]:text-accent [&_.ProseMirror_code]:border [&_.ProseMirror_code]:border-border/50
+          
+          [&_.ProseMirror_pre]:my-5 [&_.ProseMirror_pre]:p-4 [&_.ProseMirror_pre]:rounded-xl
+          [&_.ProseMirror_pre]:bg-[#1a1b26] [&_.ProseMirror_pre]:overflow-x-auto
+          [&_.ProseMirror_pre_code]:bg-transparent [&_.ProseMirror_pre_code]:border-none
+          [&_.ProseMirror_pre_code]:text-[#a9b1d6] [&_.ProseMirror_pre_code]:p-0
+          
+          /* 分隔线 */
+          [&_.ProseMirror_hr]:my-8 [&_.ProseMirror_hr]:border-none [&_.ProseMirror_hr]:h-px
+          [&_.ProseMirror_hr]:bg-gradient-to-r [&_.ProseMirror_hr]:from-transparent
+          [&_.ProseMirror_hr]:via-border [&_.ProseMirror_hr]:to-transparent
+          
+          /* 图片 */
+          [&_.ProseMirror_img]:my-5 [&_.ProseMirror_img]:mx-auto [&_.ProseMirror_img]:block
+          [&_.ProseMirror_img]:max-w-full [&_.ProseMirror_img]:h-auto
+          [&_.ProseMirror_img]:rounded-xl [&_.ProseMirror_img]:shadow-md
+          
+          /* 高亮 */
+          [&_.ProseMirror_mark]:bg-yellow-200/70 [&_.ProseMirror_mark]:px-1 [&_.ProseMirror_mark]:rounded
+          
+          /* 首尾边距 */
+          [&_.ProseMirror>*:first-child]:mt-0 [&_.ProseMirror>*:last-child]:mb-0
+        `}
       />
     </div>
   )
