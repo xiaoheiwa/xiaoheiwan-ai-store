@@ -22,6 +22,7 @@ import {
   Highlighter, Subscript as SubIcon, Superscript as SuperIcon, Palette, Type, ChevronDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { editorStyles } from './content-styles'
 
 interface TiptapEditorProps {
   value: string
@@ -547,7 +548,7 @@ export function TiptapEditor({ value, onChange, placeholder = "开始编写产�
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[300px] p-4',
+        class: `max-w-none ${editorStyles}`,
       },
       handleDrop: (view, event, slice, moved) => {
         if (!moved && event.dataTransfer?.files?.length) {
