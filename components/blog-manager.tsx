@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useCallback } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,9 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft, Plus, Pencil, Trash2, Eye, Search, Loader2,
   FileText, Clock, CheckCircle, AlertCircle, ExternalLink,
-  ChevronLeft, ChevronRight, Bold, Italic, Heading1, Heading2, Heading3,
-  List, ListOrdered, Quote, Code, Link2, ImagePlus, Minus, EyeIcon, EyeOff
+  ChevronLeft, ChevronRight
 } from "lucide-react"
+import { TiptapEditor } from "@/components/tiptap-editor"
 
 interface BlogPost {
   id: string
@@ -34,74 +34,6 @@ interface BlogManagerProps {
   adminToken: string
 }
 
-// Toolbar actions
-interface ToolbarAction {
-  icon: React.ReactNode
-  label: string
-  shortcut?: string
-  action: (textarea: HTMLTextAreaElement) => { before: string; after: string; placeholder: string; block?: boolean }
-}
-
-function insertMarkdown(
-  textarea: HTMLTextAreaElement,
-  setContent: (fn: (prev: string) => string) => void,
-  config: { before: string; after: string; placeholder: string; block?: boolean }
-) {
-  const { before, after, placeholder, block } = config
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const value = textarea.value
-  const selected = value.substring(start, end)
-  const text = selected || placeholder
-
-  let insert: string
-  let cursorStart: number
-  let cursorEnd: number
-
-  if (block) {
-    // Block-level: ensure newlines
-    const prefix = start > 0 && value[start - 1] !== "\n" ? "\n" : ""
-    const suffix = end < value.length && value[end] !== "\n" ? "\n" : ""
-    insert = `${prefix}${before}${text}${after}${suffix}`
-    cursorStart = start + prefix.length + before.length
-    cursorEnd = cursorStart + text.length
-  } else {
-    insert = `${before}${text}${after}`
-    cursorStart = start + before.length
-    cursorEnd = cursorStart + text.length
-  }
-
-  const newValue = value.substring(0, start) + insert + value.substring(end)
-  setContent(() => newValue)
-
-  // Restore cursor position
-  requestAnimationFrame(() => {
-    textarea.focus()
-    textarea.setSelectionRange(cursorStart, selected ? cursorStart : cursorEnd)
-  })
-}
-
-// Markdown preview renderer (simplified for editor preview)
-function renderPreview(md: string): string {
-  return md
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre style="background:rgba(128,128,128,0.1);padding:12px;border-radius:8px;overflow-x:auto;margin:12px 0"><code>$2</code></pre>')
-    .replace(/`([^`]+)`/g, '<code style="background:rgba(128,128,128,0.15);padding:1px 5px;border-radius:4px;font-size:0.85em">$1</code>')
-    .replace(/!\[([^\]]*)\]\(([^)\s]+(?:\?[^)\s]*)?)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0" />')
-    .replace(/^(https?:\/\/[^\s]+\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?[^\s]*)?)$/gim, '<img src="$1" alt="" style="max-width:100%;border-radius:8px;margin:8px 0" />')
-    .replace(/<img\s+([^>]*?)(?:\s*\/?)>/gi, (m, a) => a.includes('style') ? m : `<img ${a} style="max-width:100%;border-radius:8px;margin:8px 0" />`)
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#10B981;text-decoration:underline" target="_blank">$1</a>')
-    .replace(/^### (.+)$/gm, '<h3 style="font-size:1.1em;font-weight:600;margin:16px 0 6px">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 style="font-size:1.25em;font-weight:600;margin:20px 0 8px">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 style="font-size:1.5em;font-weight:700;margin:24px 0 10px">$1</h1>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid rgba(128,128,128,0.3);padding-left:12px;color:rgba(128,128,128,0.8);margin:8px 0">$1</blockquote>')
-    .replace(/^- (.+)$/gm, '<li style="margin-left:20px;list-style:disc">$1</li>')
-    .replace(/^\d+\. (.+)$/gm, '<li style="margin-left:20px;list-style:decimal">$1</li>')
-    .replace(/^---$/gm, '<hr style="border-color:rgba(128,128,128,0.2);margin:16px 0" />')
-    .replace(/^(?!<[a-z/])((?!<\/)[^\n]+)$/gm, '<p style="margin:6px 0;line-height:1.7">$1</p>')
-}
-
 export function BlogManager({ adminToken }: BlogManagerProps) {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(false)
@@ -115,9 +47,6 @@ export function BlogManager({ adminToken }: BlogManagerProps) {
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const [form, setForm] = useState({
     title: "",
@@ -154,7 +83,6 @@ export function BlogManager({ adminToken }: BlogManagerProps) {
   const resetForm = () => {
     setForm({ title: "", slug: "", excerpt: "", content: "", cover_image: "", status: "draft", tags: "" })
     setEditingPost(null)
-    setShowPreview(false)
   }
 
   const openCreate = () => { resetForm(); setMode("create") }
@@ -211,66 +139,8 @@ export function BlogManager({ adminToken }: BlogManagerProps) {
     finally { setDeleting(false) }
   }
 
-  // --- Toolbar ---
-  const doInsert = (config: { before: string; after: string; placeholder: string; block?: boolean }) => {
-    if (!textareaRef.current) return
-    insertMarkdown(textareaRef.current, (fn) => setForm(f => ({ ...f, content: fn(f.content) })), config)
-  }
-
-  const toolbarActions: ToolbarAction[] = [
-    { icon: <Bold className="w-4 h-4" />, label: "粗体", shortcut: "B", action: () => ({ before: "**", after: "**", placeholder: "粗体文字" }) },
-    { icon: <Italic className="w-4 h-4" />, label: "斜体", shortcut: "I", action: () => ({ before: "*", after: "*", placeholder: "斜体文字" }) },
-    { icon: <Heading1 className="w-4 h-4" />, label: "标题1", action: () => ({ before: "# ", after: "", placeholder: "一级标题", block: true }) },
-    { icon: <Heading2 className="w-4 h-4" />, label: "标题2", action: () => ({ before: "## ", after: "", placeholder: "二级标题", block: true }) },
-    { icon: <Heading3 className="w-4 h-4" />, label: "标题3", action: () => ({ before: "### ", after: "", placeholder: "三级标题", block: true }) },
-    { icon: <List className="w-4 h-4" />, label: "无序列表", action: () => ({ before: "- ", after: "", placeholder: "列表项", block: true }) },
-    { icon: <ListOrdered className="w-4 h-4" />, label: "有序列表", action: () => ({ before: "1. ", after: "", placeholder: "列表项", block: true }) },
-    { icon: <Quote className="w-4 h-4" />, label: "引用", action: () => ({ before: "> ", after: "", placeholder: "引用内容", block: true }) },
-    { icon: <Code className="w-4 h-4" />, label: "代码", shortcut: "E", action: () => ({ before: "`", after: "`", placeholder: "code" }) },
-    { icon: <Link2 className="w-4 h-4" />, label: "链接", shortcut: "K", action: () => ({ before: "[", after: "](https://)", placeholder: "链接文字" }) },
-    { icon: <ImagePlus className="w-4 h-4" />, label: "图片", action: () => ({ before: "![", after: "](https://)", placeholder: "图片描述", block: true }) },
-    { icon: <Minus className="w-4 h-4" />, label: "分隔线", action: () => ({ before: "---", after: "", placeholder: "", block: true }) },
-  ]
-
-  // Keyboard shortcuts
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!(e.metaKey || e.ctrlKey)) return
-    const key = e.key.toLowerCase()
-    const found = toolbarActions.find(a => a.shortcut && a.shortcut.toLowerCase() === key)
-    if (found && textareaRef.current) {
-      e.preventDefault()
-      doInsert(found.action(textareaRef.current))
-    }
-    // Ctrl+S to save draft
-    if (key === "s") {
-      e.preventDefault()
-      handleSave("draft")
-    }
-  }
-
-  // Tab key support for indentation
-  const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Tab") {
-      e.preventDefault()
-      const ta = textareaRef.current
-      if (!ta) return
-      const start = ta.selectionStart
-      const end = ta.selectionEnd
-      const val = ta.value
-      const newVal = val.substring(0, start) + "  " + val.substring(end)
-      setForm(f => ({ ...f, content: newVal }))
-      requestAnimationFrame(() => {
-        ta.focus()
-        ta.setSelectionRange(start + 2, start + 2)
-      })
-    }
-  }
-
   // Editor view
   if (mode !== "list") {
-    const charCount = form.content.length
-    const wordCount = form.content.trim() ? form.content.trim().split(/\s+/).length : 0
-
     return (
       <div>
         {/* Editor Header */}
@@ -326,65 +196,17 @@ export function BlogManager({ adminToken }: BlogManagerProps) {
             </CardContent>
           </Card>
 
-          {/* Content Editor */}
+          {/* Content Editor - Using TiptapEditor */}
           <Card className="bg-card border-border">
-            <CardContent className="p-0">
-              {/* Toolbar */}
-              <div className="flex items-center justify-between border-b border-border px-2 py-1.5 bg-muted/30 rounded-t-xl">
-                <div className="flex items-center flex-wrap gap-0.5">
-                  {toolbarActions.map((item, i) => (
-                    <div key={i} className="contents">
-                      {(i === 2 || i === 5 || i === 8 || i === 10) && <div className="w-px h-5 bg-border mx-0.5" />}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (textareaRef.current) doInsert(item.action(textareaRef.current))
-                        }}
-                        title={`${item.label}${item.shortcut ? ` (Ctrl+${item.shortcut})` : ""}`}
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      >
-                        {item.icon}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">{charCount} {"字"}</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPreview(!showPreview)}
-                    title={showPreview ? "隐藏预览" : "显示预览"}
-                    className={`p-1.5 rounded-md transition-colors ${showPreview ? "text-accent bg-accent/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
-                  >
-                    {showPreview ? <EyeOff className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Editor + Preview */}
-              <div className={`${showPreview ? "grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border" : ""}`}>
-                <div className="relative">
-                  <textarea
-                    ref={textareaRef}
-                    value={form.content}
-                    onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
-                    onKeyDown={(e) => { handleKeyDown(e); handleTab(e) }}
-                    placeholder={"开始写作...\n\n支持 Markdown 语法，使用上方工具栏快速插入格式\n\nCtrl+B 粗体 | Ctrl+I 斜体 | Ctrl+K 链接 | Ctrl+S 保存"}
-                    className="w-full bg-transparent px-4 py-3 text-sm font-mono leading-relaxed focus:outline-none resize-none"
-                    style={{ minHeight: showPreview ? "500px" : "450px" }}
-                  />
-                </div>
-                {showPreview && (
-                  <div className="p-4 overflow-auto bg-background/50" style={{ maxHeight: "550px" }}>
-                    <div className="text-xs text-muted-foreground/50 mb-3 font-medium uppercase tracking-wider">{"Preview"}</div>
-                    {form.content ? (
-                      <div className="prose-sm text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: renderPreview(form.content) }} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground/40 italic">{"开始写作后这里会显示预览..."}</p>
-                    )}
-                  </div>
-                )}
-              </div>
+            <CardContent className="p-4">
+              <Label className="text-xs mb-2 block">{"文章内容"} *</Label>
+              <p className="text-xs text-muted-foreground mb-3">{"支持直接粘贴或拖拽图片上传，可使用快捷键格式化文本"}</p>
+              <TiptapEditor
+                value={form.content}
+                onChange={(html) => setForm(f => ({ ...f, content: html }))}
+                placeholder="开始写作...&#10;&#10;可直接粘贴截图或拖拽图片上传"
+                minHeight="450px"
+              />
             </CardContent>
           </Card>
         </div>

@@ -20,6 +20,7 @@ interface TiptapEditorProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
+  minHeight?: string
 }
 
 // 上传图片到服务器
@@ -278,7 +279,7 @@ function Toolbar({ editor, uploading }: { editor: Editor | null, uploading: bool
   )
 }
 
-export function TiptapEditor({ value, onChange, placeholder = "开始编写产品详情...\n\n支持直接粘贴或拖拽图片" }: TiptapEditorProps) {
+export function TiptapEditor({ value, onChange, placeholder = "开始编写产品详情...\n\n支持直接粘贴或拖拽图片", minHeight = "300px" }: TiptapEditorProps) {
   const [uploading, setUploading] = useState(false)
   
   const editor = useEditor({
@@ -379,7 +380,8 @@ export function TiptapEditor({ value, onChange, placeholder = "开始编写产�
       <Toolbar editor={editor} uploading={uploading} />
       <EditorContent 
         editor={editor} 
-        className="[&_.ProseMirror]:min-h-[300px] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:opacity-50 [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
+        style={{ '--editor-min-height': minHeight } as React.CSSProperties}
+        className="[&_.ProseMirror]:min-h-[var(--editor-min-height,300px)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:opacity-50 [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
       />
     </div>
   )
