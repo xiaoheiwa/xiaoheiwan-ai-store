@@ -548,7 +548,7 @@ export function TiptapEditor({ value, onChange, placeholder = "开始编写产�
     },
     editorProps: {
       attributes: {
-        class: `max-w-none ${editorStyles}`,
+        class: "max-w-none p-4 focus:outline-none min-h-[300px] " + editorStyles,
       },
       handleDrop: (view, event, slice, moved) => {
         if (!moved && event.dataTransfer?.files?.length) {
