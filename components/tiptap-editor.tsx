@@ -6,13 +6,20 @@ import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useCallback, useEffect, useState } from 'react'
+import TextAlign from '@tiptap/extension-text-align'
+import Highlight from '@tiptap/extension-highlight'
+import Subscript from '@tiptap/extension-subscript'
+import Superscript from '@tiptap/extension-superscript'
+import TextStyle from '@tiptap/extension-text-style'
+import Color from '@tiptap/extension-color'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { 
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   List, ListOrdered, Heading1, Heading2, Heading3,
   Link as LinkIcon, Image as ImageIcon, Undo, Redo,
-  Quote, Code, Minus, Loader2
+  Quote, Code, Minus, Loader2, AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Highlighter, Subscript as SubIcon, Superscript as SuperIcon, Palette, Type, ChevronDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -23,8 +30,37 @@ interface TiptapEditorProps {
   minHeight?: string
 }
 
+// 预设颜色
+const COLORS = [
+  { name: '默认', value: '' },
+  { name: '红色', value: '#ef4444' },
+  { name: '橙色', value: '#f97316' },
+  { name: '黄色', value: '#eab308' },
+  { name: '绿色', value: '#22c55e' },
+  { name: '蓝色', value: '#3b82f6' },
+  { name: '紫色', value: '#8b5cf6' },
+  { name: '粉色', value: '#ec4899' },
+  { name: '灰色', value: '#6b7280' },
+]
+
+const HIGHLIGHT_COLORS = [
+  { name: '无', value: '' },
+  { name: '黄色', value: '#fef08a' },
+  { name: '绿色', value: '#bbf7d0' },
+  { name: '蓝色', value: '#bfdbfe' },
+  { name: '紫色', value: '#ddd6fe' },
+  { name: '粉色', value: '#fbcfe8' },
+  { name: '橙色', value: '#fed7aa' },
+]
+
 // 上传图片到服务器
 async function uploadImage(file: File): Promise<string | null> {
+  const maxSize = 4 * 1024 * 1024
+  if (file.size > maxSize) {
+    alert(`图片太大 (${(file.size / 1024 / 1024).toFixed(1)}MB)，请压缩到 4MB 以下`)
+    return null
+  }
+  
   const formData = new FormData()
   formData.append('file', file)
   
@@ -35,14 +71,24 @@ async function uploadImage(file: File): Promise<string | null> {
     })
     
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || '上传失败')
+      let errorMsg = '上传失败'
+      try {
+        const error = await response.json()
+        errorMsg = error.error || errorMsg
+      } catch {
+        if (response.status === 413) {
+          errorMsg = '图片太大，请压缩后重试'
+        }
+      }
+      alert(errorMsg)
+      return null
     }
     
     const data = await response.json()
     return data.url
   } catch (error) {
     console.error('Upload failed:', error)
+    alert('上传失败，请重试')
     return null
   }
 }
@@ -75,6 +121,89 @@ function ToolbarButton({
     >
       {children}
     </button>
+  )
+}
+
+// 下拉菜单按钮
+function DropdownButton({ 
+  children, 
+  title,
+  menuContent,
+  active
+}: { 
+  children: React.ReactNode
+  title?: string
+  menuContent: React.ReactNode
+  active?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        title={title}
+        className={cn(
+          "p-1.5 rounded hover:bg-accent transition-colors flex items-center gap-0.5",
+          active && "bg-accent text-accent-foreground"
+        )}
+      >
+        {children}
+        <ChevronDown className="w-3 h-3" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 p-1 bg-popover border border-border rounded-md shadow-lg z-20 min-w-[120px]">
+          {menuContent}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 颜色选择器
+function ColorPicker({ 
+  colors, 
+  currentColor, 
+  onSelect,
+  title
+}: { 
+  colors: { name: string; value: string }[]
+  currentColor?: string
+  onSelect: (color: string) => void
+  title: string
+}) {
+  return (
+    <div className="p-2">
+      <div className="text-xs text-muted-foreground mb-2">{title}</div>
+      <div className="grid grid-cols-5 gap-1">
+        {colors.map((color) => (
+          <button
+            key={color.value || 'default'}
+            type="button"
+            onClick={() => onSelect(color.value)}
+            title={color.name}
+            className={cn(
+              "w-6 h-6 rounded border-2 transition-all hover:scale-110",
+              currentColor === color.value ? "border-primary" : "border-transparent",
+              !color.value && "bg-gradient-to-br from-gray-200 to-gray-400"
+            )}
+            style={color.value ? { backgroundColor: color.value } : undefined}
+          />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -201,6 +330,102 @@ function Toolbar({ editor, uploading }: { editor: Editor | null, uploading: bool
       
       <ToolbarDivider />
       
+      {/* 上下标 */}
+      <ToolbarButton 
+        onClick={() => editor.chain().focus().toggleSuperscript().run()}
+        active={editor.isActive('superscript')}
+        title="上标"
+      >
+        <SuperIcon className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton 
+        onClick={() => editor.chain().focus().toggleSubscript().run()}
+        active={editor.isActive('subscript')}
+        title="下标"
+      >
+        <SubIcon className="w-4 h-4" />
+      </ToolbarButton>
+      
+      <ToolbarDivider />
+      
+      {/* 文字颜色 */}
+      <DropdownButton 
+        title="文字颜色"
+        active={!!editor.getAttributes('textStyle').color}
+        menuContent={
+          <ColorPicker
+            colors={COLORS}
+            currentColor={editor.getAttributes('textStyle').color}
+            onSelect={(color) => {
+              if (color) {
+                editor.chain().focus().setColor(color).run()
+              } else {
+                editor.chain().focus().unsetColor().run()
+              }
+            }}
+            title="文字颜色"
+          />
+        }
+      >
+        <Palette className="w-4 h-4" />
+      </DropdownButton>
+      
+      {/* 高亮颜色 */}
+      <DropdownButton 
+        title="高亮"
+        active={editor.isActive('highlight')}
+        menuContent={
+          <ColorPicker
+            colors={HIGHLIGHT_COLORS}
+            currentColor={editor.getAttributes('highlight').color}
+            onSelect={(color) => {
+              if (color) {
+                editor.chain().focus().toggleHighlight({ color }).run()
+              } else {
+                editor.chain().focus().unsetHighlight().run()
+              }
+            }}
+            title="高亮颜色"
+          />
+        }
+      >
+        <Highlighter className="w-4 h-4" />
+      </DropdownButton>
+      
+      <ToolbarDivider />
+      
+      {/* 对齐方式 */}
+      <ToolbarButton 
+        onClick={() => editor.chain().focus().setTextAlign('left').run()}
+        active={editor.isActive({ textAlign: 'left' })}
+        title="左对齐"
+      >
+        <AlignLeft className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton 
+        onClick={() => editor.chain().focus().setTextAlign('center').run()}
+        active={editor.isActive({ textAlign: 'center' })}
+        title="居中"
+      >
+        <AlignCenter className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton 
+        onClick={() => editor.chain().focus().setTextAlign('right').run()}
+        active={editor.isActive({ textAlign: 'right' })}
+        title="右对齐"
+      >
+        <AlignRight className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton 
+        onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+        active={editor.isActive({ textAlign: 'justify' })}
+        title="两端对齐"
+      >
+        <AlignJustify className="w-4 h-4" />
+      </ToolbarButton>
+      
+      <ToolbarDivider />
+      
       {/* 列表 */}
       <ToolbarButton 
         onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -248,7 +473,7 @@ function Toolbar({ editor, uploading }: { editor: Editor | null, uploading: bool
           <LinkIcon className="w-4 h-4" />
         </ToolbarButton>
         {showLinkInput && (
-          <div className="absolute top-full left-0 mt-1 p-2 bg-popover border border-border rounded-md shadow-lg z-10 flex gap-2">
+          <div className="absolute top-full left-0 mt-1 p-2 bg-popover border border-border rounded-md shadow-lg z-20 flex gap-2">
             <input
               type="url"
               placeholder="输入链接地址"
@@ -290,6 +515,16 @@ export function TiptapEditor({ value, onChange, placeholder = "开始编写产�
         },
       }),
       Underline,
+      Subscript,
+      Superscript,
+      TextStyle,
+      Color,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
