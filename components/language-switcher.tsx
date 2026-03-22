@@ -1,8 +1,6 @@
 "use client"
 
-import { useLocale } from 'next-intl'
-import { useRouter, usePathname } from 'next/navigation'
-import { locales, localeNames, type Locale } from '@/i18n/config'
+import { useRouter } from 'next/navigation'
 import { Globe } from 'lucide-react'
 import {
   DropdownMenu,
@@ -11,31 +9,37 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
+
+type Locale = 'zh' | 'en'
+
+const localeNames: Record<Locale, string> = {
+  zh: '中文',
+  en: 'English',
+}
+
+function getLocale(): Locale {
+  if (typeof window === 'undefined') return 'zh'
+  const cookie = document.cookie.split('; ').find(row => row.startsWith('locale='))
+  return (cookie?.split('=')[1] as Locale) || 'zh'
+}
+
+function setLocale(locale: Locale) {
+  document.cookie = `locale=${locale};path=/;max-age=31536000`
+}
 
 export function LanguageSwitcher() {
-  const locale = useLocale() as Locale
   const router = useRouter()
-  const pathname = usePathname()
+  const [locale, setLocaleState] = useState<Locale>('zh')
+  
+  useEffect(() => {
+    setLocaleState(getLocale())
+  }, [])
 
   const switchLocale = (newLocale: Locale) => {
     if (newLocale === locale) return
-    
-    // Remove current locale prefix if exists
-    let newPath = pathname
-    for (const loc of locales) {
-      if (pathname.startsWith(`/${loc}/`)) {
-        newPath = pathname.replace(`/${loc}`, '')
-        break
-      } else if (pathname === `/${loc}`) {
-        newPath = '/'
-        break
-      }
-    }
-    
-    // Add new locale prefix (unless it's default locale with 'as-needed' prefix mode)
-    const finalPath = newLocale === 'zh' ? newPath : `/${newLocale}${newPath}`
-    
-    router.push(finalPath)
+    setLocale(newLocale)
+    setLocaleState(newLocale)
     router.refresh()
   }
 
@@ -48,7 +52,7 @@ export function LanguageSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[120px]">
-        {locales.map((loc) => (
+        {(['zh', 'en'] as Locale[]).map((loc) => (
           <DropdownMenuItem
             key={loc}
             onClick={() => switchLocale(loc)}

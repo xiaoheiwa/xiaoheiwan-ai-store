@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import createMiddleware from 'next-intl/middleware'
-import { routing } from './i18n/routing'
 
 // 授权验证中间件 - 简化版，客户只需设置 LICENSE_KEY
 
 // 内置密钥 - 与 lib/license.ts 和 scripts/generate-license.js 保持一致
 const INTERNAL_SECRET = "XHW-2024-SECRET-KEY-CHANGE-THIS-TO-YOUR-OWN"
-
-// 国际化中间件
-const intlMiddleware = createMiddleware(routing)
 
 // 不需要授权验证的路径
 const PUBLIC_PATHS = [
@@ -142,8 +137,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url)
   }
 
-  // 处理国际化路由
-  return intlMiddleware(request)
+  return NextResponse.next()
 }
 
 export const config = {
