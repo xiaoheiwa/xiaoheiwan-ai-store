@@ -33,14 +33,22 @@
     "learnMore": "了解更多"
   },
   "nav": {
+    "brand": "小黑丸",
     "home": "首页",
     "purchase": "购买",
-    "activateGPT": "激活GPT",
-    "activateTeam": "激活Team",
-    "tutorial": "教程",
+    "activate": "激活",
+    "claudeActivate": "Claude 激活",
+    "claudeDesc": "Claude Pro 会员激活",
+    "grokActivate": "Grok 激活",
+    "grokDesc": "Grok Premium 会员激活",
+    "gptActivate": "ChatGPT 激活",
+    "gptDesc": "ChatGPT Plus 会员激活",
+    "teamRedeem": "Team 兑换",
+    "teamDesc": "GPT Team 邀请兑换",
+    "guide": "指南",
     "blog": "博客",
-    "recommend": "推荐",
-    "orderQuery": "订单查询",
+    "orderLookup": "订单查询",
+    "buyNow": "立即购买",
     "language": "语言",
     "switchToEnglish": "English",
     "switchToChinese": "中文"
@@ -218,7 +226,7 @@
     "howItWorks": {
       "title": "如何参与",
       "step1": "复制您的专属推荐链接",
-      "step2": "分享给您的好友",
+      "step2": "分享给您���好友",
       "step3": "好友通过链接购买后，您获得佣金"
     }
   },

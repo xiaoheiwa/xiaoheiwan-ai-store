@@ -7,37 +7,39 @@ import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown } from "luci
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { LanguageSwitcher } from "@/components/language-switcher"
-
-// Navigation items - IMPORTANT: Using child.label as key because Claude and Grok share same /activate href
-const navItems = [
-  { 
-    label: "购买", 
-    href: "/purchase",
-    icon: ShoppingBag,
-  },
-  { 
-    label: "激活",
-    icon: Zap,
-    children: [
-      { label: "Claude 激活", href: "/activate/claude", description: "Claude Pro 会员激活" },
-      { label: "Grok 激活", href: "/activate/grok", description: "Grok Premium 会员激活" },
-      { label: "ChatGPT 激活", href: "/activate/gpt", description: "ChatGPT Plus 会员激活" },
-      { label: "Team 兑换", href: "/activate/team", description: "GPT Team 邀请兑换" },
-    ]
-  },
-  { 
-    label: "指南", 
-    href: "/guide",
-    icon: BookOpen,
-  },
-  { 
-    label: "博客", 
-    href: "/blog",
-    icon: FileText,
-  },
-]
+import { useTranslations } from "@/lib/i18n-context"
 
 export default function Navbar() {
+  const t = useTranslations('nav')
+  
+  // Navigation items with translations
+  const navItems = [
+    { 
+      label: t('purchase'), 
+      href: "/purchase",
+      icon: ShoppingBag,
+    },
+    { 
+      label: t('activate'),
+      icon: Zap,
+      children: [
+        { label: t('claudeActivate'), href: "/activate/claude", description: t('claudeDesc') },
+        { label: t('grokActivate'), href: "/activate/grok", description: t('grokDesc') },
+        { label: t('gptActivate'), href: "/activate/gpt", description: t('gptDesc') },
+        { label: t('teamRedeem'), href: "/activate/team", description: t('teamDesc') },
+      ]
+    },
+    { 
+      label: t('guide'), 
+      href: "/guide",
+      icon: BookOpen,
+    },
+    { 
+      label: t('blog'), 
+      href: "/blog",
+      icon: FileText,
+    },
+  ]
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
@@ -71,7 +73,7 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-14 sm:h-16">
             <Link href="/" className="flex items-center gap-2 group">
               <Logo size={28} className="transition-transform group-hover:scale-105" />
-              <span className="font-semibold text-foreground hidden sm:block">{"小黑丸"}</span>
+              <span className="font-semibold text-foreground hidden sm:block">{t('brand')}</span>
             </Link>
 
             <div className="hidden md:flex items-center gap-1">
@@ -137,12 +139,12 @@ export default function Navbar() {
               </div>
               <Link href="/order-lookup" className="hidden sm:block">
                 <Button variant="ghost" size="sm" className="text-foreground/80 hover:text-foreground">
-                  {"订单查询"}
+                  {t('orderLookup')}
                 </Button>
               </Link>
               <Link href="/purchase" className="hidden sm:block">
                 <Button size="sm" className="bg-accent hover:bg-accent/90 text-white">
-                  {"立即购买"}
+                  {t('buyNow')}
                 </Button>
               </Link>
               
@@ -214,12 +216,12 @@ export default function Navbar() {
                 </div>
                 <Link href="/order-lookup" className="block">
                   <Button variant="outline" size="default" className="w-full justify-center h-11">
-                    {"订单查询"}
+                    {t('orderLookup')}
                   </Button>
                 </Link>
                 <Link href="/purchase" className="block">
                   <Button size="default" className="w-full justify-center bg-accent hover:bg-accent/90 text-white h-11">
-                    {"立即购买"}
+                    {t('buyNow')}
                   </Button>
                 </Link>
               </div>
