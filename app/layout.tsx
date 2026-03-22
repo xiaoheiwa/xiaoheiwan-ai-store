@@ -97,11 +97,6 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: BASE_URL,
-    languages: {
-      'zh-CN': BASE_URL,
-      'en-US': `${BASE_URL}/en`,
-      'x-default': BASE_URL,
-    },
   },
   category: "technology",
   classification: "AI Services, Digital Products, Software Subscription",
