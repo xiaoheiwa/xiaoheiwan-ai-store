@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from 'next/navigation'
 import { Globe } from 'lucide-react'
 import {
   DropdownMenu,
@@ -9,38 +8,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { useEffect, useState } from 'react'
-
-type Locale = 'zh' | 'en'
+import { useI18n, type Locale } from '@/lib/i18n-context'
 
 const localeNames: Record<Locale, string> = {
   zh: '中文',
   en: 'English',
 }
 
-function getLocale(): Locale {
-  if (typeof window === 'undefined') return 'zh'
-  const cookie = document.cookie.split('; ').find(row => row.startsWith('locale='))
-  return (cookie?.split('=')[1] as Locale) || 'zh'
-}
-
-function setLocale(locale: Locale) {
-  document.cookie = `locale=${locale};path=/;max-age=31536000`
-}
-
 export function LanguageSwitcher() {
-  const router = useRouter()
-  const [locale, setLocaleState] = useState<Locale>('zh')
-  
-  useEffect(() => {
-    setLocaleState(getLocale())
-  }, [])
+  const { locale, setLocale } = useI18n()
 
   const switchLocale = (newLocale: Locale) => {
     if (newLocale === locale) return
     setLocale(newLocale)
-    setLocaleState(newLocale)
-    router.refresh()
   }
 
   return (
