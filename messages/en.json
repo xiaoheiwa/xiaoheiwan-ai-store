@@ -1,0 +1,240 @@
+{
+  "common": {
+    "home": "Home",
+    "purchase": "Purchase",
+    "activate": "Activate",
+    "tutorial": "Tutorial",
+    "blog": "Blog",
+    "recommend": "Referral",
+    "orderQuery": "Order Query",
+    "admin": "Admin",
+    "login": "Login",
+    "logout": "Logout",
+    "loading": "Loading...",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "noData": "No data",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "copy": "Copy",
+    "copied": "Copied",
+    "share": "Share",
+    "close": "Close",
+    "viewMore": "View More",
+    "learnMore": "Learn More"
+  },
+  "nav": {
+    "home": "Home",
+    "purchase": "Purchase",
+    "activateGPT": "Activate GPT",
+    "activateTeam": "Activate Team",
+    "tutorial": "Tutorial",
+    "blog": "Blog",
+    "recommend": "Referral",
+    "orderQuery": "Orders",
+    "language": "Language",
+    "switchToEnglish": "English",
+    "switchToChinese": "中文"
+  },
+  "home": {
+    "title": "Xiaoheiwan AI Store",
+    "subtitle": "One-stop AI Tools Platform",
+    "hero": {
+      "title": "Unlock the Power of AI",
+      "subtitle": "Easy purchase and activation of premium AI tools like ChatGPT Plus and Claude Pro",
+      "cta": "Buy Now",
+      "learnMore": "Learn More"
+    },
+    "features": {
+      "title": "Why Choose Us",
+      "fast": {
+        "title": "Instant Delivery",
+        "description": "Immediate delivery after payment"
+      },
+      "secure": {
+        "title": "Secure & Reliable",
+        "description": "Official channels, account security guaranteed"
+      },
+      "support": {
+        "title": "24/7 Support",
+        "description": "Professional customer service anytime"
+      },
+      "price": {
+        "title": "Best Prices",
+        "description": "Competitive pricing with bulk discounts"
+      }
+    },
+    "products": {
+      "title": "Popular Products",
+      "viewAll": "View All Products"
+    }
+  },
+  "purchase": {
+    "title": "Purchase Products",
+    "selectProduct": "Select Product",
+    "selectDuration": "Select Duration",
+    "enterEmail": "Enter Email",
+    "emailPlaceholder": "Enter your email address",
+    "emailHint": "Order info will be sent to this email",
+    "paymentMethod": "Payment Method",
+    "alipay": "Alipay",
+    "wechat": "WeChat Pay",
+    "crypto": "Cryptocurrency",
+    "usdt": "USDT",
+    "totalPrice": "Total",
+    "originalPrice": "Original Price",
+    "discount": "Discount",
+    "payNow": "Pay Now",
+    "processing": "Processing...",
+    "orderCreated": "Order Created",
+    "scanToPay": "Scan to Pay",
+    "paymentSuccess": "Payment Successful",
+    "paymentFailed": "Payment Failed",
+    "orderExpired": "Order Expired",
+    "month": "month",
+    "months": "months",
+    "year": "year"
+  },
+  "activate": {
+    "title": "Activate Account",
+    "gptTitle": "Activate ChatGPT Plus",
+    "teamTitle": "Activate Team Version",
+    "enterCode": "Enter Activation Code",
+    "codePlaceholder": "Enter your activation code",
+    "enterAccount": "Enter Account",
+    "accountPlaceholder": "Enter the account to activate",
+    "activateNow": "Activate Now",
+    "activating": "Activating...",
+    "activateSuccess": "Activation Successful",
+    "activateFailed": "Activation Failed",
+    "invalidCode": "Invalid activation code",
+    "codeUsed": "Activation code already used",
+    "codeExpired": "Activation code expired",
+    "instructions": "Activation Instructions",
+    "step1": "You will receive an activation code after purchase",
+    "step2": "Enter the code and your account above",
+    "step3": "Click activate to complete the process"
+  },
+  "tutorial": {
+    "title": "Tutorials",
+    "subtitle": "Step-by-step guides to help you get started",
+    "searchPlaceholder": "Search tutorials...",
+    "categories": {
+      "all": "All",
+      "chatgpt": "ChatGPT",
+      "claude": "Claude",
+      "other": "Other"
+    },
+    "readMore": "Read More",
+    "publishedAt": "Published",
+    "updatedAt": "Updated",
+    "views": "views",
+    "noTutorials": "No tutorials available"
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "AI News, Tech Insights & Industry Updates",
+    "searchPlaceholder": "Search articles...",
+    "allPosts": "All Posts",
+    "recentPosts": "Recent Posts",
+    "popularPosts": "Popular Posts",
+    "readMore": "Read More",
+    "publishedAt": "Published",
+    "author": "Author",
+    "views": "views",
+    "tags": "Tags",
+    "share": "Share Article",
+    "relatedPosts": "Related Posts",
+    "noPosts": "No articles available",
+    "backToList": "Back to List"
+  },
+  "order": {
+    "title": "Order Query",
+    "subtitle": "Enter order ID or email to check order status",
+    "enterOrderId": "Enter Order ID",
+    "orderIdPlaceholder": "Enter your order ID",
+    "enterEmail": "Or Enter Email",
+    "emailPlaceholder": "Enter the email used for purchase",
+    "query": "Search",
+    "querying": "Searching...",
+    "orderInfo": "Order Information",
+    "orderId": "Order ID",
+    "productName": "Product",
+    "amount": "Amount",
+    "status": "Status",
+    "createTime": "Created",
+    "payTime": "Paid",
+    "activationCode": "Activation Code",
+    "statusPending": "Pending",
+    "statusPaid": "Paid",
+    "statusCompleted": "Completed",
+    "statusCancelled": "Cancelled",
+    "statusExpired": "Expired",
+    "orderNotFound": "Order not found",
+    "copyCode": "Copy Code"
+  },
+  "crypto": {
+    "title": "Cryptocurrency Payment",
+    "subtitle": "Pay with USDT",
+    "network": "Network",
+    "address": "Payment Address",
+    "amount": "Amount",
+    "copyAddress": "Copy Address",
+    "scanQR": "Scan QR Code to Pay",
+    "paymentNote": "Please complete payment within 30 minutes",
+    "afterPayment": "After Payment",
+    "uploadHash": "Submit Transaction Hash",
+    "hashPlaceholder": "Enter transaction hash (TxHash)",
+    "verifying": "Verifying...",
+    "verifyPayment": "Verify Payment",
+    "paymentVerified": "Payment Verified",
+    "paymentPending": "Awaiting Confirmation",
+    "paymentFailed": "Verification Failed",
+    "wrongAmount": "Incorrect amount",
+    "wrongAddress": "Incorrect address",
+    "networkFee": "Please ensure payment amount includes network fees"
+  },
+  "recommend": {
+    "title": "Referral Program",
+    "subtitle": "Share with friends, both of you get rewards",
+    "yourLink": "Your Referral Link",
+    "copyLink": "Copy Link",
+    "shareTitle": "Share to",
+    "stats": {
+      "title": "Referral Stats",
+      "totalReferred": "Total Referrals",
+      "totalEarnings": "Total Earnings",
+      "pendingEarnings": "Pending"
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1": "Copy your unique referral link",
+      "step2": "Share it with your friends",
+      "step3": "Earn commission when they purchase"
+    }
+  },
+  "footer": {
+    "about": "About Us",
+    "contact": "Contact",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "copyright": "All Rights Reserved"
+  },
+  "error": {
+    "pageNotFound": "Page Not Found",
+    "serverError": "Server Error",
+    "networkError": "Network error, please try again",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "backToHome": "Back to Home"
+  }
+}
