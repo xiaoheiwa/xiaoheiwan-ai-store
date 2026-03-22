@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown } from "lucide-react"
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
+import { LanguageSwitcher } from "@/components/language-switcher"
 
 // Navigation items - IMPORTANT: Using child.label as key because Claude and Grok share same /activate href
 const navItems = [
@@ -131,6 +132,9 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-2">
+              <div className="hidden sm:block">
+                <LanguageSwitcher />
+              </div>
               <Link href="/order-lookup" className="hidden sm:block">
                 <Button variant="ghost" size="sm" className="text-foreground/80 hover:text-foreground">
                   {"订单查询"}
@@ -205,6 +209,9 @@ export default function Navbar() {
               ))}
               
               <div className="pt-4 mt-4 border-t border-border space-y-3">
+                <div className="flex justify-center">
+                  <LanguageSwitcher />
+                </div>
                 <Link href="/order-lookup" className="block">
                   <Button variant="outline" size="default" className="w-full justify-center h-11">
                     {"订单查询"}
