@@ -32,6 +32,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.85,
     },
     {
+      url: `${baseUrl}/activate/claude`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/activate/grok`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    {
       url: `${baseUrl}/activate/team`,
       lastModified: now,
       changeFrequency: "weekly",
@@ -55,12 +67,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.7,
     },
-    {
-      url: `${baseUrl}/order-lookup`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
+    // 注意: /order-lookup 设置了 noindex，不包含在 sitemap 中
   ]
 
   // Dynamic blog posts
