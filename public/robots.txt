@@ -1,0 +1,26 @@
+# 小黑丸 AI激活码商城 - robots.txt
+# https://upgrade.xiaoheiwan.com
+
+User-agent: *
+Allow: /
+
+# 允许所有搜索引擎爬虫
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+# 禁止爬取管理后台和API
+Disallow: /admin
+Disallow: /api/
+Disallow: /unauthorized
+
+# 禁止爬取支付相关页面
+Disallow: /pay/
+
+# 站点地图
+Sitemap: https://upgrade.xiaoheiwan.com/sitemap.xml
