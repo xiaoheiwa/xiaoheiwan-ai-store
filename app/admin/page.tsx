@@ -1319,7 +1319,10 @@ export default function AdminPage() {
                                 )}
                               </Button>
                             )}
-                            {order.fulfilled_at && order.code && (
+                            {order.fulfilled_at && order.delivery_type === "manual" && (
+                              <span className="text-xs text-emerald-600 font-medium">{"已发货"}</span>
+                            )}
+                            {order.fulfilled_at && order.code && order.delivery_type !== "manual" && (
                               <span className="text-xs text-emerald-600 font-medium" title={order.code}>{"已发货"}</span>
                             )}
                             {order.code && !order.fulfilled_at && order.delivery_type !== "manual" && (
@@ -1423,7 +1426,7 @@ export default function AdminPage() {
                 上一页
               </Button>
               <Button variant="outline" size="sm" onClick={() => loadOrders(ordersPage + 1)} disabled={ordersPage >= ordersTotalPages}>
-                下一页
+                ��一页
               </Button>
             </div>
           </div>
@@ -1481,7 +1484,7 @@ export default function AdminPage() {
 
               {/* Cost recording */}
               <div className="p-3 rounded-lg bg-secondary/50 border border-border space-y-2.5">
-                <p className="text-xs font-medium text-muted-foreground">{"采购成本（选填，计入���务统计）"}</p>
+                <p className="text-xs font-medium text-muted-foreground">{"采购成本（选填，计入���务统计��"}</p>
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <Label className="text-xs">{"单���成本 (元)"}</Label>
@@ -1801,7 +1804,7 @@ export default function AdminPage() {
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="text-left p-3 font-medium w-8"></th>
-                    <th className="text-left p-3 font-medium">激活码</th>
+                    <th className="text-left p-3 font-medium">��活码</th>
                     <th className="text-left p-3 font-medium hidden md:table-cell">关联产品</th>
                     <th className="text-left p-3 font-medium">状态</th>
                     <th className="text-left p-3 font-medium hidden lg:table-cell">创建时间</th>
