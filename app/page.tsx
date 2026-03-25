@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Shield, Zap, CheckCircle, ArrowRight, Sparkles, Newspaper, BookOpen, Search, Package, Link2, LayoutGrid } from "lucide-react"
 import Link from "next/link"
 import Logo from "@/components/logo"
-import AnnouncementBanner from "@/components/announcement-banner"
 
 interface Category {
   id: string
@@ -82,9 +81,6 @@ export default function HomePage() {
       <div className="fixed inset-0 bg-gradient-to-b from-background via-transparent to-background" />
 
       <div className="relative z-10">
-        {/* Announcement Banner */}
-        <AnnouncementBanner />
-        
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-20">
 
           {/* Hero */}
