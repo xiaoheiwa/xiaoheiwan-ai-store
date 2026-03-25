@@ -11,7 +11,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import { BlogManager } from "@/components/blog-manager"
 import { AffiliateManager } from "@/components/affiliate-manager"
-import { NotificationManager } from "@/components/notification-manager"
 import { FinancePanel } from "@/components/finance-panel"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
@@ -3304,8 +3303,6 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
         return <BlogManager adminToken={adminToken} />
       case "affiliates":
         return <AffiliateManager adminToken={adminToken} />
-      case "notifications":
-        return <NotificationManager />
       case "settings":
         return renderSettings()
       default:
@@ -3473,7 +3470,6 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
                   {activeTab === "finance" && "财务管理"}
                 {activeTab === "blog" && "博客管理"}
                 {activeTab === "affiliates" && "推广管理"}
-                {activeTab === "notifications" && "通知公告"}
                 {activeTab === "settings" && "系统设置"}
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -3485,7 +3481,6 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
                   {activeTab === "finance" && "进销存与利润分析"}
                 {activeTab === "blog" && "创建和管理博客文章"}
                 {activeTab === "affiliates" && "管理推广链接和合作伙伴"}
-                {activeTab === "notifications" && "管理首页通知公告"}
                 {activeTab === "settings" && "系统配置和设置"}
                 </p>
               </div>
