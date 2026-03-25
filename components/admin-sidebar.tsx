@@ -71,7 +71,7 @@ export function AdminSidebar({ activeTab, onTabChange, onLogout, stats }: AdminS
       id: "notifications",
       label: "通知公告",
       icon: Megaphone,
-      badge: "新",
+      badge: null,
     },
     {
       id: "settings",
