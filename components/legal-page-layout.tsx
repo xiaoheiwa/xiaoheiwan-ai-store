@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 interface LegalPageLayoutProps {
   title: { zh: string; en: string }
   lastUpdated: string
-  children: (lang: "zh" | "en") => React.ReactNode
+  renderContent: (lang: "zh" | "en") => React.ReactNode
 }
 
 const legalLinks = [
@@ -19,7 +19,7 @@ const legalLinks = [
   { href: "/disclaimer", label: { zh: "免责声明", en: "Disclaimer" } },
 ]
 
-export function LegalPageLayout({ title, lastUpdated, children }: LegalPageLayoutProps) {
+export function LegalPageLayout({ title, lastUpdated, renderContent }: LegalPageLayoutProps) {
   const [lang, setLang] = useState<"zh" | "en">("zh")
 
   return (
@@ -94,7 +94,7 @@ export function LegalPageLayout({ title, lastUpdated, children }: LegalPageLayou
 
         {/* Content */}
         <article className="prose prose-neutral dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-8 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-border/50 prose-p:text-muted-foreground prose-p:leading-relaxed prose-li:text-muted-foreground prose-strong:text-foreground prose-ul:my-4 prose-li:my-1">
-          {children(lang)}
+          {renderContent(lang)}
         </article>
 
         {/* Footer Contact */}

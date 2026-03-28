@@ -5,8 +5,7 @@ export default function PrivacyPolicyPage() {
     <LegalPageLayout
       title={{ zh: "隐私政策", en: "Privacy Policy" }}
       lastUpdated="2025年3月 / March 2025"
-    >
-      {(lang) => lang === "zh" ? (
+      renderContent={(lang) => lang === "zh" ? (
         <>
           <p>欢迎访问小黑丸（"本网站"、"我们"）。本隐私政策说明了当您访问或使用本网站、产品或服务时，我们如何收集、使用、存储和披露信息。</p>
           <p>使用本网站即表示您已阅读并理解本隐私政策。</p>
@@ -63,6 +62,6 @@ export default function PrivacyPolicyPage() {
           <p>Subject to applicable law, you may request access, correction, deletion of information, or withdraw consent.</p>
         </>
       )}
-    </LegalPageLayout>
+    />
   )
 }

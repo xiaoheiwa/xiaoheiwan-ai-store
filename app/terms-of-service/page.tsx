@@ -5,8 +5,7 @@ export default function TermsOfServicePage() {
     <LegalPageLayout
       title={{ zh: "服务条款", en: "Terms of Service" }}
       lastUpdated="2025年3月 / March 2025"
-    >
-      {(lang) => lang === "zh" ? (
+      renderContent={(lang) => lang === "zh" ? (
         <>
           <p>本服务条款规定了您访问和使用小黑丸及相关产品、内容和服务的条件。访问或使用本网站即表示您同意受这些条款约束。</p>
 
@@ -69,6 +68,6 @@ export default function TermsOfServicePage() {
           <p>We may modify these Terms at any time. Continued use constitutes acceptance of modifications.</p>
         </>
       )}
-    </LegalPageLayout>
+    />
   )
 }

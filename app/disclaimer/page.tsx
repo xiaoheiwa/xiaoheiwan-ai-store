@@ -5,8 +5,7 @@ export default function DisclaimerPage() {
     <LegalPageLayout
       title={{ zh: "免责声明", en: "Disclaimer" }}
       lastUpdated="2025年3月 / March 2025"
-    >
-      {(lang) => lang === "zh" ? (
+      renderContent={(lang) => lang === "zh" ? (
         <>
           <p>本网站提供的信息、产品和服务不面向任何在其所在司法管辖区内访问、购买、接收或使用会构成违法的个人或实体。</p>
 
@@ -41,6 +40,6 @@ export default function DisclaimerPage() {
           <p>We reserve the right to restrict access, reject transactions, or refuse service at any time for legal, sanctions, compliance, fraud, operational, or policy reasons.</p>
         </>
       )}
-    </LegalPageLayout>
+    />
   )
 }

@@ -5,8 +5,7 @@ export default function RefundPolicyPage() {
     <LegalPageLayout
       title={{ zh: "退款政策", en: "Refund Policy" }}
       lastUpdated="2025年3月 / March 2025"
-    >
-      {(lang) => lang === "zh" ? (
+      renderContent={(lang) => lang === "zh" ? (
         <>
           <h2>1. 数字商品性质</h2>
           <p>本网站销售的产品为数字商品（激活码、会员服务等）。由于数字商品的特殊性，一经交付即视为已使用，通常不支持退款。</p>
@@ -55,6 +54,6 @@ export default function RefundPolicyPage() {
           <p>To request a refund, please contact us with your order number and details. We will respond within 3 business days.</p>
         </>
       )}
-    </LegalPageLayout>
+    />
   )
 }

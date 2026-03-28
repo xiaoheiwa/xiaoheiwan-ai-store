@@ -5,8 +5,7 @@ export default function AcceptableUsePolicyPage() {
     <LegalPageLayout
       title={{ zh: "可接受使用政策", en: "Acceptable Use Policy" }}
       lastUpdated="2025年3月 / March 2025"
-    >
-      {(lang) => lang === "zh" ? (
+      renderContent={(lang) => lang === "zh" ? (
         <>
           <p>本可接受使用政策是小黑丸服务条款的一部分。您不得将本网站或通过本网站获得的任何产品或服务用于以下目的：</p>
 
@@ -39,6 +38,6 @@ export default function AcceptableUsePolicyPage() {
           <p>We may investigate suspected violations and may suspend access, cancel orders, refuse support, or cooperate with lawful requests from authorities.</p>
         </>
       )}
-    </LegalPageLayout>
+    />
   )
 }
