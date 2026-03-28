@@ -56,10 +56,10 @@ export default function PrivacyPolicyPage() {
               <p>我们仅在合理需要的时间内保留信息，并采取合理措施保护数据安全，但无法保证绝对安全。</p>
 
               <h2>7. 您的权利</h2>
-              <p>根据适用法律，您可请求访问、更正、删除信息，或撤回同意。联系：support@xiaoheiwan.com</p>
+              <p>根据适用法律，您可请求访问、更正、删除信息，或撤回同意。联系：Telegram @jialiao2025</p>
 
               <h2>8. 联系方式</h2>
-              <p>如有疑问，请联系：support@xiaoheiwan.com</p>
+              <p>如有疑问，请联系：Telegram @jialiao2025</p>
             </>
           ) : (
             <>
@@ -90,10 +90,10 @@ export default function PrivacyPolicyPage() {
               <p>We retain information only as long as reasonably necessary and take reasonable measures to protect data, but cannot guarantee absolute security.</p>
 
               <h2>7. Your Rights</h2>
-              <p>Subject to applicable law, you may request access, correction, deletion of information, or withdraw consent. Contact: support@xiaoheiwan.com</p>
+              <p>Subject to applicable law, you may request access, correction, deletion of information, or withdraw consent. Contact: Telegram @jialiao2025</p>
 
               <h2>8. Contact</h2>
-              <p>If you have questions, contact: support@xiaoheiwan.com</p>
+              <p>If you have questions, contact: Telegram @jialiao2025</p>
             </>
           )}
         </article>

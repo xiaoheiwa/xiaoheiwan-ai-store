@@ -62,7 +62,7 @@ export default function TermsOfServicePage() {
               <p>我们可随时修改条款，继续使用即表示接受修改。</p>
 
               <h2>10. 联系方式</h2>
-              <p>如有疑问，请联系：support@xiaoheiwan.com</p>
+              <p>如有疑问，请联系：Telegram @jialiao2025</p>
             </>
           ) : (
             <>
@@ -99,7 +99,7 @@ export default function TermsOfServicePage() {
               <p>We may modify these Terms at any time. Continued use constitutes acceptance of modifications.</p>
 
               <h2>10. Contact</h2>
-              <p>If you have questions, contact: support@xiaoheiwan.com</p>
+              <p>If you have questions, contact: Telegram @jialiao2025</p>
             </>
           )}
         </article>

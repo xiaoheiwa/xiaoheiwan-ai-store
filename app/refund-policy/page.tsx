@@ -42,10 +42,10 @@ export default function RefundPolicyPage() {
               <p>系统故障导致重复扣款、商品无法正常使用且无法解决、未交付且取消订单。</p>
 
               <h2>4. 退款流程</h2>
-              <p>如需申请退款，请联系 support@xiaoheiwan.com，提供订单号和具体情况说明。我们将在3个工作日内回复。</p>
+              <p>如需申请退款，请联系 Telegram @jialiao2025，提供订单号和具体情况说明。我们将在3个工作日内回复。</p>
 
               <h2>5. 联系方式</h2>
-              <p>support@xiaoheiwan.com</p>
+              <p>Telegram @jialiao2025</p>
             </>
           ) : (
             <>
@@ -62,10 +62,10 @@ export default function RefundPolicyPage() {
               <p>Duplicate charges due to system error, product cannot be used and issue cannot be resolved, undelivered order cancellation.</p>
 
               <h2>4. Refund Process</h2>
-              <p>To request a refund, contact support@xiaoheiwan.com with your order number and details. We will respond within 3 business days.</p>
+              <p>To request a refund, contact Telegram @jialiao2025 with your order number and details. We will respond within 3 business days.</p>
 
               <h2>5. Contact</h2>
-              <p>support@xiaoheiwan.com</p>
+              <p>Telegram @jialiao2025</p>
             </>
           )}
         </article>
