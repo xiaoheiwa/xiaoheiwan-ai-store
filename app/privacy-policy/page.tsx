@@ -1,102 +1,99 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { ArrowLeft, Globe } from "lucide-react"
 
 export default function PrivacyPolicyPage() {
-  const [lang, setLang] = useState<"en" | "zh">("zh")
+  const [lang, setLang] = useState<"zh" | "en">("zh")
 
   return (
-    <main className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-end mb-6 gap-2">
-          <Button
-            variant={lang === "zh" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setLang("zh")}
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">{"返回首页"}</span>
+          </Link>
+          <button
+            onClick={() => setLang(lang === "zh" ? "en" : "zh")}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-sm"
           >
-            中文
-          </Button>
-          <Button
-            variant={lang === "en" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setLang("en")}
-          >
-            English
-          </Button>
+            <Globe className="w-4 h-4" />
+            <span>{lang === "zh" ? "EN" : "中文"}</span>
+          </button>
         </div>
 
-        <article className="prose prose-neutral dark:prose-invert max-w-none">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            {lang === "zh" ? "隐私政策" : "Privacy Policy"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {lang === "zh" ? "最后更新：2025年3月" : "Last Updated: March 2025"}
+          </p>
+        </div>
+
+        <div className="space-y-6">
           {lang === "zh" ? (
             <>
-              <h1>隐私政策</h1>
-              <p className="text-muted-foreground">最后更新：2025年3月</p>
-
-              <p>欢迎访问小黑丸（"本网站"、"我们"）。本隐私政策说明了当您访问或使用本网站、产品或服务时，我们如何收集、使用、存储和披露信息。</p>
-              <p>使用本网站即表示您已阅读并理解本隐私政策。</p>
-
-              <h2>1. 适用范围</h2>
-              <p>本隐私政策适用于通过以下方式收集的信息：本网站、结账页面、客户支持通信、订单和交付流程、与本网站相关的分析、安全和防欺诈系统。</p>
-
-              <h2>2. 我们收集的信息</h2>
-              <p><strong>您直接提供的信息：</strong>电子邮件地址、用户名或账户标识符、账单相关详细信息、客服消息。</p>
-              <p><strong>自动收集的信息：</strong>IP 地址、浏览器类型、设备信息、操作系统、访问页面、Cookie 和日志。</p>
-              <p><strong>来自第三方的信息：</strong>支付处理商、托管提供商、分析提供商提供的有限数据。</p>
-
-              <h2>3. 信息使用方式</h2>
-              <p>处理订单、交付产品、验证交易、提供客户支持、维护安全、改进体验、发送通知、执行政策、遵守法律。</p>
-
-              <h2>4. Cookie 和跟踪技术</h2>
-              <p>我们使用 Cookie 保持网站运行、记住偏好、分析流量、检测滥用。您可通过浏览器设置管理 Cookie。</p>
-
-              <h2>5. 信息共享</h2>
-              <p>我们不出售个人信息。我们可能与支付处理商、托管提供商、分析供应商、法律机构共享有限信息。</p>
-
-              <h2>6. 数据保留与安全</h2>
-              <p>我们仅在合理需要的时间内保留信息，并采取合理措施保护数据安全，但无法保证绝对安全。</p>
-
-              <h2>7. 您的权利</h2>
-              <p>根据适用法律，您可请求访问、更正、删除信息，或撤回同意。联系：Telegram @jialiao2025</p>
-
-              <h2>8. 联系方式</h2>
-              <p>如有疑问，请联系：Telegram @jialiao2025</p>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"1. 信息收集"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"我们收集您在使用服务时提供的信息，包括邮箱地址、支付信息（由第三方支付处理商处理）、以及服务使用数据。"}</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"2. 信息使用"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"收集的信息用于：处理订单和交付服务、提供客户支持、改进服务质量、发送服务相关通知。"}</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"3. 信息保护"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"我们采用行业标准的安全措施保护您的个人信息，包括 SSL 加密传输和安全存储。"}</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"4. 信息共享"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"我们不会出售您的个人信息。仅在必要时与支付处理商、服务提供商共享，或应法律要求披露。"}</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"5. 联系我们"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"如有隐私相关问题，请联系 Telegram @jialiao2025"}</p>
+              </section>
             </>
           ) : (
             <>
-              <h1>Privacy Policy</h1>
-              <p className="text-muted-foreground">Last updated: March 2025</p>
-
-              <p>Welcome to Xiaoheiwan. This Privacy Policy explains how we collect, use, store, and disclose information when you use our website, products, or services.</p>
-              <p>By using this Website, you acknowledge that you have read and understood this Privacy Policy.</p>
-
-              <h2>1. Scope</h2>
-              <p>This Privacy Policy applies to information collected through: our website, checkout pages, customer support, order processes, and analytics systems.</p>
-
-              <h2>2. Information We Collect</h2>
-              <p><strong>Information you provide:</strong> Email address, username or account identifier, billing details, support messages.</p>
-              <p><strong>Automatically collected:</strong> IP address, browser type, device info, OS, pages visited, cookies and logs.</p>
-              <p><strong>From third parties:</strong> Limited data from payment processors, hosting providers, analytics providers.</p>
-
-              <h2>3. How We Use Information</h2>
-              <p>Process orders, deliver products, verify transactions, provide support, maintain security, improve experience, send notifications, enforce policies, comply with laws.</p>
-
-              <h2>4. Cookies and Tracking</h2>
-              <p>We use cookies to keep the site functioning, remember preferences, analyze traffic, detect abuse. You may manage cookies through browser settings.</p>
-
-              <h2>5. Sharing of Information</h2>
-              <p>We do not sell personal information. We may share limited info with payment processors, hosting providers, analytics vendors, legal authorities.</p>
-
-              <h2>6. Data Retention and Security</h2>
-              <p>We retain information only as long as reasonably necessary and take reasonable measures to protect data, but cannot guarantee absolute security.</p>
-
-              <h2>7. Your Rights</h2>
-              <p>Subject to applicable law, you may request access, correction, deletion of information, or withdraw consent. Contact: Telegram @jialiao2025</p>
-
-              <h2>8. Contact</h2>
-              <p>If you have questions, contact: Telegram @jialiao2025</p>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"1. Information Collection"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"We collect information you provide when using our services, including email addresses, payment information (processed by third-party payment processors), and service usage data."}</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"2. Information Use"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"Collected information is used to: process orders and deliver services, provide customer support, improve service quality, and send service-related notifications."}</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"3. Information Protection"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"We employ industry-standard security measures to protect your personal information, including SSL encrypted transmission and secure storage."}</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"4. Information Sharing"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"We do not sell your personal information. We only share with payment processors and service providers when necessary, or disclose as required by law."}</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold border-b pb-2 mb-3">{"5. Contact Us"}</h2>
+                <p className="text-muted-foreground leading-relaxed">{"For privacy inquiries, contact Telegram @jialiao2025"}</p>
+              </section>
             </>
           )}
-        </article>
+        </div>
+
+        <div className="mt-12 pt-8 border-t">
+          <p className="text-sm text-muted-foreground mb-4">{lang === "zh" ? "相关文档" : "Related Documents"}</p>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/terms-of-service" className="text-sm px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors">
+              {lang === "zh" ? "服务条款" : "Terms of Service"}
+            </Link>
+            <Link href="/refund-policy" className="text-sm px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors">
+              {lang === "zh" ? "退款政策" : "Refund Policy"}
+            </Link>
+          </div>
+        </div>
       </div>
     </main>
   )
