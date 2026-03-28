@@ -20,6 +20,7 @@ const navItems = [
     children: [
       { label: "Claude 激活", href: "/activate/claude", description: "Claude Pro 会员激活" },
       { label: "Grok 激活", href: "/activate/grok", description: "Grok Premium 会员激活" },
+      { label: "X Premium", href: "/activate/x", description: "X Premium 会员激活" },
       { label: "ChatGPT 激活", href: "/activate/gpt", description: "ChatGPT Plus 会员激活" },
       { label: "Team 兑换", href: "/activate/team", description: "GPT Team 邀请兑换" },
       { label: "Telegram 会员", href: "/telegram-premium", description: "Telegram Premium 代开" },

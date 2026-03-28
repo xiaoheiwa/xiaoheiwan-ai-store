@@ -310,9 +310,11 @@ export default function HomePage() {
                 <p className="text-sm font-medium text-foreground">{"激活码使用入口"}</p>
                 <span className="text-xs text-muted-foreground">{"购买后前往对应页面激活"}</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[
-                  { href: "/activate", label: "Claude/Grok", color: "#D4A574" },
+                  { href: "/activate/claude", label: "Claude Pro", color: "#D4A574" },
+                  { href: "/activate/grok", label: "Grok Premium", color: "#1DA1F2" },
+                  { href: "/activate/x", label: "X Premium", color: "#000000" },
                   { href: "/activate/gpt", label: "ChatGPT Plus", color: "#10A37F" },
                   { href: "/activate/team", label: "GPT Team", color: "#3B82F6" },
                 ].map((item) => (

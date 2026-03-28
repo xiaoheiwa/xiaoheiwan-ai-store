@@ -14,9 +14,21 @@ interface ActivationRoute {
 const ACTIVATION_ROUTES: ActivationRoute[] = [
   {
     label: "Claude Pro 激活",
-    href: "/activate",
+    href: "/activate/claude",
     color: "#D4A574",
     description: "前往 Claude Pro 激活页面，输入激活码完成会员开通",
+  },
+  {
+    label: "Grok Premium 激活",
+    href: "/activate/grok",
+    color: "#1DA1F2",
+    description: "前往 Grok Premium 激活页面，输入激活码完成会员开通",
+  },
+  {
+    label: "X Premium 激活",
+    href: "/activate/x",
+    color: "#000000",
+    description: "前往 X Premium 激活页面，输入激活码完成会员开通",
   },
   {
     label: "ChatGPT Plus 激活",
@@ -34,13 +46,17 @@ const ACTIVATION_ROUTES: ActivationRoute[] = [
 
 const KEYWORD_MAP: Record<string, number> = {
   claude: 0,
-  "chatgpt": 1,
-  "gpt plus": 1,
-  "gpt-plus": 1,
-  "chatgpt plus": 1,
-  "gpt team": 2,
-  "gpt-team": 2,
-  team: 2,
+  grok: 1,
+  supergrok: 1,
+  "x premium": 2,
+  "x-premium": 2,
+  "chatgpt": 3,
+  "gpt plus": 3,
+  "gpt-plus": 3,
+  "chatgpt plus": 3,
+  "gpt team": 4,
+  "gpt-team": 4,
+  team: 4,
 }
 
 /**

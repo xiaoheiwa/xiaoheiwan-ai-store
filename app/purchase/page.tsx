@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { AlertMessage } from "@/components/alert-message"
-import { CreditCard, Mail, ArrowLeft, CheckCircle, Clock, Loader2, Sparkles, Box } from "lucide-react"
+import { CreditCard, Mail, ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, Sparkles, Box, Zap } from "lucide-react"
 import Link from "next/link"
 
 interface PriceTier {
@@ -623,6 +623,38 @@ function PurchaseContent() {
             </button>
           </form>
 
+          {/* 激活码使用入口 */}
+          <div className="mt-8 p-5 rounded-2xl bg-muted/30 border border-border">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium text-foreground">{"已购买？前往激活"}</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                { href: "/activate/claude", label: "Claude Pro", color: "#D4A574" },
+                { href: "/activate/grok", label: "Grok", color: "#1DA1F2" },
+                { href: "/activate/x", label: "X Premium", color: "#000000" },
+                { href: "/activate/gpt", label: "ChatGPT", color: "#10A37F" },
+                { href: "/activate/team", label: "GPT Team", color: "#3B82F6" },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group flex items-center justify-between gap-2 px-3 py-2 rounded-lg border transition-all text-sm"
+                  style={{
+                    backgroundColor: `${item.color}10`,
+                    borderColor: `${item.color}30`,
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-foreground font-medium">{item.label}</span>
+                  </div>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+                </Link>
+              ))}
+            </div>
+          </div>
 
         </div>
       </div>

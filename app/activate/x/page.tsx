@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Loader2 } from "lucide-react"
 
-export default function GrokActivatePage() {
+export default function XPremiumActivatePage() {
   const [loading, setLoading] = useState(true)
 
   return (
@@ -28,15 +28,14 @@ export default function GrokActivatePage() {
           </div>
         )}
         <iframe
-          src="https://quickplus.vip/public/grok/"
+          src="https://quickplus.vip/public/x/"
           className="w-full h-full border-0"
           onLoad={() => setLoading(false)}
           allow="clipboard-read; clipboard-write"
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
-          title="Grok Premium 激活系统"
+          title="X Premium 激活系统"
         />
       </div>
-
     </div>
   )
 }
