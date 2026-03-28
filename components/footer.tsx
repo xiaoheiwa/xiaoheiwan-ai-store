@@ -11,6 +11,13 @@ const quickLinks = [
   { href: "/blog", label: "博客" },
 ]
 
+const legalLinks = [
+  { href: "/privacy-policy", label: "隐私政策", labelEn: "Privacy" },
+  { href: "/terms-of-service", label: "服务条款", labelEn: "Terms" },
+  { href: "/refund-policy", label: "退款政策", labelEn: "Refund" },
+  { href: "/disclaimer", label: "免责声明", labelEn: "Disclaimer" },
+]
+
 export default function Footer() {
   const currentYear = new Date().getFullYear()
 
@@ -26,12 +33,25 @@ export default function Footer() {
           </div>
           
           {/* Quick links - horizontal scrollable */}
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-6">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-4">
             {quickLinks.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
                 className="text-sm text-foreground/70 hover:text-accent transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Legal links */}
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mb-4 text-xs">
+            {legalLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-foreground/50 hover:text-foreground/70 transition-colors"
               >
                 {link.label}
               </Link>
@@ -99,6 +119,18 @@ export default function Footer() {
                   <li><Link href="/guide" className="text-sm text-foreground/70 hover:text-accent transition-colors">{"使用指南"}</Link></li>
                   <li><Link href="/order-lookup" className="text-sm text-foreground/70 hover:text-accent transition-colors">{"订单查询"}</Link></li>
                   <li><Link href="/blog" className="text-sm text-foreground/70 hover:text-accent transition-colors">{"博客"}</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-3">{"法律"}</h3>
+                <ul className="space-y-2">
+                  {legalLinks.map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href} className="text-sm text-foreground/70 hover:text-accent transition-colors">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
