@@ -58,6 +58,12 @@ export default function Footer() {
             ))}
           </div>
           
+          {/* Service hours */}
+          <div className="flex items-center justify-center gap-2 mb-4 text-xs text-foreground/60">
+            <span>{"客服时间"}</span>
+            <span className="font-medium text-foreground/80">{"08:00 - 24:00"}</span>
+          </div>
+
           {/* Social links */}
           <div className="flex justify-center gap-6 mb-6">
             <Link 
@@ -97,8 +103,11 @@ export default function Footer() {
                 <Logo size={24} className="transition-transform group-hover:scale-105" />
                 <span className="font-semibold text-foreground">{"小黑丸"}</span>
               </Link>
-              <p className="text-sm text-foreground/70">
+              <p className="text-sm text-foreground/70 mb-2">
                 {"专业的 AI 服务激活码购买平台，安全可靠，自动发货"}
+              </p>
+              <p className="text-xs text-foreground/50">
+                {"客服时间："}<span className="text-foreground/70">{"08:00 - 24:00"}</span>
               </p>
             </div>
 

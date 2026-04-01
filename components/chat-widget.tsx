@@ -11,9 +11,9 @@ interface Message {
   created_at: string
 }
 
-// Business hours configuration (adjust as needed)
+// Business hours configuration
 const BUSINESS_HOURS = {
-  start: 9,  // 9 AM
+  start: 8,  // 8 AM
   end: 24,   // 12 AM (midnight)
   timezone: "Asia/Shanghai"
 }
@@ -297,7 +297,7 @@ export default function ChatWidget() {
               </div>
               <div>
                 <h3 className="font-medium text-sm">{"在线客服"}</h3>
-                <p className="text-xs opacity-70">{"通常几分钟内回复"}</p>
+                <p className="text-xs opacity-70">{"服务时间 08:00-24:00"}</p>
               </div>
             </div>
             <button 
