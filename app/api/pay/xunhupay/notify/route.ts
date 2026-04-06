@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { xunhupay } from "@/lib/xunhupay-client"
 import { Database, updateOrder, getOrder } from "@/lib/database"
 import { sendCodeMail } from "@/lib/resend"
+import { notifyPaymentSuccess } from "@/lib/telegram-bot"
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
           gateway_resp: JSON.stringify(data),
         })
 
+        // Send email notification
         if (order.email) {
           try {
             let productName: string | undefined
@@ -84,6 +86,26 @@ export async function POST(request: NextRequest) {
             console.log("[v0] Activation code sent to:", order.email)
           } catch (emailError) {
             console.error("[v0] Email sending failed:", emailError)
+          }
+        }
+
+        // Send Telegram notification (if user linked telegram)
+        if (order.telegram_chat_id) {
+          try {
+            let productName: string | undefined
+            if (order.product_id) {
+              const product = await Database.getProduct(order.product_id)
+              productName = product?.name
+            }
+            await notifyPaymentSuccess(order.telegram_chat_id, {
+              orderNo,
+              productName: productName || "产品",
+              code: soldCode.code,
+              amount: order.amount,
+            })
+            console.log("[v0] Telegram notification sent to:", order.telegram_chat_id)
+          } catch (tgError) {
+            console.error("[v0] Telegram notification failed:", tgError)
           }
         }
 

@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import { handleUserCommand } from "@/lib/telegram-commands"
 
 const sql = neon(process.env.DATABASE_URL!)
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const ADMIN_CHAT_ID = process.env.TELEGRAM_CHAT_ID
+
+// Feature flag - set to true to enable user bot features
+const ENABLE_USER_BOT = process.env.TELEGRAM_BOT_ENABLED === "true"
 
 // Send message to Telegram
 async function sendTelegramReply(chatId: string, text: string) {
@@ -42,8 +46,15 @@ export async function POST(request: Request) {
     const text = message.text
     console.log("[v0] Chat ID:", chatId, "Admin ID:", ADMIN_CHAT_ID, "Text:", text)
     
-    // Only process messages from admin
+    // Handle user commands (non-admin) - only if feature is enabled
     if (chatId !== ADMIN_CHAT_ID) {
+      if (ENABLE_USER_BOT) {
+        try {
+          await handleUserCommand(message)
+        } catch (err) {
+          console.error("[v0] User command error:", err)
+        }
+      }
       return NextResponse.json({ ok: true })
     }
     
