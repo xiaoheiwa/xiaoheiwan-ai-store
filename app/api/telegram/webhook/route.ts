@@ -176,6 +176,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
     
+    // Admin test user bot - /test command to simulate user mode
+    if (text.trim().startsWith("/test ")) {
+      const testCommand = text.replace("/test ", "").trim()
+      const fakeMessage = { ...message, text: testCommand }
+      try {
+        await handleUserCommand(fakeMessage)
+        return NextResponse.json({ ok: true })
+      } catch (err) {
+        console.error("[v0] Admin test error:", err)
+        await sendTelegramReply(chatId, `❌ 测试出错: ${err}`)
+        return NextResponse.json({ ok: true })
+      }
+    }
+
     // Help command
     if (text.trim() === "/help" || text.trim() === "/start") {
       const helpText = `
@@ -184,8 +198,10 @@ export async function POST(request: Request) {
 /chats - 查看活跃会话列表
 /reply ID 消息 - 回复指定会话
 /close ID - 关闭会话
+/test 命令 - 测试用户Bot功能
 
 <i>会话ID只需输入前8位即可</i>
+<i>例如: /test /products 查看商品</i>
       `.trim()
       await sendTelegramReply(chatId, helpText)
       return NextResponse.json({ ok: true })
