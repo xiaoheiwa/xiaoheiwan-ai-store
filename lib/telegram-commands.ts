@@ -24,6 +24,123 @@ const sql = neon(process.env.DATABASE_URL!)
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://upgrade.xiaoheiwan.com"
 const ADMIN_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 
+// ==================== 主入口函数 ====================
+
+/**
+ * 处理用户发送的消息
+ * 这是 Webhook 调用的入口函数
+ */
+export async function handleUserCommand(message: TelegramMessage) {
+  const text = message.text || ""
+  const chatId = message.chat.id
+  
+  console.log("[v0] handleUserCommand called, chatId:", chatId, "text:", text)
+  
+  // 解析命令
+  if (text.startsWith("/start")) {
+    await handleStart(message)
+  } else if (text.startsWith("/products")) {
+    await handleProducts(message)
+  } else if (text.startsWith("/order")) {
+    const args = text.replace(/^\/order\s*/, "").trim()
+    await handleOrder(message, args)
+  } else if (text.startsWith("/help")) {
+    await handleHelp(message)
+  } else if (text.startsWith("/buy")) {
+    const productId = text.replace(/^\/buy\s*/, "").trim()
+    if (productId) {
+      await startPurchase(chatId, productId)
+    } else {
+      await sendMessage(chatId, "请指定产品ID，例如：/buy 产品ID\n\n发送 /products 查看产品列表")
+    }
+  } else {
+    // 检查是否在等待用户输入（如邮箱）
+    const handled = await handlePendingInput(message)
+    if (!handled) {
+      // 未识别的消息，显示帮助
+      await sendMessage(chatId, `抱歉，我不太理解您的意思。\n\n发送 /help 查看可用命令。`)
+    }
+  }
+}
+
+/**
+ * 处理回调查询（按钮点击）
+ */
+export async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery) {
+  const data = callbackQuery.data
+  const chatId = callbackQuery.message?.chat.id
+  const messageId = callbackQuery.message?.message_id
+  
+  if (!chatId || !data) {
+    await answerCallbackQuery(callbackQuery.id)
+    return
+  }
+  
+  console.log("[v0] handleCallbackQuery called, data:", data)
+  
+  // 解析回调数据
+  if (data.startsWith("cmd:")) {
+    const cmd = data.replace("cmd:", "")
+    await handleCallbackCommand(callbackQuery, cmd)
+  } else if (data.startsWith("cat:")) {
+    const categoryId = data.replace("cat:", "")
+    await showProductsInCategory(chatId, categoryId, messageId)
+  } else if (data.startsWith("prod:")) {
+    const productId = data.replace("prod:", "")
+    if (messageId) {
+      await showProductDetail(chatId, messageId, productId)
+    }
+  } else if (data.startsWith("buy:")) {
+    const productId = data.replace("buy:", "")
+    await startPurchase(chatId, productId)
+  }
+  
+  await answerCallbackQuery(callbackQuery.id)
+}
+
+// ==================== 辅助函数 ====================
+
+// 发起购买流程（用于 /buy 命令和按钮点击）
+async function startPurchase(chatId: number, productId: string) {
+  const products = await sql`
+    SELECT p.*, pc.name as category_name
+    FROM products p
+    LEFT JOIN product_categories pc ON p.category_id = pc.id
+    WHERE p.id = ${productId}
+  `
+
+  if (products.length === 0) {
+    await sendMessage(chatId, "产品不存在，请重新选择。\n\n发送 /products 查看产品列表")
+    return
+  }
+
+  const p = products[0]
+  
+  // 生成购买链接（直接跳转网站支付）
+  const buyUrl = `${SITE_URL}/purchase?product=${productId}&from=telegram&chat_id=${chatId}`
+  
+  const text = `<b>购买 ${escapeHtml(p.name)}</b>
+
+价格：${formatPrice(Number(p.price))}
+
+请点击下方按钮跳转到支付页面完成购买。
+支付成功后，激活码将自动发送到此对话。`
+
+  await sendMessage(chatId, text, {
+    replyMarkup: buildInlineKeyboard([
+      [kb.url("前往支付", buyUrl)],
+      [kb.callback("查看其他产品", "cmd:products")],
+    ])
+  })
+}
+
+// 处理待输入状态（目前暂不使用，保留扩展）
+async function handlePendingInput(message: TelegramMessage): Promise<boolean> {
+  // 暂时不处理待输入状态，直接返回 false
+  // 未来可扩展：邮箱输入、订单号输入等
+  return false
+}
+
 // ==================== 命令处理 ====================
 
 // /start 命令 - 欢迎消息
