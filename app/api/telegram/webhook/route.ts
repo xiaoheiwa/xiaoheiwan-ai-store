@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
-import { handleUserCommand } from "@/lib/telegram-commands"
+import { handleUserCommand, handleCallbackQuery } from "@/lib/telegram-commands"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -34,6 +34,22 @@ export async function POST(request: Request) {
   try {
     const update = await request.json()
     console.log("[v0] Telegram webhook received:", JSON.stringify(update))
+    
+    // Handle callback query (button clicks) - process for all users
+    if (update.callback_query) {
+      const callbackQuery = update.callback_query
+      const chatId = callbackQuery.message?.chat?.id?.toString()
+      
+      // Skip if from admin (admin doesn't use bot buttons)
+      if (chatId !== ADMIN_CHAT_ID && ENABLE_USER_BOT) {
+        try {
+          await handleCallbackQuery(callbackQuery)
+        } catch (err) {
+          console.error("[v0] Callback query error:", err)
+        }
+      }
+      return NextResponse.json({ ok: true })
+    }
     
     // Handle message from Telegram
     const message = update.message
