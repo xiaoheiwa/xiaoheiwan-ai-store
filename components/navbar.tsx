@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown } from "lucide-react"
+import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown, Shield, Wrench, Mail } from "lucide-react"
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
 
@@ -35,6 +35,14 @@ const navItems = [
     label: "博客", 
     href: "/blog",
     icon: FileText,
+  },
+  {
+    label: "工具",
+    icon: Wrench,
+    children: [
+      { label: "2FA 验证器", href: "/tools/2fa", description: "TOTP 双因素认证码生成" },
+      { label: "Gmail 检测", href: "/tools/gmail-checker", description: "批量检测邮箱状态" },
+    ]
   },
 ]
 
