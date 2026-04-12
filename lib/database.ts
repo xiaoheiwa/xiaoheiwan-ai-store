@@ -236,22 +236,33 @@ export class Database {
       const hasImageUrl = "image_url" in data
       const priceTiersJson = hasPriceTiers ? (data.price_tiers ? JSON.stringify(data.price_tiers) : null) : null
       const regionOptionsJson = hasRegionOptions ? (data.region_options ? JSON.stringify(data.region_options) : null) : null
+      // 处理空字符串为 null
+      const nameVal = data.name || null
+      const descVal = data.description ?? null
+      const detailsVal = hasDetails ? (data.details || null) : null
+      const skuVal = data.sku || null
+      const statusVal = data.status || null
+      const deliveryTypeVal = data.delivery_type || null
+      const imageUrlVal = hasImageUrl ? (data.image_url || null) : null
+      const originalPriceVal = hasOriginalPrice ? (data.original_price ?? null) : null
+      const categoryIdVal = hasCategoryId ? (data.category_id || null) : null
+
       const result = await s`
         UPDATE products SET
-          name = COALESCE(${data.name ?? null}, name),
-          description = COALESCE(${data.description ?? null}, description),
-          details = CASE WHEN ${hasDetails} THEN ${hasDetails ? (data.details ?? null) : null}::text ELSE details END,
+          name = COALESCE(${nameVal}, name),
+          description = COALESCE(${descVal}, description),
+          details = CASE WHEN ${hasDetails} THEN ${detailsVal}::text ELSE details END,
           price = COALESCE(${data.price ?? null}, price),
-          original_price = CASE WHEN ${hasOriginalPrice} THEN ${hasOriginalPrice ? (data.original_price ?? null) : null}::numeric ELSE original_price END,
-          sku = COALESCE(${data.sku ?? null}, sku),
-          status = COALESCE(${data.status ?? null}, status),
+          original_price = CASE WHEN ${hasOriginalPrice} THEN ${originalPriceVal}::numeric ELSE original_price END,
+          sku = COALESCE(${skuVal}, sku),
+          status = COALESCE(${statusVal}, status),
           sort_order = COALESCE(${data.sort_order ?? null}, sort_order),
-          delivery_type = COALESCE(${data.delivery_type ?? null}, delivery_type),
+          delivery_type = COALESCE(${deliveryTypeVal}, delivery_type),
           price_tiers = CASE WHEN ${hasPriceTiers} THEN ${priceTiersJson}::jsonb ELSE price_tiers END,
-          category_id = CASE WHEN ${hasCategoryId} THEN ${hasCategoryId ? (data.category_id ?? null) : null}::uuid ELSE category_id END,
+          category_id = CASE WHEN ${hasCategoryId} THEN ${categoryIdVal}::uuid ELSE category_id END,
           region_options = CASE WHEN ${hasRegionOptions} THEN ${regionOptionsJson}::jsonb ELSE region_options END,
           require_region_selection = CASE WHEN ${hasRequireRegionSelection} THEN ${hasRequireRegionSelection ? (data.require_region_selection ?? false) : false}::boolean ELSE require_region_selection END,
-          image_url = CASE WHEN ${hasImageUrl} THEN ${hasImageUrl ? (data.image_url ?? null) : null}::text ELSE image_url END,
+          image_url = CASE WHEN ${hasImageUrl} THEN ${imageUrlVal}::text ELSE image_url END,
           updated_at = NOW()
         WHERE id = ${id}
         RETURNING *

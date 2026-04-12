@@ -62,12 +62,16 @@ export async function PUT(request: NextRequest) {
     }
 
     if (updates.price) updates.price = Number.parseFloat(updates.price)
-    if (updates.original_price) updates.original_price = Number.parseFloat(updates.original_price)
-    if (updates.sort_order !== undefined) updates.sort_order = Number.parseInt(updates.sort_order)
-    if (updates.price_tiers !== undefined) updates.price_tiers = updates.price_tiers || null
+    if (updates.original_price !== undefined) {
+      updates.original_price = updates.original_price ? Number.parseFloat(updates.original_price) : null
+    }
+    if (updates.sort_order !== undefined) updates.sort_order = Number.parseInt(updates.sort_order) || 0
+    if (updates.price_tiers !== undefined) updates.price_tiers = updates.price_tiers?.length > 0 ? updates.price_tiers : null
     if (updates.category_id !== undefined) updates.category_id = updates.category_id || null
-    if (updates.region_options !== undefined) updates.region_options = updates.region_options || null
+    if (updates.region_options !== undefined) updates.region_options = updates.region_options?.length > 0 ? updates.region_options : null
     if (updates.require_region_selection !== undefined) updates.require_region_selection = !!updates.require_region_selection
+    if (updates.details !== undefined) updates.details = updates.details || null
+    if (updates.image_url !== undefined) updates.image_url = updates.image_url || null
 
     console.log("[v0] Calling Database.updateProduct with id:", id, "updates:", JSON.stringify(updates))
     const product = await Database.updateProduct(id, updates)
