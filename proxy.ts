@@ -112,7 +112,7 @@ async function verifyLicenseEdge(licenseKey: string, currentDomain: string): Pro
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   
   // 跳过公开路径
