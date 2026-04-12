@@ -2717,11 +2717,15 @@ export default function AdminPage() {
     if (!editingProduct) return
     setProductLoading(true)
     try {
+      const payload = { id: editingProduct.id, ...productForm }
+      console.log("[v0] Updating product with payload:", payload)
       const response = await fetch("/api/admin/products", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-        body: JSON.stringify({ id: editingProduct.id, ...productForm }),
+        body: JSON.stringify(payload),
       })
+      const result = await response.json()
+      console.log("[v0] Update response:", result)
       if (response.ok) {
         setMessage("产品更新成功")
         setEditingProduct(null)
@@ -2729,9 +2733,11 @@ export default function AdminPage() {
         setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
         loadData()
       } else {
-        setMessage("更新产品失败")
+        console.error("[v0] Update failed:", result)
+        setMessage("更新产品失败: " + (result.error || "未知错误"))
       }
     } catch (error) {
+      console.error("[v0] Update error:", error)
       setMessage("更新产品失败")
     }
     setProductLoading(false)

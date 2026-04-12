@@ -54,6 +54,7 @@ export async function PUT(request: NextRequest) {
   if (authError) return authError
   try {
     const body = await request.json()
+    console.log("[v0] PUT /api/admin/products received body:", JSON.stringify(body))
     const { id, ...updates } = body
 
     if (!id) {
@@ -68,7 +69,9 @@ export async function PUT(request: NextRequest) {
     if (updates.region_options !== undefined) updates.region_options = updates.region_options || null
     if (updates.require_region_selection !== undefined) updates.require_region_selection = !!updates.require_region_selection
 
+    console.log("[v0] Calling Database.updateProduct with id:", id, "updates:", JSON.stringify(updates))
     const product = await Database.updateProduct(id, updates)
+    console.log("[v0] Database.updateProduct returned:", JSON.stringify(product))
     return NextResponse.json(product)
   } catch (error) {
     console.error("[v0] Failed to update product:", error)
