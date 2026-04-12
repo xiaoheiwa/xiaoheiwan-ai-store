@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown } from "lucide-react"
+import { Menu, X, ShoppingBag, Zap, BookOpen, FileText, ChevronDown, Shield } from "lucide-react"
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
 
@@ -35,6 +35,11 @@ const navItems = [
     label: "博客", 
     href: "/blog",
     icon: FileText,
+  },
+  {
+    label: "2FA",
+    href: "/tools/2fa",
+    icon: Shield,
   },
 ]
 
