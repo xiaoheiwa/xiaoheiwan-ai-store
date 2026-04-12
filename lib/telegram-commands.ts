@@ -63,40 +63,7 @@ export async function handleUserCommand(message: TelegramMessage) {
   }
 }
 
-/**
- * 处理回调查询（按钮点击）
- */
-export async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery) {
-  const data = callbackQuery.data
-  const chatId = callbackQuery.message?.chat.id
-  const messageId = callbackQuery.message?.message_id
-  
-  if (!chatId || !data) {
-    await answerCallbackQuery(callbackQuery.id)
-    return
-  }
-  
-  console.log("[v0] handleCallbackQuery called, data:", data)
-  
-  // 解析回调数据
-  if (data.startsWith("cmd:")) {
-    const cmd = data.replace("cmd:", "")
-    await handleCallbackCommand(callbackQuery, cmd)
-  } else if (data.startsWith("cat:")) {
-    const categoryId = data.replace("cat:", "")
-    await showProductsInCategory(chatId, categoryId, messageId)
-  } else if (data.startsWith("prod:")) {
-    const productId = data.replace("prod:", "")
-    if (messageId) {
-      await showProductDetail(chatId, messageId, productId)
-    }
-  } else if (data.startsWith("buy:")) {
-    const productId = data.replace("buy:", "")
-    await startPurchase(chatId, productId)
-  }
-  
-  await answerCallbackQuery(callbackQuery.id)
-}
+
 
 // ==================== 辅助函数 ====================
 
