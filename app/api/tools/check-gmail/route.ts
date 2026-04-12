@@ -15,8 +15,9 @@ function isValidEmailFormat(email: string): boolean {
   return emailRegex.test(email.trim())
 }
 
-// 通过 Google 账号恢复页面检测邮箱是否存在
-async function checkGmailExists(email: string): Promise<CheckResult> {
+// 通过 Google 用户内容 API 检测邮箱是否存在
+// 这个方法检测用户的 Google 头像是否存在
+async function checkGmailViaAvatar(email: string): Promise<CheckResult> {
   const trimmedEmail = email.trim().toLowerCase()
   
   // 格式验证
@@ -38,48 +39,53 @@ async function checkGmailExists(email: string): Promise<CheckResult> {
       message: "用户名格式无效"
     }
   }
+  
+  // Gmail 用户名长度检查（6-30字符）
+  const cleanLocalPart = localPart.replace(/\./g, "") // Gmail 忽略点号
+  if (cleanLocalPart.length < 6) {
+    return {
+      email: trimmedEmail,
+      status: "invalid",
+      message: "用户名过短（至少6位）"
+    }
+  }
+  
+  if (cleanLocalPart.length > 30) {
+    return {
+      email: trimmedEmail,
+      status: "invalid",
+      message: "用户名过长（最多30位）"
+    }
+  }
 
   try {
-    // 使用 Google People API 的公开接口检测
-    // 通过 Hangouts 的 lookup 接口检测邮箱是否存在
-    const lookupUrl = `https://www.google.com/inputtools/request?ime=handwriting&app=translate&num=1&cp=0&cs=1&ie=utf-8&oe=utf-8&t=test&email=${encodeURIComponent(trimmedEmail)}`
+    // 方法1: 通过 Google 的 People API 公开端点检测
+    // 检测用户是否有 Google+ 或 Google 个人资料
+    const profileUrl = `https://www.google.com/s2/photos/public/AIbEiAIAAABECKjS1dTF_sXdRiILdmNhcmRfcGhvdG8qKGQyNTI4YzEyN2Y1ZTllZWI1ZDIzMjVjMDI0NGE1ZDMzYzk5MTg5NjkwAQ?sz=100`
     
-    // 方法: 使用 Gmail SMTP RCPT TO 验证
-    // 由于服务端限制，改用 Google Calendar 的免费繁忙状态 API
-    const calendarCheckUrl = `https://www.googleapis.com/calendar/v3/freeBusy`
+    // 使用 GData API 检测（Google Contacts public profile）
+    // 如果返回默认头像，可能不存在；如果返回自定义头像，则存在
+    const gdataUrl = `https://www.google.com/m8/feeds/photos/profile/default/${encodeURIComponent(trimmedEmail)}?v=3.0`
     
-    // 使用 Google 的用户名检查接口
-    const response = await fetch(
-      "https://accounts.google.com/InputValidator?resource=SignUp",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "*/*",
-          "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-          "Origin": "https://accounts.google.com",
-          "Referer": "https://accounts.google.com/signup",
-        },
-        body: new URLSearchParams({
-          "Email": trimmedEmail,
-          "GmailUsername": localPart,
-        }).toString(),
+    const response = await fetch(gdataUrl, {
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+      redirect: "follow",
+    })
+    
+    // 404 表示账号不存在
+    if (response.status === 404) {
+      return {
+        email: trimmedEmail,
+        status: "invalid",
+        message: "账号不存在"
       }
-    )
-
-    if (!response.ok) {
-      // 尝试备用方法 - Google 密码恢复检测
-      return await checkViaPasswordRecovery(trimmedEmail)
     }
-
-    const text = await response.text()
     
-    // 如果用户名已被占用，说明邮箱存在
-    if (text.includes("That username is taken") || 
-        text.includes("该用户名已被占用") || 
-        text.includes("DUPLICATE") ||
-        text.includes("already")) {
+    // 200 表示账号存在（有头像）
+    if (response.status === 200) {
       return {
         email: trimmedEmail,
         status: "valid",
@@ -87,94 +93,116 @@ async function checkGmailExists(email: string): Promise<CheckResult> {
       }
     }
     
-    // 如果可以注册，说明邮箱不存在
-    if (text.includes("available") || text.includes("可用")) {
-      return {
-        email: trimmedEmail,
-        status: "invalid",
-        message: "账号不存在"
-      }
-    }
-
-    // 无法确定时使用备用方法
-    return await checkViaPasswordRecovery(trimmedEmail)
+    // 其他情况尝试备用方法
+    return await checkViaGoogleChat(trimmedEmail)
     
   } catch (error) {
-    console.error(`[v0] Gmail check error for ${trimmedEmail}:`, error)
-    // 出错时尝试备用方法
-    try {
-      return await checkViaPasswordRecovery(trimmedEmail)
-    } catch {
-      return {
-        email: trimmedEmail,
-        status: "unknown",
-        message: "检测失败"
-      }
-    }
+    console.error(`[v0] Gmail avatar check error for ${trimmedEmail}:`, error)
+    return await checkViaGoogleChat(trimmedEmail)
   }
 }
 
-// 备用方法：通过密码恢复页面检测
-async function checkViaPasswordRecovery(email: string): Promise<CheckResult> {
+// 备用方法：通过 Google Chat/Hangouts API 检测
+async function checkViaGoogleChat(email: string): Promise<CheckResult> {
   try {
-    // Google 账号恢复接口
+    // Google Hangouts 的用户查找接口
     const response = await fetch(
-      "https://accounts.google.com/_/signin/v2/lookup",
+      `https://people.googleapis.com/v1/people:searchContacts?readMask=names,emailAddresses&query=${encodeURIComponent(email)}`,
       {
-        method: "POST",
+        method: "GET",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "*/*",
-          "Origin": "https://accounts.google.com",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept": "application/json",
         },
-        body: new URLSearchParams({
-          "email": email,
-          "continue": "https://mail.google.com",
-        }).toString(),
       }
     )
-
-    const text = await response.text()
     
-    // 根据响应判断
-    if (text.includes("couldn't find") || 
-        text.includes("找不到") || 
-        text.includes("Couldn't find your Google Account") ||
-        text.includes("没有找到")) {
-      return {
-        email,
-        status: "invalid",
-        message: "账号不存在"
-      }
+    // 401/403 表示需要认证，但这也意味着接口可用
+    // 我们改用另一个方法
+    if (response.status === 401 || response.status === 403) {
+      return await checkViaCalendar(email)
     }
     
-    if (text.includes("disabled") || text.includes("已停用")) {
-      return {
-        email,
-        status: "risky",
-        message: "账号已停用"
-      }
-    }
+    const data = await response.json()
     
-    // 如果返回了下一步（如输入密码），说明账号存在
-    if (text.includes("password") || 
-        text.includes("密码") ||
-        text.includes("Enter your password") ||
-        text.includes("Next") ||
-        response.status === 200) {
+    if (data.results && data.results.length > 0) {
       return {
         email,
         status: "valid",
         message: "账号存在"
       }
     }
+    
+    return await checkViaCalendar(email)
+    
+  } catch {
+    return await checkViaCalendar(email)
+  }
+}
 
+// 备用方法：通过 Google Calendar 的 FreeBusy 检测
+async function checkViaCalendar(email: string): Promise<CheckResult> {
+  try {
+    // Google Calendar FreeBusy API（公开）
+    // 如果邮箱存在，会返回繁忙信息或空数组
+    // 如果邮箱不存在，会返回 notFound 错误
+    const now = new Date()
+    const later = new Date(now.getTime() + 60000) // 1分钟后
+    
+    const response = await fetch(
+      "https://www.googleapis.com/calendar/v3/freeBusy?key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          timeMin: now.toISOString(),
+          timeMax: later.toISOString(),
+          items: [{ id: email }]
+        })
+      }
+    )
+    
+    if (!response.ok) {
+      // API 不可用，使用格式验证
+      return {
+        email,
+        status: "unknown",
+        message: "无法验证，格式正确"
+      }
+    }
+    
+    const data = await response.json()
+    
+    // 检查是否有错误
+    const calendarInfo = data.calendars?.[email]
+    if (calendarInfo?.errors) {
+      const errorReason = calendarInfo.errors[0]?.reason
+      if (errorReason === "notFound") {
+        return {
+          email,
+          status: "invalid",
+          message: "账号不存在"
+        }
+      }
+    }
+    
+    // 如果没有错误，说明账号存在
+    if (calendarInfo && !calendarInfo.errors) {
+      return {
+        email,
+        status: "valid",
+        message: "账号存在"
+      }
+    }
+    
     return {
       email,
       status: "unknown",
       message: "无法确定状态"
     }
+    
   } catch {
     return {
       email,
@@ -198,13 +226,13 @@ export async function POST(request: NextRequest) {
 
     const results: CheckResult[] = []
 
-    // 逐个检测，添加延迟避免被 Google 限制
+    // 逐个检测，添加延迟避免被限制
     for (const email of emails) {
-      const result = await checkGmailExists(email)
+      const result = await checkGmailViaAvatar(email)
       results.push(result)
       // 添加延迟避免被限制
       if (emails.length > 1) {
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 300))
       }
     }
 
