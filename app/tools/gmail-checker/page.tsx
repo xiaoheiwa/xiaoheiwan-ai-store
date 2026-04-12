@@ -51,7 +51,7 @@ export default function GmailCheckerPage() {
       const response = await fetch("/api/tools/check-gmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emails, mode: "quick" }),
+        body: JSON.stringify({ emails }),
       })
 
       const data = await response.json()
@@ -110,7 +110,7 @@ export default function GmailCheckerPage() {
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="输入 Gmail 邮箱列表，每行一个，或用逗号分隔..."
+            placeholder="输入 Gmail 邮箱列表，每行一个或用逗号分隔（单次最多50个）..."
             className="w-full h-40 p-4 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
           />
           <div className="flex items-center gap-3">
