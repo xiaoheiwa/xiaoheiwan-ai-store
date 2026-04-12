@@ -50,6 +50,7 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [toolsConfig, setToolsConfig] = useState({ twofa: true, gmailChecker: true })
   const pathname = usePathname()
 
   useEffect(() => {
@@ -58,6 +59,14 @@ export default function Navbar() {
     }
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  // 加载工具配置
+  useEffect(() => {
+    fetch("/api/tools-config")
+      .then(res => res.json())
+      .then(config => setToolsConfig(config))
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -84,9 +93,22 @@ export default function Navbar() {
             </Link>
 
             <div className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => (
+              {navItems.map((item) => {
+                // 过滤工具子菜单
+                let filteredChildren = item.children
+                if (item.label === "工具" && item.children) {
+                  filteredChildren = item.children.filter(child => {
+                    if (child.href === "/tools/2fa") return toolsConfig.twofa
+                    if (child.href === "/tools/gmail-checker") return toolsConfig.gmailChecker
+                    return true
+                  })
+                  // 如果没有启用的工具，不显示工具菜单
+                  if (filteredChildren.length === 0) return null
+                }
+
+                return (
                 <div key={item.label} className="relative">
-                  {item.children ? (
+                  {filteredChildren ? (
                     <div
                       className="relative"
                       onMouseEnter={() => setOpenDropdown(item.label)}
@@ -94,7 +116,7 @@ export default function Navbar() {
                     >
                       <button
                         className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                          item.children.some(child => isActive(child.href))
+                          filteredChildren.some(child => isActive(child.href))
                             ? "text-accent"
                             : "text-foreground hover:text-accent"
                         }`}
@@ -106,7 +128,7 @@ export default function Navbar() {
                       {openDropdown === item.label && (
                         <div className="absolute top-full left-0 pt-2 w-48">
                           <div className="bg-popover border border-border rounded-xl shadow-xl p-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-                            {item.children.map((child) => (
+                            {filteredChildren.map((child) => (
                               <Link
                                 key={child.label}
                                 href={child.href}
@@ -137,7 +159,7 @@ export default function Navbar() {
                     </Link>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
 
             <div className="flex items-center gap-2">
@@ -166,9 +188,21 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-border bg-background animate-in slide-in-from-top-2 duration-200">
             <div className="max-w-5xl mx-auto px-4 py-4 space-y-1">
-              {navItems.map((item) => (
+              {navItems.map((item) => {
+                // 过滤工具子菜单
+                let filteredChildren = item.children
+                if (item.label === "工具" && item.children) {
+                  filteredChildren = item.children.filter(child => {
+                    if (child.href === "/tools/2fa") return toolsConfig.twofa
+                    if (child.href === "/tools/gmail-checker") return toolsConfig.gmailChecker
+                    return true
+                  })
+                  if (filteredChildren.length === 0) return null
+                }
+
+                return (
                 <div key={item.label}>
-                  {item.children ? (
+                  {filteredChildren ? (
                     <div>
                       <button
                         onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
@@ -182,7 +216,7 @@ export default function Navbar() {
                       </button>
                       {openDropdown === item.label && (
                         <div className="ml-6 mt-1 space-y-1">
-                          {item.children.map((child) => (
+                          {filteredChildren.map((child) => (
                             <Link
                               key={child.label}
                               href={child.href}
@@ -212,7 +246,7 @@ export default function Navbar() {
                     </Link>
                   )}
                 </div>
-              ))}
+              )})}
               
               <div className="pt-4 mt-4 border-t border-border space-y-3">
                 <Link href="/order-lookup" className="block">

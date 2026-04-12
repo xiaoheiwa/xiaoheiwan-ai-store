@@ -36,6 +36,8 @@ import {
   Trash2,
   X,
   CreditCard,
+  Wrench,
+  Shield,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 
@@ -161,6 +163,7 @@ export default function AdminPage() {
   const [emailTemplateLoaded, setEmailTemplateLoaded] = useState(false)
   const [paymentConfig, setPaymentConfig] = useState({ alipay: true, usdt: true })
   const [usdtRate, setUsdtRate] = useState("7.20")
+  const [toolsConfig, setToolsConfig] = useState({ twofa: true, gmailChecker: true })
 
   // Payment settings state
   const [paymentSettings, setPaymentSettings] = useState({ alipay: true, usdt: true })
@@ -228,6 +231,7 @@ export default function AdminPage() {
             setIsAuthenticated(true)
             loadData()
             loadPaymentSettings()
+            loadToolsConfig()
           }
         }
       } catch {
@@ -679,6 +683,42 @@ export default function AdminPage() {
       setMessage("保存失败")
     }
     setPaymentSettingsLoading(false)
+  }
+
+  // 加载工具配置
+  const loadToolsConfig = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/tools-config")
+      if (response.ok) {
+        const config = await response.json()
+        setToolsConfig(config)
+      }
+    } catch (error) {
+      console.error("Load tools config error:", error)
+    }
+  }, [])
+
+  // 切换工具开关
+  const toggleTool = async (tool: "twofa" | "gmailChecker") => {
+    const newConfig = { ...toolsConfig, [tool]: !toolsConfig[tool] }
+    setToolsConfig(newConfig)
+    try {
+      const response = await fetch("/api/admin/tools-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newConfig),
+      })
+      if (response.ok) {
+        setMessage(`${tool === "twofa" ? "2FA 验证器" : "Gmail 检测"} 已${newConfig[tool] ? "启用" : "禁用"}`)
+      } else {
+        // 恢复原状态
+        setToolsConfig(toolsConfig)
+        setMessage("保存失败")
+      }
+    } catch (error) {
+      setToolsConfig(toolsConfig)
+      setMessage("保存失败")
+    }
   }
 
   const handleSaveUsdtRate = async () => {
@@ -2136,6 +2176,51 @@ export default function AdminPage() {
               <Switch
                 checked={paymentConfig.usdt}
                 onCheckedChange={(checked) => handlePaymentToggle("usdt", checked)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tools Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench className="w-5 h-5" />
+            {"工具设置"}
+          </CardTitle>
+          <CardDescription>{"启用或禁用网站工具功能"}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="font-medium">{"2FA 验证器"}</p>
+                  <p className="text-sm text-muted-foreground">{"TOTP 双因素认证码生成工具"}</p>
+                </div>
+              </div>
+              <Switch
+                checked={toolsConfig.twofa}
+                onCheckedChange={() => toggleTool("twofa")}
+              />
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="font-medium">{"Gmail 检测"}</p>
+                  <p className="text-sm text-muted-foreground">{"批量检测邮箱状态工具"}</p>
+                </div>
+              </div>
+              <Switch
+                checked={toolsConfig.gmailChecker}
+                onCheckedChange={() => toggleTool("gmailChecker")}
               />
             </div>
           </div>
