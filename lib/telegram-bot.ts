@@ -217,3 +217,37 @@ export function escapeHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
 }
+
+// 支付成功通知
+export async function notifyPaymentSuccess(
+  chatId: string | number,
+  orderInfo: {
+    orderNo: string
+    productName: string
+    code?: string
+    amount: number
+  }
+) {
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://upgrade.xiaoheiwan.com"
+  
+  let text = `<b>✅ 支付成功！</b>
+
+订单号：<code>${orderInfo.orderNo}</code>
+产品：${escapeHtml(orderInfo.productName)}
+金额：${formatPrice(orderInfo.amount)}`
+
+  if (orderInfo.code) {
+    text += `
+
+<b>🔑 您的激活码：</b>
+<code>${orderInfo.code}</code>`
+  }
+
+  text += `
+
+<a href="${SITE_URL}/order/${orderInfo.orderNo}">查看订单详情</a>`
+
+  await sendMessage(chatId, text, {
+    disableWebPagePreview: true,
+  })
+}
