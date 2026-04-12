@@ -101,7 +101,7 @@ export const metadata: Metadata = {
   category: "technology",
   classification: "AI Services, Digital Products, Software Subscription",
   other: {
-    "apple-mobile-web-app-capable": "yes",
+    "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
     "format-detection": "telephone=no",
   },
