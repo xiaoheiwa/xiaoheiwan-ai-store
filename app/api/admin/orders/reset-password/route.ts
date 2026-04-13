@@ -25,11 +25,16 @@ function hashPassword(password: string): string {
 
 // POST: 重置订单查询密码
 export async function POST(request: NextRequest) {
+  console.log("[v0] Reset password API called")
   const authError = await requireAdmin(request)
-  if (authError) return authError
+  if (authError) {
+    console.log("[v0] Auth error:", authError)
+    return authError
+  }
 
   try {
     const { orderNo, newPassword } = await request.json()
+    console.log("[v0] Reset password for order:", orderNo, "password length:", newPassword?.length)
 
     if (!orderNo) {
       return NextResponse.json({ error: "订单号不能为空" }, { status: 400 })
@@ -43,6 +48,7 @@ export async function POST(request: NextRequest) {
     const orders = await sql`
       SELECT out_trade_no FROM orders WHERE out_trade_no = ${orderNo}
     `
+    console.log("[v0] Found orders:", orders.length)
 
     if (orders.length === 0) {
       return NextResponse.json({ error: "订单不存在" }, { status: 404 })
@@ -50,10 +56,14 @@ export async function POST(request: NextRequest) {
 
     // 更新密码
     const passwordHash = hashPassword(newPassword)
-    await sql`
+    console.log("[v0] Password hash generated, updating database...")
+    
+    const result = await sql`
       UPDATE orders SET query_password_hash = ${passwordHash}, updated_at = NOW()
       WHERE out_trade_no = ${orderNo}
+      RETURNING out_trade_no, query_password_hash
     `
+    console.log("[v0] Update result:", result)
 
     return NextResponse.json({ success: true, message: "查询密码已重置" })
   } catch (error) {
