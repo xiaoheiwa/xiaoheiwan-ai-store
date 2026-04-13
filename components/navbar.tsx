@@ -42,6 +42,7 @@ const navItems = [
     children: [
       { label: "2FA 验证器", href: "/tools/2fa", description: "TOTP 双因素认证码生成" },
       { label: "Gmail 检测", href: "/tools/gmail-checker", description: "批量检测邮箱状态" },
+      { label: "图片分割", href: "https://collagesplitter.com/", description: "AI拼贴图分割成单独照片", external: true },
     ]
   },
 ]
@@ -129,18 +130,36 @@ export default function Navbar() {
                         <div className="absolute top-full left-0 pt-2 w-48">
                           <div className="bg-popover border border-border rounded-xl shadow-xl p-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
                             {filteredChildren.map((child) => (
-                              <Link
-                                key={child.label}
-                                href={child.href}
-                                className={`flex flex-col px-3 py-2.5 rounded-lg transition-colors ${
-                                  isActive(child.href)
-                                    ? "bg-accent/10 text-accent"
-                                    : "hover:bg-secondary"
-                                }`}
-                              >
-                                <span className="text-sm font-medium">{child.label}</span>
-                                <span className="text-xs text-muted-foreground">{child.description}</span>
-                              </Link>
+                              child.external ? (
+                                <a
+                                  key={child.label}
+                                  href={child.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex flex-col px-3 py-2.5 rounded-lg transition-colors hover:bg-secondary"
+                                >
+                                  <span className="text-sm font-medium flex items-center gap-1">
+                                    {child.label}
+                                    <svg className="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">{child.description}</span>
+                                </a>
+                              ) : (
+                                <Link
+                                  key={child.label}
+                                  href={child.href}
+                                  className={`flex flex-col px-3 py-2.5 rounded-lg transition-colors ${
+                                    isActive(child.href)
+                                      ? "bg-accent/10 text-accent"
+                                      : "hover:bg-secondary"
+                                  }`}
+                                >
+                                  <span className="text-sm font-medium">{child.label}</span>
+                                  <span className="text-xs text-muted-foreground">{child.description}</span>
+                                </Link>
+                              )
                             ))}
                           </div>
                         </div>
@@ -217,17 +236,32 @@ export default function Navbar() {
                       {openDropdown === item.label && (
                         <div className="ml-6 mt-1 space-y-1">
                           {filteredChildren.map((child) => (
-                            <Link
-                              key={child.label}
-                              href={child.href}
-                              className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
-                                isActive(child.href)
-                                  ? "text-accent bg-accent/10"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                              }`}
-                            >
-                              {child.label}
-                            </Link>
+                            child.external ? (
+                              <a
+                                key={child.label}
+                                href={child.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary"
+                              >
+                                {child.label}
+                                <svg className="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                            ) : (
+                              <Link
+                                key={child.label}
+                                href={child.href}
+                                className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                                  isActive(child.href)
+                                    ? "text-accent bg-accent/10"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                                }`}
+                              >
+                                {child.label}
+                              </Link>
+                            )
                           ))}
                         </div>
                       )}
