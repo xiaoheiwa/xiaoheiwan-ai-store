@@ -186,6 +186,8 @@ export default function AdminPage() {
   const [emailSending, setEmailSending] = useState(false)
   const [sendingCodeToOrder, setSendingCodeToOrder] = useState<string | null>(null)
   const [manualCodeInputs, setManualCodeInputs] = useState<{ [key: string]: string }>({})
+  const [resetPasswordInputs, setResetPasswordInputs] = useState<{ [key: string]: string }>({})
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null)
   const [sendingManualCodeToOrder, setSendingManualCodeToOrder] = useState<string | null>(null)
   const [fulfillModal, setFulfillModal] = useState<{ orderNo: string; email: string; productName: string; quantity: number } | null>(null)
   const [fulfillCodes, setFulfillCodes] = useState("")
@@ -840,6 +842,37 @@ export default function AdminPage() {
     setSendingCodeToOrder(null)
   }
 
+  // 重置订单查询密码
+  const handleResetOrderPassword = async (orderNo: string, newPassword: string) => {
+    if (!newPassword || newPassword.length < 4 || newPassword.length > 20) {
+      setMessage("密码长度需要4-20位")
+      return
+    }
+
+    setResettingPassword(orderNo)
+    try {
+      const response = await fetch("/api/admin/orders/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ orderNo, newPassword }),
+      })
+
+      const result = await response.json()
+      if (response.ok) {
+        setMessage(`订单 ${orderNo} 的查询密码已重置为: ${newPassword}`)
+        setResetPasswordInputs((prev) => ({ ...prev, [orderNo]: "" }))
+      } else {
+        setMessage(result.error || "重置密码失败")
+      }
+    } catch (error) {
+      setMessage("重置密码失败")
+    }
+    setResettingPassword(null)
+  }
+
   const handleSendManualCodeToOrder = async (order: Order, manualCode: string) => {
     if (!order.email) {
       setMessage("订单邮箱地址不存在")
@@ -1386,6 +1419,41 @@ export default function AdminPage() {
                                   <p><span className="text-muted-foreground">{"数量:"}</span> {order.quantity || 1}</p>
                                   <p><span className="text-muted-foreground">{"发货方式:"}</span> {order.delivery_type === "manual" ? "人工发货" : "自动发货"}</p>
                                   <p><span className="text-muted-foreground">{"支付渠道:"}</span> {order.pay_channel || "-"}</p>
+                                </div>
+                                {/* 重置查询密码 */}
+                                <div className="mt-3 pt-3 border-t border-border/50">
+                                  <p className="text-xs font-medium text-muted-foreground mb-2">{"重置查询密码"}</p>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder="输入新密码(4-20位)"
+                                      value={resetPasswordInputs[order.out_trade_no] || ""}
+                                      onChange={(e) =>
+                                        setResetPasswordInputs((prev) => ({
+                                          ...prev,
+                                          [order.out_trade_no]: e.target.value,
+                                        }))
+                                      }
+                                      className="flex-1 px-2 py-1.5 text-xs border border-input bg-background rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                                    />
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => handleResetOrderPassword(order.out_trade_no, resetPasswordInputs[order.out_trade_no] || "")}
+                                      disabled={
+                                        resettingPassword === order.out_trade_no ||
+                                        !resetPasswordInputs[order.out_trade_no]?.trim() ||
+                                        (resetPasswordInputs[order.out_trade_no]?.length || 0) < 4
+                                      }
+                                      className="text-xs h-7 shrink-0"
+                                    >
+                                      {resettingPassword === order.out_trade_no ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <><Key className="w-3 h-3 mr-1" />{"重置"}</>
+                                      )}
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                               <div className="space-y-2">
@@ -3003,7 +3071,7 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">产品列表</h2>
+          <h2 className="text-lg font-semibold">产品���表</h2>
           <p className="text-sm text-muted-foreground">管理可销售的产品品类</p>
         </div>
         <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" }); setShowProductForm(true) }}>
