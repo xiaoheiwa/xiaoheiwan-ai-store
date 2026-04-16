@@ -4,7 +4,7 @@ import { ZPayz } from "@/lib/zpayz-client"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { orderNo, amount, paymentType = "alipay", productName = "小黑丸Plus激活码" } = body
+    const { orderNo, amount, paymentType = "alipay", clientip, device } = body
 
     if (!orderNo || !amount) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 })
@@ -24,7 +24,35 @@ export async function POST(request: NextRequest) {
       param: "xiaoheiwan-plus",
     }
 
-    // Create page redirect payment URL
+    // 微信支付在手机端使用 API 方式（支持 JSAPI）
+    if (paymentType === "wxpay" && clientip) {
+      console.log("[v0] 使用微信 API 支付方式, clientip:", clientip, "device:", device)
+      const apiResult = await ZPayz.createApiPayment({
+        ...paymentParams,
+        clientip,
+        device: device || "mobile",
+      })
+
+      if (apiResult.code === 1 || apiResult.code === "1") {
+        // API 返回成功，返回支付信息
+        return NextResponse.json({
+          success: true,
+          paymentUrl: apiResult.payurl || apiResult.qrcode || apiResult.urlscheme,
+          qrcode: apiResult.qrcode,
+          orderNo,
+          amount,
+          apiResult,
+        })
+      } else {
+        console.error("[v0] 微信 API 支付失败:", apiResult)
+        return NextResponse.json({ 
+          error: apiResult.msg || "微信支付创建失败", 
+          details: apiResult 
+        }, { status: 400 })
+      }
+    }
+
+    // 支付宝或其他情况使用页面跳转方式
     const paymentUrl = ZPayz.createPagePayment(paymentParams)
 
     return NextResponse.json({

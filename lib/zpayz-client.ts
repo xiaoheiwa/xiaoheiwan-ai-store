@@ -98,12 +98,18 @@ export class ZPayz {
   }
 
   static async createApiPayment(params: ZPayzApiPaymentParams): Promise<any> {
-    const paymentParams = {
+    const paymentParams: Record<string, string> = {
       ...params,
       pid: this.PID,
       sign_type: "MD5",
     }
 
+    // 微信支付需要指定渠道
+    if (params.type === "wxpay" && this.WXPAY_CID) {
+      paymentParams.cid = this.WXPAY_CID
+    }
+
+    console.log("[v0] ZPayz createApiPayment - params before sign:", JSON.stringify(paymentParams))
     paymentParams.sign = this.generateSign(paymentParams)
 
     const formData = new FormData()
@@ -111,12 +117,15 @@ export class ZPayz {
       formData.append(key, value)
     })
 
+    console.log("[v0] ZPayz createApiPayment - calling mapi.php")
     const response = await fetch(`${this.BASE_URL}/mapi.php`, {
       method: "POST",
       body: formData,
     })
 
-    return response.json()
+    const result = await response.json()
+    console.log("[v0] ZPayz createApiPayment - response:", JSON.stringify(result))
+    return result
   }
 
   static async queryOrder(outTradeNo: string): Promise<any> {
