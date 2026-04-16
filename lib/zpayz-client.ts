@@ -22,8 +22,16 @@ export class ZPayz {
   private static readonly PID = process.env.ZPAYZ_PID || ""
   private static readonly PKEY = process.env.ZPAYZ_PKEY || ""
   // 微信支付渠道配置
-  private static readonly WXPAY_CID = process.env.ZPAYZ_WXPAY_CID || "14704"
-  private static readonly WXPAY_MID = process.env.ZPAYZ_WXPAY_MID || "1646878223"
+  private static readonly WXPAY_CID = process.env.ZPAYZ_WXPAY_CID || ""
+
+  // 获取配置信息用于调试
+  static getConfig() {
+    return {
+      pid: this.PID,
+      pkeySet: !!this.PKEY,
+      wxpayCid: this.WXPAY_CID,
+    }
+  }
 
   static generateSign(params: Record<string, string>): string {
     // Remove sign, sign_type and empty values
@@ -76,7 +84,11 @@ export class ZPayz {
       paymentParams.cid = this.WXPAY_CID
     }
 
+    console.log("[v0] ZPayz createPagePayment - config:", JSON.stringify(this.getConfig()))
+    console.log("[v0] ZPayz createPagePayment - params before sign:", JSON.stringify(paymentParams))
+    
     paymentParams.sign = this.generateSign(paymentParams)
+    console.log("[v0] ZPayz createPagePayment - final params:", JSON.stringify(paymentParams))
 
     const queryString = Object.entries(paymentParams)
       .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
