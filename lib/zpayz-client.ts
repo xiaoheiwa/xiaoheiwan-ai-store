@@ -21,6 +21,9 @@ export class ZPayz {
   private static readonly BASE_URL = "https://zpayz.cn"
   private static readonly PID = process.env.ZPAYZ_PID || ""
   private static readonly PKEY = process.env.ZPAYZ_PKEY || ""
+  // 微信支付渠道配置
+  private static readonly WXPAY_CID = process.env.ZPAYZ_WXPAY_CID || "14704"
+  private static readonly WXPAY_MID = process.env.ZPAYZ_WXPAY_MID || "1646878223"
 
   static generateSign(params: Record<string, string>): string {
     // Remove sign, sign_type and empty values
@@ -62,10 +65,15 @@ export class ZPayz {
   }
 
   static createPagePayment(params: ZPayzPaymentParams): string {
-    const paymentParams = {
+    const paymentParams: Record<string, string> = {
       ...params,
       pid: this.PID,
       sign_type: "MD5",
+    }
+
+    // 微信支付需要指定渠道
+    if (params.type === "wxpay" && this.WXPAY_CID) {
+      paymentParams.cid = this.WXPAY_CID
     }
 
     paymentParams.sign = this.generateSign(paymentParams)

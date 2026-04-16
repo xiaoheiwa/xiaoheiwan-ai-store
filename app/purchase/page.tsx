@@ -56,7 +56,7 @@ function PurchaseContent() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [selectedRegion, setSelectedRegion] = useState<RegionOption | null>(null)
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
-  const [paymentConfig, setPaymentConfig] = useState({ alipay: true, usdt: true })
+  const [paymentConfig, setPaymentConfig] = useState({ alipay: true, usdt: true, wxpay: false })
 
   // Backwards compat: fallback price/stock for when no products exist
   const [fallbackPrice, setFallbackPrice] = useState(99)
@@ -303,7 +303,7 @@ function PurchaseContent() {
             <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
               {selectedProduct ? `购买 ${selectedProduct.name}` : "购买激活码"}
             </h1>
-            <p className="text-muted-foreground">{isManual ? "填写邮箱地址，支付后客服将尽快为您处理" : "填写邮箱地址，支付后自动发货"}</p>
+            <p className="text-muted-foreground">{isManual ? "填��邮箱地址，支付后客服将尽快为您处理" : "填写邮箱地址，支付后自动发货"}</p>
           </div>
 
           {/* Preselected product - show compact info with option to change */}
@@ -555,6 +555,39 @@ function PurchaseContent() {
                         }`}
                       >
                         {paymentMethod === "alipay" && <CheckCircle className="w-4 h-4 text-white" />}
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                {paymentConfig.wxpay && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("wxpay")}
+                    className={`w-full p-5 rounded-2xl border-2 transition-all duration-200 hover-scale ${
+                      paymentMethod === "wxpay"
+                        ? "border-accent bg-accent/5 shadow-lg shadow-accent/10"
+                        : "border-border hover:border-muted-foreground/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-[#07C160]/10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 1024 1024" className="w-6 h-6" fill="#07C160">
+                            <path d="M690.1 377.4c5.9 0 11.8.2 17.6.5-15.8-73.1-88.4-127-173.6-127-97 0-178.8 65.3-178.8 154.9 0 46.3 25 89.3 69.2 118.6l-17.3 52.4 61.2-31.5c22.4 4.8 44.6 8.8 69.1 8.8 5.9 0 11.8-.2 17.6-.5-3.7-12.6-5.7-25.8-5.7-39.4 0-75.5 64.1-136.8 140.7-136.8zM460.4 360.3c15.6 0 25 12.7 25 25.1 0 12.7-9.4 25.1-25 25.1-15.7 0-31.3-12.4-31.3-25.1 0-12.4 15.6-25.1 31.3-25.1zm-135 50.2c-15.6 0-31.3-12.4-31.3-25.1 0-12.4 15.6-25.1 31.3-25.1 15.6 0 25 12.7 25 25.1 0 12.7-9.5 25.1-25 25.1zm519.3 137.4c0-75.7-75.9-137.4-159.5-137.4-89.8 0-159.5 61.7-159.5 137.4 0 75.8 69.7 137.4 159.5 137.4 19.2 0 37.5-3.2 56.7-9.5l47.3 28.5-12.5-44c37.5-28.5 68-68.9 68-112.4zm-203.5-25.1c-9.4 0-18.7-9.4-18.7-18.8 0-9.4 9.4-18.8 18.7-18.8 15.6 0 25 9.4 25 18.8 0 9.4-9.4 18.8-25 18.8zm103.1 0c-9.4 0-18.7-9.4-18.7-18.8 0-9.4 9.4-18.8 18.7-18.8 15.6 0 25 9.4 25 18.8 0 9.4-9.4 18.8-25 18.8z"/>
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold text-foreground">{"微信支付"}</div>
+                          <div className="text-xs text-muted-foreground">{"扫码快捷支付"}</div>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                          paymentMethod === "wxpay" ? "border-accent bg-accent scale-110" : "border-muted-foreground/50"
+                        }`}
+                      >
+                        {paymentMethod === "wxpay" && <CheckCircle className="w-4 h-4 text-white" />}
                       </div>
                     </div>
                   </button>
