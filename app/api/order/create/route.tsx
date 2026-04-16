@@ -151,56 +151,40 @@ export async function POST(req: Request) {
       param: email,
     }
 
-    // 微信支付使用 API 方式获取二维码
+    // 微信支付使用 API 方式（支持手机端 JSAPI）
     if (paymentMethod === "wxpay") {
+      // 获取客户端 IP（从请求头或前端传递）
       const ip = clientip || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "127.0.0.1"
       console.log("[v0] 微信支付 API 方式, clientip:", ip)
       
       const apiResult = await ZPayz.createApiPayment({
         ...paymentParams,
         clientip: ip,
-        device: "pc", // 使用 pc 模式获取二维码，避免 JSAPI 问题
+        device: "mobile",
       })
 
       console.log("[v0] 微信支付 API 返回:", JSON.stringify(apiResult))
 
       if (apiResult.code === 1 || apiResult.code === "1") {
-        const qrcode = apiResult.qrcode
-        const payurl = apiResult.payurl
-        
-        // 如果有二维码，返回二维码让前端展示
-        if (qrcode) {
-          const qrcodePageUrl = `/pay/wxpay-qrcode?orderNo=${orderNo}&amount=${verifiedAmount}&qrcode=${encodeURIComponent(qrcode)}`
-          return NextResponse.json({
-            success: true,
-            orderNo,
-            paymentUrl: qrcodePageUrl,
-            redirectUrl: qrcodePageUrl,
-            qrcode,
-            isQrcode: true,
-          })
-        }
-        
-        // 没有二维码但有 payurl
-        if (payurl) {
-          return NextResponse.json({
-            success: true,
-            orderNo,
-            paymentUrl: payurl,
-            redirectUrl: payurl,
-          })
-        }
+        const paymentUrl = apiResult.payurl || apiResult.qrcode || apiResult.urlscheme
+        return NextResponse.json({
+          success: true,
+          orderNo,
+          paymentUrl,
+          redirectUrl: paymentUrl,
+          qrcode: apiResult.qrcode,
+        })
+      } else {
+        console.error("[v0] 微信支付 API 失败:", apiResult)
+        // 失败时回退到页面跳转方式
+        const paymentUrl = ZPayz.createPagePayment(paymentParams)
+        return NextResponse.json({
+          success: true,
+          orderNo,
+          paymentUrl,
+          redirectUrl: paymentUrl,
+        })
       }
-      
-      // API 失败时回退到页面跳转方式
-      console.log("[v0] 微信支付 API 失败，回退到页面跳转")
-      const paymentUrl = ZPayz.createPagePayment(paymentParams)
-      return NextResponse.json({
-        success: true,
-        orderNo,
-        paymentUrl,
-        redirectUrl: paymentUrl,
-      })
     }
 
     // 支付宝使用页面跳转方式
