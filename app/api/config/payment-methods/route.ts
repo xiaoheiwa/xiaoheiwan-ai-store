@@ -8,12 +8,13 @@ export async function GET() {
   try {
     const configs = await sql`
       SELECT key, value FROM site_config 
-      WHERE key IN ('payment_alipay_enabled', 'payment_usdt_enabled')
+      WHERE key IN ('payment_alipay_enabled', 'payment_usdt_enabled', 'payment_wxpay_enabled')
     `
 
     const result: Record<string, boolean> = {
-      alipay: true, // Default enabled
-      usdt: true,   // Default enabled
+      alipay: true,  // Default enabled
+      usdt: true,    // Default enabled
+      wxpay: false,  // Default disabled (need to enable manually)
     }
 
     for (const config of configs) {
@@ -21,6 +22,8 @@ export async function GET() {
         result.alipay = config.value === "true"
       } else if (config.key === "payment_usdt_enabled") {
         result.usdt = config.value === "true"
+      } else if (config.key === "payment_wxpay_enabled") {
+        result.wxpay = config.value === "true"
       }
     }
 
@@ -28,6 +31,6 @@ export async function GET() {
   } catch (error) {
     console.error("Get payment methods error:", error)
     // Return defaults on error
-    return NextResponse.json({ alipay: true, usdt: true })
+    return NextResponse.json({ alipay: true, usdt: true, wxpay: false })
   }
 }

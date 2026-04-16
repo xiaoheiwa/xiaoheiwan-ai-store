@@ -161,7 +161,7 @@ export default function AdminPage() {
   const [emailTemplateSaving, setEmailTemplateSaving] = useState(false)
   const [emailPreviewMode, setEmailPreviewMode] = useState(false)
   const [emailTemplateLoaded, setEmailTemplateLoaded] = useState(false)
-  const [paymentConfig, setPaymentConfig] = useState({ alipay: true, usdt: true })
+  const [paymentConfig, setPaymentConfig] = useState({ alipay: true, usdt: true, wxpay: false })
   const [usdtRate, setUsdtRate] = useState("7.20")
   const [toolsConfig, setToolsConfig] = useState({ twofa: true, gmailChecker: true })
 
@@ -2226,6 +2226,23 @@ export default function AdminPage() {
               <Switch
                 checked={paymentConfig.alipay}
                 onCheckedChange={(checked) => handlePaymentToggle("alipay", checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#07C160]/10 flex items-center justify-center">
+                  <svg viewBox="0 0 1024 1024" className="w-6 h-6" fill="#07C160">
+                    <path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm195.2 589.2l-94.4 94.4c-12.5 12.5-32.8 12.5-45.3 0l-94.4-94.4c-12.5-12.5-12.5-32.8 0-45.3l22.6-22.6c12.5-12.5 32.8-12.5 45.3 0l49.2 49.2 49.2-49.2c12.5-12.5 32.8-12.5 45.3 0l22.6 22.6c12.4 12.5 12.4 32.8-.1 45.3zM653.4 412.5L512 553.9 370.6 412.5c-12.5-12.5-32.8-12.5-45.3 0l-22.6 22.6c-12.5 12.5-12.5 32.8 0 45.3l94.4 94.4c12.5 12.5 32.8 12.5 45.3 0l94.4-94.4c12.5-12.5 32.8-12.5 45.3 0l94.4 94.4c12.5 12.5 32.8 12.5 45.3 0l22.6-22.6c12.5-12.5 12.5-32.8 0-45.3L653.4 412.5z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium">{"微信支付"}</p>
+                  <p className="text-sm text-muted-foreground">{"国内用户扫码支付"}</p>
+                </div>
+              </div>
+              <Switch
+                checked={paymentConfig.wxpay}
+                onCheckedChange={(checked) => handlePaymentToggle("wxpay", checked)}
               />
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg border">

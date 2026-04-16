@@ -90,7 +90,7 @@ export async function POST(req: Request) {
       amount: verifiedAmount,
       subject,
       status: "pending",
-      pay_channel: paymentMethod === "alipay" ? "支付宝" : "微信支付",
+      pay_channel: paymentMethod === "alipay" ? "支付宝" : paymentMethod === "wxpay" ? "微信支付" : "其他",
       product_id: productId || null,
       query_password_hash: queryPasswordHash,
       quantity,
