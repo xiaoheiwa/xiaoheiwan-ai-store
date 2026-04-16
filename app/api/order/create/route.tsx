@@ -31,7 +31,17 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
     const { email, paymentMethod, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, clientip } = body
+    console.log("[v0] Order creation request - paymentMethod:", paymentMethod, "type:", typeof paymentMethod)
     console.log("[v0] Order creation request:", { email, paymentMethod, amount, productId, productName, quantity, deliveryType, selectedRegion, regionName, hasQueryPassword: !!queryPassword, clientip })
+    
+    // 确定支付渠道显示名称
+    let payChannel = "其他"
+    if (paymentMethod === "alipay") {
+      payChannel = "支付宝"
+    } else if (paymentMethod === "wxpay") {
+      payChannel = "微信支付"
+    }
+    console.log("[v0] Determined pay_channel:", payChannel, "from paymentMethod:", paymentMethod)
 
     if (!email || !paymentMethod || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
@@ -90,7 +100,7 @@ export async function POST(req: Request) {
       amount: verifiedAmount,
       subject,
       status: "pending",
-      pay_channel: paymentMethod === "alipay" ? "支付宝" : paymentMethod === "wxpay" ? "微信支付" : "其他",
+      pay_channel: payChannel,
       product_id: productId || null,
       query_password_hash: queryPasswordHash,
       quantity,
