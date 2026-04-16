@@ -30,8 +30,8 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const { email, paymentMethod, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName } = body
-    console.log("[v0] Order creation request:", { email, paymentMethod, amount, productId, productName, quantity, deliveryType, selectedRegion, regionName, hasQueryPassword: !!queryPassword })
+    const { email, paymentMethod, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, clientip } = body
+    console.log("[v0] Order creation request:", { email, paymentMethod, amount, productId, productName, quantity, deliveryType, selectedRegion, regionName, hasQueryPassword: !!queryPassword, clientip })
 
     if (!email || !paymentMethod || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
@@ -141,6 +141,43 @@ export async function POST(req: Request) {
       param: email,
     }
 
+    // 微信支付使用 API 方式（支持手机端 JSAPI）
+    if (paymentMethod === "wxpay") {
+      // 获取客户端 IP（从请求头或前端传递）
+      const ip = clientip || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "127.0.0.1"
+      console.log("[v0] 微信支付 API 方式, clientip:", ip)
+      
+      const apiResult = await ZPayz.createApiPayment({
+        ...paymentParams,
+        clientip: ip,
+        device: "mobile",
+      })
+
+      console.log("[v0] 微信支付 API 返回:", JSON.stringify(apiResult))
+
+      if (apiResult.code === 1 || apiResult.code === "1") {
+        const paymentUrl = apiResult.payurl || apiResult.qrcode || apiResult.urlscheme
+        return NextResponse.json({
+          success: true,
+          orderNo,
+          paymentUrl,
+          redirectUrl: paymentUrl,
+          qrcode: apiResult.qrcode,
+        })
+      } else {
+        console.error("[v0] 微信支付 API 失败:", apiResult)
+        // 失败时回退到页面跳转方式
+        const paymentUrl = ZPayz.createPagePayment(paymentParams)
+        return NextResponse.json({
+          success: true,
+          orderNo,
+          paymentUrl,
+          redirectUrl: paymentUrl,
+        })
+      }
+    }
+
+    // 支付宝使用页面跳转方式
     const paymentUrl = ZPayz.createPagePayment(paymentParams)
 
     console.log("[v0] Payment URL generated")
