@@ -8,12 +8,13 @@ export async function GET() {
   try {
     const result = await sql`
       SELECT key, value FROM site_config 
-      WHERE key IN ('payment_alipay_enabled', 'payment_usdt_enabled')
+      WHERE key IN ('payment_alipay_enabled', 'payment_usdt_enabled', 'payment_wxpay_enabled')
     `
     
     const config: Record<string, boolean> = {
-      alipay: true, // default enabled
-      usdt: true,   // default enabled
+      alipay: true,  // default enabled
+      usdt: true,    // default enabled
+      wxpay: false,  // default disabled
     }
     
     for (const row of result) {
@@ -21,6 +22,8 @@ export async function GET() {
         config.alipay = row.value === 'true'
       } else if (row.key === 'payment_usdt_enabled') {
         config.usdt = row.value === 'true'
+      } else if (row.key === 'payment_wxpay_enabled') {
+        config.wxpay = row.value === 'true'
       }
     }
     
@@ -28,6 +31,6 @@ export async function GET() {
   } catch (error) {
     console.error("Payment config fetch error:", error)
     // Return defaults on error
-    return NextResponse.json({ alipay: true, usdt: true })
+    return NextResponse.json({ alipay: true, usdt: true, wxpay: false })
   }
 }
