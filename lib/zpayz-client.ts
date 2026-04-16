@@ -72,10 +72,12 @@ export class ZPayz {
     }
 
     // 微信支付需要指定渠道
-    if (params.type === "wxpay" && this.WXPAY_CID) {
+    if (params.type === "wxpay") {
       paymentParams.cid = this.WXPAY_CID
+      console.log("[v0] 微信支付参数 - cid:", this.WXPAY_CID, "pid:", this.PID)
     }
 
+    console.log("[v0] createPagePayment params:", JSON.stringify(paymentParams))
     paymentParams.sign = this.generateSign(paymentParams)
 
     const queryString = Object.entries(paymentParams)
