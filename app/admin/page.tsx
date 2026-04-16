@@ -347,6 +347,7 @@ export default function AdminPage() {
           setPaymentConfig({
             alipay: configData.configs?.find((c: any) => c.key === "payment_alipay_enabled")?.value !== "false",
             usdt: configData.configs?.find((c: any) => c.key === "payment_usdt_enabled")?.value !== "false",
+            wxpay: configData.configs?.find((c: any) => c.key === "payment_wxpay_enabled")?.value === "true",
           })
           // Load USDT rate
           const rateConfig = configData.configs?.find((c: any) => c.key === "usdt_cny_rate")
@@ -744,21 +745,30 @@ export default function AdminPage() {
     }
   }
 
-  const handlePaymentToggle = async (method: "alipay" | "usdt", enabled: boolean) => {
+  const handlePaymentToggle = async (method: "alipay" | "usdt" | "wxpay", enabled: boolean) => {
     try {
-      const key = method === "alipay" ? "payment_alipay_enabled" : "payment_usdt_enabled"
+      const keyMap: Record<string, string> = {
+        alipay: "payment_alipay_enabled",
+        usdt: "payment_usdt_enabled",
+        wxpay: "payment_wxpay_enabled",
+      }
+      const nameMap: Record<string, string> = {
+        alipay: "支付宝",
+        usdt: "USDT",
+        wxpay: "微信支付",
+      }
       const response = await fetch("/api/admin/config", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({ key, value: enabled ? "true" : "false" }),
+        body: JSON.stringify({ key: keyMap[method], value: enabled ? "true" : "false" }),
       })
 
       if (response.ok) {
         setPaymentConfig((prev) => ({ ...prev, [method]: enabled }))
-        setMessage(`${method === "alipay" ? "支付宝" : "USDT"} 已${enabled ? "启用" : "禁用"}`)
+        setMessage(`${nameMap[method]} 已${enabled ? "启用" : "禁用"}`)
       } else {
         setMessage("更新支付设置失败")
       }
@@ -3511,7 +3521,7 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
         setMessage(`删除失败: ${result.error}`)
       }
     } catch (error) {
-      setMessage("删除订单失败，请重试")
+      setMessage("删除订单��败，请重试")
     } finally {
       setIsDeleting(false)
     }
