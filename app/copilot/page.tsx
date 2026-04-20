@@ -160,7 +160,7 @@ export default function CopilotPage() {
               <div className="w-8 h-8 rounded-lg bg-[#e6edf3] flex items-center justify-center">
                 <Github className="w-5 h-5 text-[#0d1117]" />
               </div>
-              <span className="font-semibold text-[#e6edf3]">{"GitHub Copilot 充值平台"}</span>
+              <span className="font-semibold text-[#e6edf3]">{"GitHub Copilot Activation"}</span>
             </div>
           </div>
           <Link href="/copilot/query" className="hidden md:flex items-center gap-1 text-sm text-[#7d8590] hover:text-[#e6edf3]">
@@ -188,18 +188,25 @@ export default function CopilotPage() {
           </p>
         </div>
 
-        {/* Video Tutorial */}
-        <div className="mb-8">
-          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-md bg-[#238636]/20 flex items-center justify-center">
-                <svg className="w-3.5 h-3.5 text-[#3fb950]" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
+        {/* Video Tutorial - Collapsible */}
+        <details className="mb-8 group">
+          <summary className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 cursor-pointer list-none hover:bg-[#1c2128] transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-[#238636]/20 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-[#3fb950]" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
+                <span className="text-sm font-medium text-[#e6edf3]">{"视频教程"}</span>
+                <span className="text-xs text-[#7d8590]">{"- 点击展开观看完整操作流程"}</span>
               </div>
-              <span className="text-sm font-medium text-[#e6edf3]">{"视频教程"}</span>
-              <span className="text-xs text-[#7d8590]">{"- 观看完整操作流程"}</span>
+              <svg className="w-5 h-5 text-[#7d8590] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
+          </summary>
+          <div className="bg-[#161b22] border border-t-0 border-[#30363d] rounded-b-xl p-4 -mt-3">
             <video 
               controls 
               className="w-full rounded-lg border border-[#30363d]"
@@ -210,7 +217,7 @@ export default function CopilotPage() {
               {"您的浏览器不支持视频播放"}
             </video>
           </div>
-        </div>
+        </details>
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-2 mb-8">
@@ -347,7 +354,7 @@ export default function CopilotPage() {
                   <p><strong className="text-[#e6edf3]">{"步骤 3:"}</strong>{" 在 GitHub 页面完成授权后，点击书签栏的 \"获取Token\" 按钮"}</p>
                   <p><span className="text-[#3fb950] font-bold">A.</span>{" 授权完成后，GitHub 页面通常会显示 \"OAuth application authorized\""}</p>
                   <p><span className="text-[#3fb950] font-bold">B.</span>{" 这时点击书签栏里的 \"获取Token\"，系统会自动把授权信息发送回当前站点"}</p>
-                  <p><span className="text-[#3fb950] font-bold">C.</span>{" 返回当前页面，等待 1-2 秒，页面会自动显示 GitHub 账号和 Token"}</p>
+                  <p><span className="text-[#3fb950] font-bold">C.</span>{" 返回当前页面，等待 1-2 秒，页面会自动显示 GitHub 账号�� Token"}</p>
                 </div>
 
                 {isPolling && (
@@ -479,13 +486,7 @@ export default function CopilotPage() {
       {/* Footer */}
       <footer className="border-t border-[#30363d] py-6 mt-12">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <p className="text-sm text-[#7d8590]">{"© 2026 GitHub Copilot 充值平台"}</p>
-          <p className="text-xs text-[#6e7681] mt-1">
-            {"Built with "}
-            <span className="text-[#3fb950] font-mono">GraphQL</span>
-            {" · "}
-            <span className="text-[#58a6ff] font-mono">OAuth 2.0</span>
-          </p>
+          <p className="text-sm text-[#7d8590]">{"© 2026 GitHub Copilot Activation"}</p>
         </div>
       </footer>
     </div>
