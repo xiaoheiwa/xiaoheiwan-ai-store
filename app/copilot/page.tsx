@@ -188,6 +188,30 @@ export default function CopilotPage() {
           </p>
         </div>
 
+        {/* Video Tutorial */}
+        <div className="mb-8">
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-md bg-[#238636]/20 flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 text-[#3fb950]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-[#e6edf3]">{"视频教程"}</span>
+              <span className="text-xs text-[#7d8590]">{"- 观看完整操作流程"}</span>
+            </div>
+            <video 
+              controls 
+              className="w-full rounded-lg border border-[#30363d]"
+              poster=""
+              preload="metadata"
+            >
+              <source src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/tutorial-qDmPfcYqOGTMR0x0CMgMKQMkv9joKN.mp4" type="video/mp4" />
+              {"您的浏览器不支持视频播放"}
+            </video>
+          </div>
+        </div>
+
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-2 mb-8">
           {[1, 2, 3].map((s, i) => (
