@@ -160,7 +160,7 @@ export default function CopilotPage() {
               <div className="w-8 h-8 rounded-lg bg-[#e6edf3] flex items-center justify-center">
                 <Github className="w-5 h-5 text-[#0d1117]" />
               </div>
-              <span className="font-semibold text-[#e6edf3]">{"GitHub Copilot 充值平台"}</span>
+              <span className="font-semibold text-[#e6edf3]">{"GitHub Copilot Activation"}</span>
             </div>
           </div>
           <Link href="/copilot/query" className="hidden md:flex items-center gap-1 text-sm text-[#7d8590] hover:text-[#e6edf3]">
@@ -486,13 +486,7 @@ export default function CopilotPage() {
       {/* Footer */}
       <footer className="border-t border-[#30363d] py-6 mt-12">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <p className="text-sm text-[#7d8590]">{"© 2026 GitHub Copilot 充值平台"}</p>
-          <p className="text-xs text-[#6e7681] mt-1">
-            {"Built with "}
-            <span className="text-[#3fb950] font-mono">GraphQL</span>
-            {" · "}
-            <span className="text-[#58a6ff] font-mono">OAuth 2.0</span>
-          </p>
+          <p className="text-sm text-[#7d8590]">{"© 2026 GitHub Copilot Activation"}</p>
         </div>
       </footer>
     </div>
