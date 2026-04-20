@@ -317,6 +317,7 @@ export default function HomePage() {
                   { href: "/activate/x", label: "X Premium", color: "#000000" },
                   { href: "/activate/gpt", label: "ChatGPT Plus", color: "#10A37F" },
                   { href: "/activate/team", label: "GPT Team", color: "#3B82F6" },
+                  { href: "/copilot", label: "GitHub Copilot", color: "#6e40c9" },
                 ].map((item) => (
                   <Link
                     key={item.href}

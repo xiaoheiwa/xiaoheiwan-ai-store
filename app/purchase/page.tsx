@@ -303,7 +303,7 @@ function PurchaseContent() {
             <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
               {selectedProduct ? `购买 ${selectedProduct.name}` : "购买激活码"}
             </h1>
-            <p className="text-muted-foreground">{isManual ? "填��邮箱地址，支付后客服将尽快为您处理" : "填写邮箱地址，支付后自动发货"}</p>
+            <p className="text-muted-foreground">{isManual ? "填����邮箱地址，支付后客服将尽快为您处理" : "填写邮箱地址，支付后自动发货"}</p>
           </div>
 
           {/* Preselected product - show compact info with option to change */}
@@ -663,13 +663,14 @@ function PurchaseContent() {
               <span className="text-sm font-medium text-foreground">{"已购买？前往激活"}</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {[
-                { href: "/activate/claude", label: "Claude Pro", color: "#D4A574" },
-                { href: "/activate/grok", label: "Grok", color: "#1DA1F2" },
-                { href: "/activate/x", label: "X Premium", color: "#000000" },
-                { href: "/activate/gpt", label: "ChatGPT", color: "#10A37F" },
-                { href: "/activate/team", label: "GPT Team", color: "#3B82F6" },
-              ].map((item) => (
+{[
+  { href: "/activate/claude", label: "Claude Pro", color: "#D4A574" },
+  { href: "/activate/grok", label: "Grok", color: "#1DA1F2" },
+  { href: "/activate/x", label: "X Premium", color: "#000000" },
+  { href: "/activate/gpt", label: "ChatGPT", color: "#10A37F" },
+  { href: "/activate/team", label: "GPT Team", color: "#3B82F6" },
+  { href: "/copilot", label: "Copilot", color: "#6e40c9" },
+  ].map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

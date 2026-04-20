@@ -6,6 +6,7 @@ const quickLinks = [
   { href: "/activate", label: "Claude 激活" },
   { href: "/activate", label: "Grok 激活" },
   { href: "/activate/gpt", label: "ChatGPT 激活" },
+  { href: "/copilot", label: "Copilot 激活" },
   { href: "/guide", label: "使用指南" },
   { href: "/order-lookup", label: "订单查询" },
   { href: "/blog", label: "博客" },
@@ -120,6 +121,7 @@ export default function Footer() {
                   <li><Link href="/activate" className="text-sm text-foreground/70 hover:text-accent transition-colors">{"Claude 激活"}</Link></li>
                   <li><Link href="/activate" className="text-sm text-foreground/70 hover:text-accent transition-colors">{"Grok 激活"}</Link></li>
                   <li><Link href="/activate/gpt" className="text-sm text-foreground/70 hover:text-accent transition-colors">{"ChatGPT 激活"}</Link></li>
+                  <li><Link href="/copilot" className="text-sm text-foreground/70 hover:text-accent transition-colors">{"Copilot 激活"}</Link></li>
                 </ul>
               </div>
               <div>
