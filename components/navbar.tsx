@@ -24,6 +24,7 @@ const navItems = [
       { label: "ChatGPT 激活", href: "/activate/gpt", description: "ChatGPT Plus 会员激活" },
       { label: "Team 兑换", href: "/activate/team", description: "GPT Team 邀请兑换" },
       { label: "Telegram 会员", href: "/telegram-premium", description: "Telegram Premium 代开" },
+      { label: "GitHub Copilot", href: "/copilot", description: "GitHub Copilot 激活充值" },
     ]
   },
   { 
