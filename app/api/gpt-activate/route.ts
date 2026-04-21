@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const GPT_API_URL = "https://8733ai.vip/"
+const GPT_API_URL = "https://9977ai.vip/"
 
 // In-memory session store (maps client session to PHP session cookies)
 const sessionStore = new Map<string, string>()
