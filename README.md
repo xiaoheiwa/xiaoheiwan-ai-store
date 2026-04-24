@@ -25,12 +25,20 @@
 ## 功能特性
 
 ### 商品销售
-- 多产品支持 - Claude、ChatGPT、Grok、Apple ID 等
-- 多支付方式 - 支付宝、微信、USDT (TRC20)
+- 多产品支持 - Claude、ChatGPT、Grok、GitHub Copilot、Apple ID 等
+- 多支付方式 - 支付宝、微信支付、USDT (TRC20)
 - 自动发货 - 支付成功后自动发送激活码
 - 人工发货 - 支持需要人工处理的商品
 - 区域选择 - 多区域商品支持（如不同国家的 Apple ID）
 - 阶梯定价 - 批量购买折扣价格
+
+### 激活服务
+- Claude Pro 激活 - 自助激活流程
+- ChatGPT Plus 激活 - 对接第三方 API
+- Grok Premium 激活 - X/Twitter 会员激活
+- GitHub Copilot 激活 - 套壳代理激活平台
+- GPT Team 兑换 - 邀请链接自动兑换
+- Telegram Premium - 代开会员服务
 
 ### 后台管理
 - 商品管理 - CRUD、库存、阶梯定价、区域选项
@@ -45,12 +53,18 @@
 - 邮件通知 - 自动发送激活码到用户邮箱
 - Webhook - 支持 Bot 命令交互
 
+### 实用工具
+- 2FA 验证器 - TOTP 双因素认证码生成
+- Gmail 检测 - 批量检测邮箱状态
+- 图片分割 - 外链 AI 拼贴图分割工具
+
 ### 其他特性
 - 域名授权 - 内置授权验证，保护源代码
 - 在线客服 - 实时聊天客服系统
 - SEO 优化 - 完整的 SEO 配置
 - 响应式设计 - 移动端 + 桌面端
 - 深色模式 - 明暗主题切换
+- 订单密码重置 - 后台支持重置用户查询密码
 
 ## 技术栈
 
@@ -62,7 +76,7 @@
 | 缓存 | Upstash Redis |
 | 样式 | Tailwind CSS v4 + shadcn/ui |
 | 邮件 | Resend |
-| 支付 | 虎皮椒 / ZPayz / EPay / USDT |
+| 支付 | 虎皮椒 / ZPayz / EPay / USDT / 微信支付 |
 | 部署 | Vercel |
 
 ## 授权说明
@@ -171,6 +185,7 @@ XUNHUPAY_APP_SECRET=your_app_secret
 # ZPayz
 ZPAYZ_PID=your_pid
 ZPAYZ_PKEY=your_pkey
+ZPAYZ_WXPAY_CID=your_wxpay_channel_id
 
 # EPay
 EPAY_API_URL=https://your-epay-url/mapi.php
@@ -237,6 +252,8 @@ CRON_SECRET=your_cron_secret
 
 | 版本 | 日期 | 更新内容 |
 |------|------|----------|
+| v1.5.0 | 2026-04-24 | GitHub Copilot 激活、微信支付渠道、订单密码重置 |
+| v1.4.0 | 2026-04 | GPT Plus 新源站、Team 存活率健康度、2FA 工具 |
 | v1.3.0 | 2026-03-16 | 域名授权系统、代码安全优化 |
 | v1.2.0 | 2026-03 | 区域选择功能、区域定价 |
 | v1.1.0 | 2026-02 | 博客系统、财务统计、分类导航 |
