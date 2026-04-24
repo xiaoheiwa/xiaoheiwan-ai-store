@@ -67,6 +67,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(data)
     }
 
+    if (action === "survival_stats") {
+      const resp = await fetch(`${BASE_URL}/api/survival_stats`, { headers: { Accept: "application/json" } })
+      const data = await resp.json()
+      return NextResponse.json(data)
+    }
+
     // SSE proxy for student verify stream
     if (action === "student_verify_stream") {
       const activationCode = searchParams.get("activation_code") || ""
