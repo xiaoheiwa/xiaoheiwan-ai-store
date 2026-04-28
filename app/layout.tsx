@@ -32,18 +32,23 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "小黑丸 - AI会员激活码商城 | ChatGPT Plus充值 | Claude Pro订阅 | GPT Team兑换",
-    template: "%s | 小黑丸 AI激活码商城",
+    default: "GPT充值 | ChatGPT Plus会员购买 | Claude Pro订阅 | 小黑丸AI激活码商城",
+    template: "%s | GPT充值 - 小黑丸",
   },
   description:
-    "小黑丸(XiaoHeiWan)是专业的AI服务激活码购买平台。提供ChatGPT Plus充值、Claude Pro订阅激活、GPT Team邀请兑换等服务，支持支付宝/微信支付，付款后激活码自动发送至邮箱，3分钟内到账。官方渠道正品保证，7×24小时自动发货。",
+    "GPT充值首选平台！小黑丸提供ChatGPT Plus会员充值、Claude Pro订阅激活、GPT Team邀请兑换、GitHub Copilot激活等服务。支持支付宝/微信支付，付款后激活码自动发送至邮箱，3分钟内到账。官方渠道正品保证，7×24小时自动发货。",
   keywords: [
     "小黑丸",
     "AI激活码",
+    "GPT充值",
+    "gpt plus",
     "ChatGPT Plus充值",
     "ChatGPT Plus激活码",
+    "ChatGPT Plus会员",
+    "chatgpt plus 账号 购买",
     "Claude Pro激活码",
     "Claude Pro订阅",
+    "claude",
     "GPT Team兑换码",
     "ChatGPT订阅充值",
     "Claude会员购买",
@@ -52,7 +57,8 @@ export const metadata: Metadata = {
     "AI订阅服务",
     "ChatGPT Plus购买",
     "AI账号充值平台",
-    "人工智能订阅",
+    "GitHub Copilot激活",
+    "gpt plus 充值",
   ],
   authors: [{ name: "小黑丸", url: BASE_URL }],
   creator: "小黑丸",
