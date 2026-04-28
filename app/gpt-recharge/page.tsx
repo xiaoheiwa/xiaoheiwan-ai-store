@@ -4,7 +4,6 @@ import Link from "next/link"
 import { ArrowRight, Check, Shield, Zap, Clock, CreditCard, Star, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
 
 export default function GptRechargePage() {
   const features = [
@@ -18,25 +17,25 @@ export default function GptRechargePage() {
     {
       name: "ChatGPT Plus 会员",
       desc: "GPT-4o、DALL-E 3、高级数据分析",
-      price: "￥145",
+      price: "￥158",
       period: "/月",
       popular: true,
       href: "/purchase?product=chatgpt-plus",
       features: ["GPT-4o 无限制使用", "DALL-E 3 图像生成", "高级数据分析", "优先访问新功能"],
     },
     {
-      name: "GPT Team 团队版",
+      name: "GPT Team 兑换码",
       desc: "团队协作，无需信用卡加入",
-      price: "￥175",
-      period: "/月",
+      price: "￥10",
+      period: "/次",
       popular: false,
       href: "/purchase?product=gpt-team",
-      features: ["所有 Plus 功能", "团队工作区", "管理控制台", "优先客服支持"],
+      features: ["所有 Plus 功能", "团队工作区", "管理控制台", "自动邀请兑换"],
     },
     {
       name: "Claude Pro 会员",
       desc: "5倍用量，优先访问 Claude 3.5",
-      price: "￥145",
+      price: "￥126",
       period: "/月",
       popular: false,
       href: "/purchase?product=claude-pro",
@@ -228,8 +227,6 @@ export default function GptRechargePage() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   )
 }
