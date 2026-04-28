@@ -44,6 +44,7 @@ const navItems = [
       { label: "2FA 验证器", href: "/tools/2fa", description: "TOTP 双因素认证码生成" },
       { label: "Gmail 检测", href: "/tools/gmail-checker", description: "批量检测邮箱状态" },
       { label: "图片分割", href: "https://collagesplitter.com/", description: "AI拼贴图分割成单独照片", external: true },
+      { label: "AI 手相分析", href: "https://palmreportai.com/", description: "上传手掌照片获取手相报告", external: true },
     ]
   },
 ]
