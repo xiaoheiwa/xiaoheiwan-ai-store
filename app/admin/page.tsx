@@ -38,9 +38,6 @@ import {
   CreditCard,
   Wrench,
   Shield,
-  Pause,
-  Play,
-  Ban,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 
@@ -94,7 +91,7 @@ interface Product {
   price: number
   original_price: number | null
   sku: string
-  status: "active" | "paused" | "inactive"
+  status: "active" | "inactive"
   sort_order: number
   stock_count?: number
   region_options?: RegionOption[] | null
@@ -1812,7 +1809,7 @@ export default function AdminPage() {
               <textarea
                 value={newCodes}
                 onChange={(e) => setNewCodes(e.target.value)}
-                placeholder={"每行一个激活���\nCARD-XXXX-XXXX\nCARD-YYYY-YYYY"}
+                placeholder={"每行一个激活码\nCARD-XXXX-XXXX\nCARD-YYYY-YYYY"}
                 className="w-full h-28 p-3 border border-input bg-background text-sm rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono"
               />
             </div>
@@ -2860,29 +2857,22 @@ export default function AdminPage() {
     }
   }
 
-const handleSetProductStatus = async (product: Product, newStatus: "active" | "paused" | "inactive") => {
-  console.log("[v0] handleSetProductStatus called:", { productId: product.id, productName: product.name, currentStatus: product.status, newStatus })
-  try {
-    const response = await fetch("/api/admin/products", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-      body: JSON.stringify({ id: product.id, status: newStatus }),
-    })
-    console.log("[v0] handleSetProductStatus response status:", response.status)
-    const data = await response.json()
-    console.log("[v0] handleSetProductStatus response data:", data)
-    if (response.ok) {
-      const statusText = newStatus === "active" ? "上架" : newStatus === "paused" ? "暂停销售" : "下架"
-      setMessage(`产品已${statusText}`)
-      loadData()
-    } else {
-      setMessage(`操作失败: ${data.error || "未知错误"}`)
+  const handleToggleProductStatus = async (product: Product) => {
+    const newStatus = product.status === "active" ? "inactive" : "active"
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ id: product.id, status: newStatus }),
+      })
+      if (response.ok) {
+        setMessage(`产品已${newStatus === "active" ? "上架" : "下架"}`)
+        loadData()
+      }
+    } catch (error) {
+      setMessage("操作失败")
     }
-  } catch (error) {
-    console.error("[v0] handleSetProductStatus error:", error)
-    setMessage("操作失败: 网络错误")
   }
-}
 
   const startEditProduct = (product: Product) => {
     setEditingProduct(product)
@@ -3415,14 +3405,14 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
       ) : (
         <div className="space-y-4">
           {products.map((product) => (
-            <Card key={product.id} className={product.status !== "active" ? "opacity-70" : ""}>
+            <Card key={product.id} className={product.status === "inactive" ? "opacity-60" : ""}>
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-                      <Badge variant={product.status === "active" ? "default" : product.status === "paused" ? "outline" : "secondary"} className={product.status === "paused" ? "border-amber-500/50 text-amber-600" : ""}>
-                        {product.status === "active" ? "销售中" : product.status === "paused" ? "已暂停" : "已下架"}
+                      <Badge variant={product.status === "active" ? "default" : "secondary"}>
+                        {product.status === "active" ? "上架中" : "已下架"}
                       </Badge>
                       <Badge variant="outline" className={`text-xs ${(product as any).delivery_type === "manual" ? "border-amber-500/50 text-amber-600" : "border-emerald-500/50 text-emerald-600"}`}>
                         {(product as any).delivery_type === "manual" ? "人工发货" : "自动发货"}
@@ -3459,31 +3449,10 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
                       <span className="text-muted-foreground">排序: {product.sort_order}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    {product.status === "active" && (
-                      <Button variant="outline" size="sm" onClick={() => handleSetProductStatus(product, "paused")} className="text-amber-600 border-amber-500/50 hover:bg-amber-50">
-                        <Pause className="w-3 h-3 mr-1" />
-                        暂停
-                      </Button>
-                    )}
-                    {product.status === "paused" && (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => handleSetProductStatus(product, "active")} className="text-green-600 border-green-500/50 hover:bg-green-50">
-                          <Play className="w-3 h-3 mr-1" />
-                          恢复
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleSetProductStatus(product, "inactive")} className="text-gray-600">
-                          <Ban className="w-3 h-3 mr-1" />
-                          下架
-                        </Button>
-                      </>
-                    )}
-                    {product.status === "inactive" && (
-                      <Button variant="outline" size="sm" onClick={() => handleSetProductStatus(product, "active")} className="text-green-600 border-green-500/50 hover:bg-green-50">
-                        <Play className="w-3 h-3 mr-1" />
-                        上架
-                      </Button>
-                    )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => handleToggleProductStatus(product)}>
+                      {product.status === "active" ? "下架" : "上架"}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => startEditProduct(product)}>
                       <Pencil className="w-3 h-3 mr-1" />
                       编辑
