@@ -94,7 +94,7 @@ interface Product {
   price: number
   original_price: number | null
   sku: string
-  status: "active" | "inactive"
+  status: "active" | "paused" | "inactive"
   sort_order: number
   stock_count?: number
   region_options?: RegionOption[] | null
