@@ -98,7 +98,7 @@ export interface Product {
   price: number
   original_price: number | null
   sku: string
-  status: "active" | "inactive"
+  status: "active" | "paused" | "inactive"
   sort_order: number
   delivery_type: "auto" | "manual"
   price_tiers: PriceTier[] | null
