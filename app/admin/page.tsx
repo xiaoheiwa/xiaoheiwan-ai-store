@@ -2861,21 +2861,28 @@ export default function AdminPage() {
   }
 
 const handleSetProductStatus = async (product: Product, newStatus: "active" | "paused" | "inactive") => {
+  console.log("[v0] handleSetProductStatus called:", { productId: product.id, productName: product.name, currentStatus: product.status, newStatus })
   try {
-  const response = await fetch("/api/admin/products", {
-  method: "PUT",
-  headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-  body: JSON.stringify({ id: product.id, status: newStatus }),
-  })
-  if (response.ok) {
-  const statusText = newStatus === "active" ? "上架" : newStatus === "paused" ? "暂停销售" : "下架"
-  setMessage(`产品已${statusText}`)
-  loadData()
-  }
+    const response = await fetch("/api/admin/products", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ id: product.id, status: newStatus }),
+    })
+    console.log("[v0] handleSetProductStatus response status:", response.status)
+    const data = await response.json()
+    console.log("[v0] handleSetProductStatus response data:", data)
+    if (response.ok) {
+      const statusText = newStatus === "active" ? "上架" : newStatus === "paused" ? "暂停销售" : "下架"
+      setMessage(`产品已${statusText}`)
+      loadData()
+    } else {
+      setMessage(`操作失败: ${data.error || "未知错误"}`)
+    }
   } catch (error) {
-  setMessage("操作失败")
+    console.error("[v0] handleSetProductStatus error:", error)
+    setMessage("操作失败: 网络错误")
   }
-  }
+}
 
   const startEditProduct = (product: Product) => {
     setEditingProduct(product)
