@@ -5,6 +5,7 @@ import { Suspense } from "react"
 import "./globals.css"
 import WeChatRedirect from "@/components/wechat-redirect"
 import LayoutWrapper from "@/components/layout-wrapper"
+import NotificationBanner from "@/components/notification-banner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -338,10 +339,11 @@ export default function RootLayout({
       <body
         className={`font-sans ${inter.variable} ${jetbrainsMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        <LayoutWrapper>
-          <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
-        </LayoutWrapper>
-        <WeChatRedirect />
+<NotificationBanner />
+<LayoutWrapper>
+  <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+</LayoutWrapper>
+  <WeChatRedirect />
       </body>
     </html>
   )
