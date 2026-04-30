@@ -65,7 +65,7 @@ export default function NotificationBanner() {
 
   return (
     <div 
-      className="fixed bottom-6 right-6 z-50 max-w-sm animate-in slide-in-from-right-5 fade-in duration-500"
+      className="fixed bottom-24 right-6 z-40 max-w-sm animate-in slide-in-from-right-5 fade-in duration-500"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
