@@ -38,6 +38,7 @@ import {
   CreditCard,
   Wrench,
   Shield,
+  Bell,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 
@@ -148,14 +149,19 @@ export default function AdminPage() {
   const [ordersSummary, setOrdersSummary] = useState({ paid: 0, pending: 0, failed: 0, total: 0, totalRevenue: 0 })
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [showOrderDeleteConfirm, setShowOrderDeleteConfirm] = useState(false)
+// 通知管理状态
+  const [notifications, setNotifications] = useState<{ id: number; title: string; content: string; is_active: boolean; updated_at: string }[]>([])
+  const [notificationForm, setNotificationForm] = useState({ id: null as number | null, title: "", content: "", is_active: true })
+  const [savingNotification, setSavingNotification] = useState(false)
+
   const [emailTemplate, setEmailTemplate] = useState({
-    shop_name: "",
-    greeting_text: "",
-    tips_text: "",
-    wechat_id: "",
-    footer_text: "",
-    primary_color: "#0f172a",
-    custom_note: "",
+  shop_name: "",
+  greeting_text: "",
+  tips_text: "",
+  wechat_id: "",
+  footer_text: "",
+  primary_color: "#0f172a",
+  custom_note: "",
   })
   const [emailTemplateLoading, setEmailTemplateLoading] = useState(false)
   const [emailTemplateSaving, setEmailTemplateSaving] = useState(false)
@@ -228,13 +234,14 @@ export default function AdminPage() {
         if (res.ok) {
           // Retrieve token from localStorage for API calls
           const storedToken = localStorage.getItem("adminToken")
-          if (storedToken) {
-            setAdminToken(storedToken)
-            setIsAuthenticated(true)
-            loadData()
-            loadPaymentSettings()
-            loadToolsConfig()
-          }
+if (storedToken) {
+  setAdminToken(storedToken)
+  setIsAuthenticated(true)
+  loadData()
+  loadPaymentSettings()
+  loadToolsConfig()
+  loadNotifications()
+  }
         }
       } catch {
         // Not authenticated
@@ -255,11 +262,12 @@ export default function AdminPage() {
       const data = await res.json()
 
       if (res.ok && data.token) {
-        setAdminToken(data.token)
-        localStorage.setItem("adminToken", data.token)
-        setIsAuthenticated(true)
-        loadData()
-        setMessage("登录成功")
+setAdminToken(data.token)
+  localStorage.setItem("adminToken", data.token)
+  setIsAuthenticated(true)
+  loadData()
+  loadNotifications()
+  setMessage("登录成功")
       } else if (res.status === 429) {
         setLoginError(data.error || "登录尝试次数过多，请稍后再试")
       } else {
@@ -286,9 +294,80 @@ export default function AdminPage() {
     setPassword("")
   }
 
+// 通知管理函数
+  const loadNotifications = async () => {
+    try {
+      const res = await fetch("/api/admin/notifications", {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      })
+      const data = await res.json()
+      if (data.success) {
+        setNotifications(data.notifications || [])
+      }
+    } catch (error) {
+      console.error("Failed to load notifications:", error)
+    }
+  }
+
+  const saveNotification = async () => {
+    setSavingNotification(true)
+    try {
+      const res = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify(notificationForm),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage(notificationForm.id ? "通知已更新" : "通知已创建")
+        setNotificationForm({ id: null, title: "", content: "", is_active: true })
+        loadNotifications()
+      } else {
+        setMessage(data.error || "保存失败")
+      }
+    } catch (error) {
+      setMessage("保存失败")
+    } finally {
+      setSavingNotification(false)
+    }
+  }
+
+  const deleteNotification = async (id: number) => {
+    try {
+      const res = await fetch(`/api/admin/notifications?id=${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${adminToken}` },
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage("通知已删除")
+        loadNotifications()
+      }
+    } catch (error) {
+      setMessage("删除失败")
+    }
+  }
+
+  const toggleNotificationStatus = async (notification: typeof notifications[0]) => {
+    try {
+      const res = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ ...notification, is_active: !notification.is_active }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage(notification.is_active ? "通知已关闭" : "通知已开启")
+        loadNotifications()
+      }
+    } catch (error) {
+      setMessage("操作失败")
+    }
+  }
+
   const loadData = async () => {
-    console.log("[v0] Starting to load admin data...")
-    setDataLoading(true)
+  console.log("[v0] Starting to load admin data...")
+  setDataLoading(true)
     try {
       console.log("[v0] Fetching stats, orders, and codes...")
 
@@ -1809,7 +1888,7 @@ export default function AdminPage() {
               <textarea
                 value={newCodes}
                 onChange={(e) => setNewCodes(e.target.value)}
-                placeholder={"每行一个激活码\nCARD-XXXX-XXXX\nCARD-YYYY-YYYY"}
+                placeholder={"每行一个激活���\nCARD-XXXX-XXXX\nCARD-YYYY-YYYY"}
                 className="w-full h-28 p-3 border border-input bg-background text-sm rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono"
               />
             </div>
@@ -2159,19 +2238,115 @@ export default function AdminPage() {
     }
   }
 
-  const renderSettings = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Key className="w-5 h-5" />
+const renderSettings = () => (
+  <div className="space-y-6">
+  {/* 通知管理 */}
+  <Card>
+  <CardHeader>
+  <CardTitle className="flex items-center space-x-2">
+    <Bell className="w-5 h-5" />
+    <span>通知管理</span>
+  </CardTitle>
+  <CardDescription>管理网站紧急通知，开启后将在左上角显示通知弹窗</CardDescription>
+  </CardHeader>
+  <CardContent className="space-y-4">
+  <div className="grid gap-4">
+    <div>
+      <Label htmlFor="notification-title">通知标题</Label>
+      <Input
+        id="notification-title"
+        placeholder="输入通知标题"
+        value={notificationForm.title}
+        onChange={(e) => setNotificationForm({ ...notificationForm, title: e.target.value })}
+      />
+    </div>
+    <div>
+      <Label htmlFor="notification-content">通知内容</Label>
+      <textarea
+        id="notification-content"
+        placeholder="输入通知内容"
+        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        value={notificationForm.content}
+        onChange={(e) => setNotificationForm({ ...notificationForm, content: e.target.value })}
+      />
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="notification-active"
+        checked={notificationForm.is_active}
+        onCheckedChange={(checked) => setNotificationForm({ ...notificationForm, is_active: checked })}
+      />
+      <Label htmlFor="notification-active">开启通知</Label>
+    </div>
+    <div className="flex gap-2">
+      <Button onClick={saveNotification} disabled={savingNotification || !notificationForm.title || !notificationForm.content}>
+        {savingNotification ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />保存中...</> : (notificationForm.id ? "更新通知" : "创建通知")}
+      </Button>
+      {notificationForm.id && (
+        <Button variant="outline" onClick={() => setNotificationForm({ id: null, title: "", content: "", is_active: true })}>
+          取消编辑
+        </Button>
+      )}
+    </div>
+  </div>
+  {notifications.length > 0 && (
+    <div className="mt-6 border-t pt-4">
+      <h4 className="text-sm font-medium mb-3">已有通知</h4>
+      <div className="space-y-2">
+        {notifications.map((n) => (
+          <div key={n.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+            <div className="flex-1 min-w-0 mr-4">
+              <div className="flex items-center gap-2">
+                <span className="font-medium truncate">{n.title}</span>
+                <Badge variant={n.is_active ? "default" : "secondary"}>
+                  {n.is_active ? "已开启" : "已关闭"}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground truncate">{n.content}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleNotificationStatus(n)}
+              >
+                {n.is_active ? "关闭" : "开启"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setNotificationForm({ id: n.id, title: n.title, content: n.content, is_active: n.is_active })}
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                onClick={() => deleteNotification(n.id)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+  </CardContent>
+  </Card>
+
+  <Card>
+  <CardHeader>
+  <CardTitle className="flex items-center space-x-2">
+  <Key className="w-5 h-5" />
             <span>激活码管理</span>
           </CardTitle>
           <CardDescription>激活码的导入和管理已移至"激活码管理"标签页</CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={() => setActiveTab("codes")} variant="outline">
-            前往激活码管理
+            前往激活���管理
           </Button>
         </CardContent>
       </Card>
