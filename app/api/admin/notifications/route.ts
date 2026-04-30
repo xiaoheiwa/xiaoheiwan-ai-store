@@ -1,18 +1,12 @@
 import { NextResponse, NextRequest } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import { verifyAdminRequest } from "@/lib/admin-auth"
 
 const sql = neon(process.env.DATABASE_URL!)
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "xiaoheiwan-admin-2024"
-
-function verifyAdmin(req: NextRequest): boolean {
-  const auth = req.headers.get("authorization")
-  if (!auth?.startsWith("Bearer ")) return false
-  return auth.slice(7) === ADMIN_TOKEN
-}
 
 // GET - 获取所有通知
 export async function GET(req: NextRequest) {
-  if (!verifyAdmin(req)) {
+  if (!(await verifyAdminRequest(req))) {
     return NextResponse.json({ error: "未授权" }, { status: 401 })
   }
 
@@ -31,7 +25,7 @@ export async function GET(req: NextRequest) {
 
 // POST - 创建或更新通知
 export async function POST(req: NextRequest) {
-  if (!verifyAdmin(req)) {
+  if (!(await verifyAdminRequest(req))) {
     return NextResponse.json({ error: "未授权" }, { status: 401 })
   }
 
@@ -66,7 +60,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE - 删除通知
 export async function DELETE(req: NextRequest) {
-  if (!verifyAdmin(req)) {
+  if (!(await verifyAdminRequest(req))) {
     return NextResponse.json({ error: "未授权" }, { status: 401 })
   }
 

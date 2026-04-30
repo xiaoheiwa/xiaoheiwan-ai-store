@@ -349,19 +349,26 @@ setAdminToken(data.token)
   }
 
   const toggleNotificationStatus = async (notification: typeof notifications[0]) => {
+    console.log("[v0] toggleNotificationStatus:", notification)
     try {
+      const payload = { id: notification.id, title: notification.title, content: notification.content, is_active: !notification.is_active }
+      console.log("[v0] Sending payload:", payload)
       const res = await fetch("/api/admin/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-        body: JSON.stringify({ ...notification, is_active: !notification.is_active }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
+      console.log("[v0] Response:", res.status, data)
       if (data.success) {
         setMessage(notification.is_active ? "通知已关闭" : "通知已开启")
         loadNotifications()
+      } else {
+        setMessage(data.error || "操作失败")
       }
     } catch (error) {
-      setMessage("操作失败")
+      console.error("[v0] toggleNotificationStatus error:", error)
+      setMessage("操作失败: " + String(error))
     }
   }
 
@@ -2100,7 +2107,7 @@ setAdminToken(data.token)
           <Card className="w-full max-w-md mx-4">
             <CardHeader>
               <CardTitle className="text-destructive">确认删除</CardTitle>
-              <CardDescription>确定要删除选中的 {selectedCodes.length} 个激活码吗？此操作不可撤销。</CardDescription>
+              <CardDescription>确定要删除���中的 {selectedCodes.length} 个激活码吗？此操作不可撤销。</CardDescription>
             </CardHeader>
             <CardContent className="flex gap-3">
               <Button variant="destructive" onClick={handleDeleteCodes} disabled={deleting} className="flex-1">
@@ -2706,7 +2713,7 @@ const renderSettings = () => (
                   size="sm"
                   onClick={() => setEmailPreviewMode(!emailPreviewMode)}
                 >
-                  {emailPreviewMode ? "编辑" : "预览"}
+                  {emailPreviewMode ? "编辑" : "���览"}
                 </Button>
                 <Button size="sm" onClick={saveEmailTemplate} disabled={emailTemplateSaving}>
                   {emailTemplateSaving ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />保存中...</> : "保存模板"}
