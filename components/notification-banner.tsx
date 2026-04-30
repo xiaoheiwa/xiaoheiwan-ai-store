@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Bell, AlertTriangle } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { X, Bell } from "lucide-react"
 
 interface Notification {
   id: number
@@ -15,10 +14,10 @@ export default function NotificationBanner() {
   const [notification, setNotification] = useState<Notification | null>(null)
   const [isVisible, setIsVisible] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
 
   useEffect(() => {
     fetchNotification()
-    // 每30秒轮询一次检查通知更新
     const interval = setInterval(fetchNotification, 30000)
     return () => clearInterval(interval)
   }, [])
@@ -30,12 +29,9 @@ export default function NotificationBanner() {
       
       if (data.success && data.notification) {
         const newNotification = data.notification
-        
-        // 检查是否是新通知或已更新的通知
         const dismissedId = localStorage.getItem("dismissed_notification_id")
         const dismissedTime = localStorage.getItem("dismissed_notification_time")
         
-        // 如果是新通知或内容已更新，显示它
         if (
           !dismissedId ||
           dismissedId !== String(newNotification.id) ||
@@ -68,38 +64,50 @@ export default function NotificationBanner() {
   }
 
   return (
-    <div className="fixed top-4 left-4 z-50 max-w-sm animate-in slide-in-from-left-5 fade-in duration-300">
-      <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg shadow-lg overflow-hidden">
+    <div 
+      className="fixed bottom-24 right-6 z-40 max-w-sm animate-in slide-in-from-right-5 fade-in duration-500"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="relative bg-card border border-border rounded-xl shadow-lg overflow-hidden backdrop-blur-sm">
+        {/* 顶部装饰条 */}
+        <div className="h-1 bg-gradient-to-r from-accent via-accent/80 to-accent/60" />
+        
         <div className="p-4">
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4 text-white" />
+            {/* 图标 */}
+            <div className="flex-shrink-0 mt-0.5">
+              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Bell className="w-4 h-4 text-accent" />
               </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <h4 className="text-sm font-semibold text-white truncate">
-                  {notification.title}
-                </h4>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-white/80 hover:text-white hover:bg-white/20 flex-shrink-0"
-                  onClick={handleDismiss}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-sm text-white/90 mt-1 leading-relaxed">
+            
+            {/* 内容 */}
+            <div className="flex-1 min-w-0 pr-6">
+              <h4 className="text-sm font-semibold text-foreground">
+                {notification.title}
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                 {notification.content}
               </p>
             </div>
+            
+            {/* 关闭按钮 */}
+            <button
+              onClick={handleDismiss}
+              className={`absolute top-3 right-3 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 ${
+                isHovered 
+                  ? "bg-muted text-foreground" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
-        <div className="h-1 bg-white/20">
-          <div className="h-full bg-white/40 animate-pulse" />
-        </div>
+        
+        {/* 底部微妙的渐变边框 */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>
     </div>
   )
