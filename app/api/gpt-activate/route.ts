@@ -86,10 +86,13 @@ export async function POST(request: NextRequest) {
 
     // 如果是验证激活码请求，返回 session cookie 给前端
     if (action === "check_cdk" && setCookieHeader) {
-      // 提取 PHPSESSID
-      const sessionMatch = setCookieHeader.match(/PHPSESSID=([^;]+)/)
+      // 提取 ios_gpt_session (源站使用的 session 名称)
+      const sessionMatch = setCookieHeader.match(/ios_gpt_session=([^;]+)/)
       if (sessionMatch) {
-        data.sessionCookie = `PHPSESSID=${sessionMatch[1]}`
+        data.sessionCookie = `ios_gpt_session=${sessionMatch[1]}`
+        console.log("[v0] Session cookie extracted:", data.sessionCookie)
+      } else {
+        console.warn("[v0] No ios_gpt_session found in Set-Cookie:", setCookieHeader)
       }
     }
 
