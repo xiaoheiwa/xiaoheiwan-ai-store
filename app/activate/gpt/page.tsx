@@ -10,7 +10,17 @@ const BRAND = "#10A37F"
 type Step = 1 | 2 | 3
 type MessageType = "success" | "error" | "info" | "warning"
 
-interface CardInfo { is_new: boolean; email?: string; [key: string]: any }
+interface CardInfo { 
+  is_new: boolean
+  email?: string
+  code?: string
+  description?: string
+  card_type?: string
+  has_existing_record?: boolean
+  allow_new_submission?: boolean
+  existing_record?: { bound_email_masked?: string }
+  [key: string]: any 
+}
 interface RechargeResult { status: "idle" | "processing" | "success" | "failed"; message: string }
 
 async function gptApi(action: string, params: Record<string, string> = {}) {
@@ -53,11 +63,28 @@ export default function GptActivatePage() {
     if (!cardCode.trim()) { setMessage({ text: "请输入激活码", type: "error" }); return }
     setVerifying(true); setMessage(null); setResult({ status: "idle", message: "" })
     try {
-      const data = await gptApi("verify_code", { activation_code: cardCode.trim().toUpperCase() })
-      if (data.success) {
-        setMessage({ text: "激活码验证成功", type: "success" }); setCardInfo(data); setStep(2)
-        if (!data.is_new && data.email) setBoundEmail(data.email)
-      } else { setMessage({ text: data.error || data.message || "激活码无效，请检查后重试", type: "error" }) }
+      const data = await gptApi("check_cdk", { cdk: cardCode.trim().toUpperCase() })
+      if (data.success && data.data) {
+        const cardData = data.data
+        const hasExistingRecord = cardData.has_existing_record || false
+        const newCardInfo: CardInfo = {
+          is_new: !hasExistingRecord && cardData.allow_new_submission,
+          code: cardData.code,
+          description: cardData.description,
+          card_type: cardData.card_type,
+          has_existing_record: hasExistingRecord,
+          allow_new_submission: cardData.allow_new_submission,
+          existing_record: cardData.existing_record,
+        }
+        setMessage({ text: "激活码验证成功", type: "success" })
+        setCardInfo(newCardInfo)
+        setStep(2)
+        if (hasExistingRecord && cardData.existing_record?.bound_email_masked) {
+          setBoundEmail(cardData.existing_record.bound_email_masked)
+        }
+      } else { 
+        setMessage({ text: data.error || data.message || "激活码无效，请检查后重试", type: "error" }) 
+      }
     } catch { setMessage({ text: "网络错误，请重试", type: "error" }) }
     setVerifying(false)
   }
@@ -77,7 +104,10 @@ export default function GptActivatePage() {
   async function confirmRecharge() {
     setShowConfirmModal(false); setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在处理充值..." })
     try {
-      const data = await gptApi("submit_json", { json_token: userData })
+      const data = await gptApi("recharge", { 
+        cdk: cardCode.trim().toUpperCase(),
+        user_data: userData 
+      })
       if (data.success) { setResult({ status: "success", message: data.message || "充值成功！ChatGPT Plus 已激活" }); setStep(3) }
       else { setResult({ status: "failed", message: data.message || data.error || "充值失败，请重试" }) }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
@@ -87,7 +117,7 @@ export default function GptActivatePage() {
   async function handleReuseRecord() {
     setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在使用已有记录充值..." })
     try {
-      const data = await gptApi("reuse_record")
+      const data = await gptApi("reuse_existing", { cdk: cardCode.trim().toUpperCase() })
       if (data.success) { setResult({ status: "success", message: data.message || "充值成功！ChatGPT Plus 已激活" }); setStep(3) }
       else { setResult({ status: "failed", message: data.message || data.error || "复用失败，请重试" }) }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
@@ -104,7 +134,10 @@ export default function GptActivatePage() {
 
     setUpdatingToken(true); setMessage(null); setResult({ status: "processing", message: "正在更新 Token 并充值..." })
     try {
-      const data = await gptApi("update_token", { json_token: newTokenData })
+      const data = await gptApi("recharge", { 
+        cdk: cardCode.trim().toUpperCase(),
+        user_data: newTokenData 
+      })
       if (data.success) { setShowUpdateToken(false); setNewTokenData(""); setResult({ status: "success", message: data.message || "更新成功，ChatGPT Plus 已激活" }); setStep(3) }
       else { setResult({ status: "failed", message: data.message || data.error || "更新失败，请重试" }) }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
