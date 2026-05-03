@@ -5,7 +5,7 @@ const GPT_API_URL = "https://chongzhi.pro"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, ...params } = body
+    const { action, sessionCookie, ...params } = body
 
     let targetUrl = ""
     let requestBody: Record<string, unknown> = {}
@@ -45,24 +45,33 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        // 默认返回错误
         return NextResponse.json(
           { success: false, error: "Unknown action", message: "未知的操作类型" },
           { status: 400 }
         )
     }
 
-    console.log("[v0] GPT activate proxy:", { action, targetUrl })
+    console.log("[v0] GPT activate proxy:", { action, targetUrl, hasSessionCookie: !!sessionCookie })
+
+    // 构建请求 headers，包含 session cookie
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    }
+    
+    if (sessionCookie) {
+      headers["Cookie"] = sessionCookie
+    }
 
     const response = await fetch(targetUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
+      headers,
       body: JSON.stringify(requestBody),
     })
 
+    // 获取响应中的 Set-Cookie header
+    const setCookieHeader = response.headers.get("set-cookie")
+    
     const text = await response.text()
     let data
     try {
@@ -73,6 +82,15 @@ export async function POST(request: NextRequest) {
         { success: false, error: "Invalid response", message: "后端返回格式错误", raw: text.substring(0, 200) },
         { status: 502 }
       )
+    }
+
+    // 如果是验证激活码请求，返回 session cookie 给前端
+    if (action === "check_cdk" && setCookieHeader) {
+      // 提取 PHPSESSID
+      const sessionMatch = setCookieHeader.match(/PHPSESSID=([^;]+)/)
+      if (sessionMatch) {
+        data.sessionCookie = `PHPSESSID=${sessionMatch[1]}`
+      }
     }
 
     return NextResponse.json(data)

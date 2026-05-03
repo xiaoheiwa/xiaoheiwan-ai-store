@@ -23,12 +23,20 @@ interface CardInfo {
 }
 interface RechargeResult { status: "idle" | "processing" | "success" | "failed"; message: string }
 
-async function gptApi(action: string, params: Record<string, string> = {}) {
-  const res = await fetch("/api/gpt-activate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...params }) })
-  return res.json()
+function useGptApi() {
+  const gptApi = async (action: string, params: Record<string, string> = {}, cookie?: string) => {
+    const res = await fetch("/api/gpt-activate", { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ action, sessionCookie: cookie, ...params }) 
+    })
+    return res.json()
+  }
+  return gptApi
 }
 
 export default function GptActivatePage() {
+  const gptApi = useGptApi()
   const [step, setStep] = useState<Step>(1)
   const [cardCode, setCardCode] = useState("")
   const [cardInfo, setCardInfo] = useState<CardInfo | null>(null)
@@ -48,6 +56,7 @@ export default function GptActivatePage() {
   const [showUpdateToken, setShowUpdateToken] = useState(false)
   const [newTokenData, setNewTokenData] = useState("")
   const [updatingToken, setUpdatingToken] = useState(false)
+  const [sessionCookie, setSessionCookie] = useState("")
 
   function getEmailFromToken(token: string): string {
     try {
@@ -65,6 +74,10 @@ export default function GptActivatePage() {
     try {
       const data = await gptApi("check_cdk", { cdk: cardCode.trim().toUpperCase() })
       if (data.success && data.data) {
+        // 保存 session cookie 用于后续请求
+        if (data.sessionCookie) {
+          setSessionCookie(data.sessionCookie)
+        }
         const cardData = data.data
         const hasExistingRecord = cardData.has_existing_record || false
         const newCardInfo: CardInfo = {
@@ -107,7 +120,7 @@ export default function GptActivatePage() {
       const data = await gptApi("recharge", { 
         cdk: cardCode.trim().toUpperCase(),
         user_data: userData 
-      })
+      }, sessionCookie)
       if (data.success) { setResult({ status: "success", message: data.message || "充值成功！ChatGPT Plus 已激活" }); setStep(3) }
       else { setResult({ status: "failed", message: data.message || data.error || "充值失败，请重试" }) }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
@@ -117,7 +130,7 @@ export default function GptActivatePage() {
   async function handleReuseRecord() {
     setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在使用已有记录充值..." })
     try {
-      const data = await gptApi("reuse_existing", { cdk: cardCode.trim().toUpperCase() })
+      const data = await gptApi("reuse_existing", { cdk: cardCode.trim().toUpperCase() }, sessionCookie)
       if (data.success) { setResult({ status: "success", message: data.message || "充值成功！ChatGPT Plus 已激活" }); setStep(3) }
       else { setResult({ status: "failed", message: data.message || data.error || "复用失败，请重试" }) }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
@@ -137,7 +150,7 @@ export default function GptActivatePage() {
       const data = await gptApi("recharge", { 
         cdk: cardCode.trim().toUpperCase(),
         user_data: newTokenData 
-      })
+      }, sessionCookie)
       if (data.success) { setShowUpdateToken(false); setNewTokenData(""); setResult({ status: "success", message: data.message || "更新成功，ChatGPT Plus 已激活" }); setStep(3) }
       else { setResult({ status: "failed", message: data.message || data.error || "更新失败，请重试" }) }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
