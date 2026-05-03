@@ -73,10 +73,15 @@ export default function GptActivatePage() {
     setVerifying(true); setMessage(null); setResult({ status: "idle", message: "" })
     try {
       const data = await gptApi("check_cdk", { cdk: cardCode.trim().toUpperCase() })
+      console.log("[v0] check_cdk response:", data)
       if (data.success && data.data) {
         // 保存 session cookie 用于后续请求
+        console.log("[v0] sessionCookie from response:", data.sessionCookie)
         if (data.sessionCookie) {
           setSessionCookie(data.sessionCookie)
+          console.log("[v0] sessionCookie saved:", data.sessionCookie)
+        } else {
+          console.warn("[v0] No sessionCookie in response!")
         }
         const cardData = data.data
         const hasExistingRecord = cardData.has_existing_record || false
@@ -114,13 +119,15 @@ export default function GptActivatePage() {
     } catch { setMessage({ text: "JSON 格式错误，请检查数据", type: "error" }) }
   }
 
-  async function confirmRecharge() {
-    setShowConfirmModal(false); setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在处理充值..." })
-    try {
-      const data = await gptApi("recharge", { 
-        cdk: cardCode.trim().toUpperCase(),
-        user_data: userData 
-      }, sessionCookie)
+async function confirmRecharge() {
+  console.log("[v0] confirmRecharge called, sessionCookie:", sessionCookie)
+  setShowConfirmModal(false); setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在处理充值..." })
+  try {
+  const data = await gptApi("recharge", {
+  cdk: cardCode.trim().toUpperCase(),
+  user_data: userData
+  }, sessionCookie)
+  console.log("[v0] recharge response:", data)
       if (data.success) { setResult({ status: "success", message: data.message || "充值成功！ChatGPT Plus 已激活" }); setStep(3) }
       else { setResult({ status: "failed", message: data.message || data.error || "充值失败，请重试" }) }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
