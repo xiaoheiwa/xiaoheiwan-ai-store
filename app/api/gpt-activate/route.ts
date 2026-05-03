@@ -19,28 +19,37 @@ export async function POST(request: NextRequest) {
         break
       
       case "recharge":
-        // 提交充值
-        targetUrl = `${GPT_API_URL}/index.php?route=/api/recharge`
+        // 提交充值 - 使用 simple-submit-recharge.php
+        targetUrl = `${GPT_API_URL}/simple-submit-recharge.php`
         requestBody = {
-          activation_code: params.cdk || params.activation_code,
-          user_data: params.user_data,
-          ...params
+          user_data: params.user_data
         }
         break
       
       case "reuse_existing":
-        // 复用已有记录
-        targetUrl = `${GPT_API_URL}/index.php?route=/api/recharge/reuse`
+        // 复用已有记录 - 使用 api-recharge-reuse.php
+        targetUrl = `${GPT_API_URL}/api-recharge-reuse.php`
         requestBody = {
-          activation_code: params.cdk || params.activation_code,
-          ...params
+          action: "reuse_record"
+        }
+        break
+
+      case "update_token":
+        // 更新Token并充值 - 使用 api-recharge-reuse.php
+        targetUrl = `${GPT_API_URL}/api-recharge-reuse.php`
+        requestBody = {
+          action: "update_token",
+          card_code: params.cdk || params.card_code,
+          json_data: params.user_data || params.json_data
         }
         break
 
       default:
-        // 默认路由到 index.php
-        targetUrl = `${GPT_API_URL}/index.php?route=/api/${action}`
-        requestBody = params
+        // 默认返回错误
+        return NextResponse.json(
+          { success: false, error: "Unknown action", message: "未知的操作类型" },
+          { status: 400 }
+        )
     }
 
     console.log("[v0] GPT activate proxy:", { action, targetUrl })
