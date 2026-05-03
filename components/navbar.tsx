@@ -45,6 +45,7 @@ const navItems = [
       { label: "Gmail 检测", href: "/tools/gmail-checker", description: "批量检测邮箱状态" },
       { label: "图片分割", href: "https://collagesplitter.com/", description: "AI拼贴图分割成单独照片", external: true },
       { label: "AI 手相分析", href: "https://palmreportai.com/", description: "上传手掌照片获取手相报告", external: true },
+      { label: "在线小游戏", href: "https://game.xiaoheiwan.com/", description: "2048、贪吃蛇等休闲小游戏", external: true },
     ]
   },
 ]
