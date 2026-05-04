@@ -13,8 +13,8 @@ export async function GET() {
 
     const result: Record<string, boolean> = {
       alipay: true,  // Default enabled
-      usdt: true,    // Default enabled
-      wxpay: false,  // Default disabled (need to enable manually)
+      usdt: false,   // Default disabled - must enable manually in admin
+      wxpay: false,  // Default disabled - need to enable manually
     }
 
     for (const config of configs) {
@@ -30,7 +30,7 @@ export async function GET() {
     return NextResponse.json(result)
   } catch (error) {
     console.error("Get payment methods error:", error)
-    // Return defaults on error
-    return NextResponse.json({ alipay: true, usdt: true, wxpay: false })
+    // Return safe defaults on error - only alipay enabled
+    return NextResponse.json({ alipay: true, usdt: false, wxpay: false })
   }
 }
