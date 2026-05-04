@@ -50,22 +50,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "请设置4-20位查询密码" }, { status: 400 })
     }
 
-    // SECURITY: Validate amount against product price from database
-    let verifiedAmount = amount
-    if (productId) {
-      const product = await Database.getProduct(productId)
-      if (!product) {
-        return NextResponse.json({ error: "商品不存在" }, { status: 400 })
-      }
-      // Calculate expected price based on tier pricing and quantity
-      const unitPrice = getUnitPrice(Number(product.price), product.price_tiers, quantity)
-      const expectedAmount = Number((unitPrice * quantity).toFixed(2))
-      if (Math.abs(Number(amount) - expectedAmount) > 0.01) {
-        console.error("[v0] SECURITY: Crypto price tampering detected!", { claimed: amount, expected: expectedAmount, productId, unitPrice, quantity, priceTiers: product.price_tiers })
-        return NextResponse.json({ error: "价格验证失败" }, { status: 400 })
-      }
-      verifiedAmount = expectedAmount
+    // SECURITY: productId is REQUIRED - reject orders without it
+    if (!productId) {
+      console.error("[v0] SECURITY: Crypto order attempt without productId!", { email, amount, productName })
+      return NextResponse.json({ error: "缺少商品信息" }, { status: 400 })
     }
+
+    // SECURITY: Validate amount against product price from database
+    const product = await Database.getProduct(productId)
+    if (!product) {
+      console.error("[v0] SECURITY: Invalid productId in crypto order!", { productId, email })
+      return NextResponse.json({ error: "商品不存在" }, { status: 400 })
+    }
+    
+    // SECURITY: Verify product is active and available for sale
+    if (product.status !== "active") {
+      console.error("[v0] SECURITY: Attempt to order inactive product via crypto!", { productId, status: product.status })
+      return NextResponse.json({ error: "该商品暂停销售" }, { status: 400 })
+    }
+    
+    // Calculate expected price based on tier pricing and quantity
+    const unitPrice = getUnitPrice(Number(product.price), product.price_tiers, quantity)
+    const expectedAmount = Number((unitPrice * quantity).toFixed(2))
+    if (Math.abs(Number(amount) - expectedAmount) > 0.01) {
+      console.error("[v0] SECURITY: Crypto price tampering detected!", { claimed: amount, expected: expectedAmount, productId, unitPrice, quantity, priceTiers: product.price_tiers })
+      return NextResponse.json({ error: "价格验证失败" }, { status: 400 })
+    }
+    const verifiedAmount = expectedAmount
+    
+    // SECURITY: Use product name from database, not from client
+    const verifiedProductName = product.name
 
     // Hash the query password
     const queryPasswordHash = crypto.createHash("sha256").update(queryPassword).digest("hex")
@@ -92,7 +106,8 @@ export async function POST(req: Request) {
     // Generate more secure order number with 8 random bytes
     const orderNo = "C" + Date.now() + crypto.randomBytes(8).toString("hex").toUpperCase()
     const qtyLabel = quantity > 1 ? ` x${quantity}` : ""
-    const subject = productName ? `${productName}${qtyLabel}购买` : `激活码${qtyLabel}购买`
+    // SECURITY: Always use verified product name from database
+    const subject = `${verifiedProductName}${qtyLabel}购买`
 
     const order = await Database.createOrder({
       out_trade_no: orderNo,
