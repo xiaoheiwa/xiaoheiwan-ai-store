@@ -114,11 +114,11 @@ export default function ChatWidget() {
     if (savedEmail) setUserEmail(savedEmail)
   }, [])
 
-  // Poll for new messages when chat is open
+  // Poll for new messages when chat is open (5 seconds interval to reduce server load)
   useEffect(() => {
     if (isOpen && sessionId) {
       fetchMessages()
-      pollIntervalRef.current = setInterval(fetchMessages, 3000)
+      pollIntervalRef.current = setInterval(fetchMessages, 5000) // Increased from 3s to 5s
     }
     
     return () => {
@@ -180,15 +180,24 @@ export default function ChatWidget() {
     }
   }, [sessionId, isOpen, playNotificationSound])
 
+  const MAX_MESSAGE_LENGTH = 500
+  
   const sendMessage = async () => {
     if (!inputValue.trim() || sending) return
+    
+    const content = inputValue.trim()
+    
+    // Client-side length validation
+    if (content.length > MAX_MESSAGE_LENGTH) {
+      setError(`消息过长，请控制在${MAX_MESSAGE_LENGTH}字以内`)
+      return
+    }
     
     // Save user info
     if (userName) localStorage.setItem("chat_user_name", userName)
     if (userEmail) localStorage.setItem("chat_user_email", userEmail)
     
     setSending(true)
-    const content = inputValue.trim()
     setInputValue("")
     
     // Optimistically add message
@@ -452,12 +461,23 @@ export default function ChatWidget() {
                 <input
                   type="text"
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
+                      setInputValue(e.target.value)
+                      setError("")
+                    }
+                  }}
                   onKeyPress={handleKeyPress}
                   placeholder="输入消息..."
                   className="w-full px-4 py-3 text-base bg-secondary border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent/50 pr-12"
                   disabled={sending}
+                  maxLength={MAX_MESSAGE_LENGTH}
                 />
+                {inputValue.length > MAX_MESSAGE_LENGTH * 0.8 && (
+                  <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs ${inputValue.length >= MAX_MESSAGE_LENGTH ? "text-destructive" : "text-muted-foreground"}`}>
+                    {inputValue.length}/{MAX_MESSAGE_LENGTH}
+                  </span>
+                )}
               </div>
               <Button
                 onClick={sendMessage}
