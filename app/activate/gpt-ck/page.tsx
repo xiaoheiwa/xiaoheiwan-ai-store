@@ -153,7 +153,7 @@ export default function GptActivateCkPage() {
     
     try {
       const platformCredential = buildPlatformCredential(validation.data)
-      const response = await gptApi("redeem_verify", {
+      const response = await gptApi("verify", {
         cdk: trimmedCdk,
         platformCredential
       })
@@ -181,7 +181,7 @@ export default function GptActivateCkPage() {
     
     try {
       const platformCredential = buildPlatformCredential(credentialData)
-      const response = await gptApi("redeem_confirm", {
+      const response = await gptApi("confirm", {
         cdk: cdk.trim(),
         platformCredential
       })

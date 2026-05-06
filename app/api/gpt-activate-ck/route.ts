@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
     let requestBody: Record<string, unknown> = {}
 
     switch (action) {
-      case "redeem_verify":
-      case "check_cdk":
+      case "verify":
         // 验证兑换 - 需要 CDK 和 ChatGPT 账号凭证
+        // POST /api/external/redeem/verify
         apiUrl = `${GPT_CK_API_BASE}/verify`
         requestBody = {
           cdk,
@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
         }
         break
 
-      case "redeem_confirm":
+      case "confirm":
         // 确认兑换
+        // POST /api/external/redeem/confirm
         apiUrl = `${GPT_CK_API_BASE}/confirm`
         requestBody = {
           cdk,
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json({ 
           success: false, 
-          error: { code: "INVALID_ACTION", message: "未知的操作类型" }
+          error: { code: "INVALID_ACTION", message: "未知的操作类型，支持: verify, confirm" }
         }, { status: 400 })
     }
 
@@ -64,28 +65,7 @@ export async function POST(request: NextRequest) {
       }, { status: 502 })
     }
 
-    // 处理 check_cdk (verify) 的响应，转换为前端期望的格式
-    if (action === "check_cdk" && data.success && data.data) {
-      const cdkData = data.data.cdk
-      const platformResult = data.data.platformResult
-      
-      return NextResponse.json({
-        success: true,
-        data: {
-          code: cdkData?.code || cdk,
-          status: cdkData?.status || "unknown",
-          is_valid: cdkData?.status === "unused",
-          is_used: cdkData?.status === "used",
-          allow_new_submission: cdkData?.status === "unused",
-          has_existing_record: cdkData?.status === "used",
-          // 验证成功时的账号信息
-          account_email: platformResult?.data?.account?.email,
-          account_plan: platformResult?.data?.account?.planType,
-          platformResult: platformResult
-        }
-      })
-    }
-
+    // 直接返回源站响应
     return NextResponse.json(data)
 
   } catch (error: unknown) {
