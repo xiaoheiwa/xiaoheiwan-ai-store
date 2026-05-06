@@ -251,6 +251,13 @@ async function confirmRecharge() {
           <ActivateButton brandColor={BRAND} onClick={handleVerifyCard} disabled={verifying}>
             {verifying ? <><Loader2 className="w-4 h-4 animate-spin" />{"验证中..."}</> : <><Check className="w-4 h-4" />{"立即验证"}</>}
           </ActivateButton>
+          <div className="text-center pt-2">
+            <a href="/activate/gpt-ck" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {"或使用 "}
+              <span className="text-purple-500 hover:text-purple-600 underline">CK渠道</span>
+              {" 进行激活"}
+            </a>
+          </div>
         </div>
       )}
 
