@@ -153,7 +153,7 @@ export default function GptActivateCkPage() {
     
     try {
       const platformCredential = buildPlatformCredential(validation.data)
-      const response = await gptApi("redeem_verify", {
+      const response = await gptApi("verify", {
         cdk: trimmedCdk,
         platformCredential
       })
@@ -181,7 +181,7 @@ export default function GptActivateCkPage() {
     
     try {
       const platformCredential = buildPlatformCredential(credentialData)
-      const response = await gptApi("redeem_confirm", {
+      const response = await gptApi("confirm", {
         cdk: cdk.trim(),
         platformCredential
       })
@@ -291,7 +291,7 @@ export default function GptActivateCkPage() {
             <ActivateInput
               type="text"
               value={cdk}
-              onChange={(e) => { setCdk(e.target.value.toUpperCase()); setMessage(null) }}
+              onChange={(e) => { setCdk(e.target.value); setMessage(null) }}
               placeholder="请输入您的 CDK 激活码"
             />
             <p className="mt-1.5 text-xs text-muted-foreground">购买后您将收到 CDK 激活码</p>
