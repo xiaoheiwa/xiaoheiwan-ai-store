@@ -1,244 +1,220 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { ArrowLeft, Check, Loader2, ExternalLink, Key, Shield, Zap, AlertTriangle, CheckCircle, XCircle, RefreshCw, Play, ChevronDown } from "lucide-react"
+import { Check, Loader2, ExternalLink, Key, Shield, Zap, CheckCircle, XCircle, Play, ChevronDown, User, Mail, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ActivateLayout, { StepIndicator, AlertMessage, ActivateInput, ActivateButton, ActivateTextarea } from "@/components/activate-layout"
 
 // CK渠道使用紫色主题，与CZ渠道的绿色区分
 const BRAND = "#8B5CF6"
 
-type Step = 1 | 2 | 3
+type Step = "input" | "confirm" | "result"
 type MessageType = "success" | "error" | "info" | "warning"
 
-interface CardInfo { 
-  is_new: boolean
-  email?: string
-  code?: string
-  description?: string
-  card_type?: string
-  has_existing_record?: boolean
-  allow_new_submission?: boolean
-  existing_record?: { bound_email_masked?: string }
-  [key: string]: any 
+interface VerifyResult {
+  cdk: { code: string; status: string; expiresAt: string | null }
+  platformResult: {
+    platform: string
+    data: {
+      account: {
+        email: string
+        userId: string
+        planType: string
+        billingCycle: string
+        willRenew: boolean
+        renewDate: string
+        hasActiveSubscription: boolean
+        subscriptionExpiresAt: string
+      }
+    }
+  }
 }
-interface RechargeResult { status: "idle" | "processing" | "success" | "failed"; message: string }
 
-// 使用新渠道 API (ck.duolg.com)
+// 使用 CK 渠道 API (ck.duolg.com)
 function useGptApi() {
-  const gptApi = async (action: string, params: Record<string, string> = {}, cookie?: string) => {
+  const gptApi = async (action: string, params: Record<string, unknown> = {}) => {
     const res = await fetch("/api/gpt-activate-ck", { 
       method: "POST", 
       headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify({ action, sessionCookie: cookie, ...params }) 
+      body: JSON.stringify({ action, ...params }) 
     })
     return res.json()
   }
   return gptApi
 }
 
+// 错误码本地化
+const ERROR_MESSAGES: Record<string, string> = {
+  INVALID_CDK_FORMAT: "CDK 格式无效",
+  CDK_NOT_FOUND: "CDK 不存在",
+  CDK_ALREADY_USED: "CDK 已使用",
+  CDK_DISABLED: "CDK 已禁用",
+  ACCOUNT_INVALID: "账号校验失败",
+  ACCOUNT_VERIFICATION_FAILED: "账号校验服务异常",
+  NO_AVAILABLE_CREDENTIAL: "暂无可用兑换资源",
+  RECHARGE_FAILED: "兑换执行失败",
+  CONFIRM_REQUIRED: "缺少确认标志",
+  NETWORK_ERROR: "网络异常",
+  TIMEOUT: "请求超时",
+  UNKNOWN_ERROR: "未知错误",
+}
+
+function getErrorMessage(error: { code?: string; message?: string } | string): string {
+  if (typeof error === "string") return error
+  if (error.code && ERROR_MESSAGES[error.code]) return ERROR_MESSAGES[error.code]
+  return error.message || "未知错误"
+}
+
+// 验证凭证 JSON
+function validateCredential(jsonStr: string): { valid: boolean; error?: string; data?: any } {
+  try {
+    const parsed = JSON.parse(jsonStr)
+    if (!parsed.user?.id) return { valid: false, error: "缺少 user.id 字段" }
+    if (!parsed.user?.email) return { valid: false, error: "缺少 user.email 字段" }
+    if (!parsed.account?.id) return { valid: false, error: "缺少 account.id 字段" }
+    if (!parsed.account?.planType) return { valid: false, error: "缺少 account.planType 字段" }
+    if (!parsed.accessToken) return { valid: false, error: "缺少 accessToken 字段" }
+    return { valid: true, data: parsed }
+  } catch {
+    return { valid: false, error: "JSON 格式错误" }
+  }
+}
+
+// 验证 CDK 格式
+function validateCdk(cdk: string): boolean {
+  if (!cdk || cdk.length < 36) return false
+  // 检查是否包含 UUID4 片段
+  const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  return uuidPattern.test(cdk)
+}
+
+// 构建 platformCredential
+function buildPlatformCredential(data: any) {
+  return {
+    platform: "chatgpt",
+    data: {
+      user: data.user,
+      account: data.account,
+      accessToken: data.accessToken
+    }
+  }
+}
+
 export default function GptActivateCkPage() {
   const gptApi = useGptApi()
-  const [step, setStep] = useState<Step>(1)
-  const [cardCode, setCardCode] = useState("")
-  const [cardInfo, setCardInfo] = useState<CardInfo | null>(null)
-  const [userData, setUserData] = useState("")
-  const [boundEmail, setBoundEmail] = useState("")
-
-  const [verifying, setVerifying] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
+  const [step, setStep] = useState<Step>("input")
+  
+  // 输入状态
+  const [cdk, setCdk] = useState("")
+  const [credentialJson, setCredentialJson] = useState("")
+  
+  // 验证结果
+  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null)
+  const [credentialData, setCredentialData] = useState<any>(null)
+  
+  // UI 状态
+  const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: MessageType } | null>(null)
-  const [result, setResult] = useState<RechargeResult>({ status: "idle", message: "" })
-
-  const [showLoginModal, setShowLoginModal] = useState(false)
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [confirmEmail, setConfirmEmail] = useState("")
-
-  const [showUpdateToken, setShowUpdateToken] = useState(false)
-  const [newTokenData, setNewTokenData] = useState("")
-  const [updatingToken, setUpdatingToken] = useState(false)
-  const [sessionCookie, setSessionCookie] = useState("")
-
-  function getEmailFromToken(token: string): string {
-    try {
-      if (!token) return "unknown@example.com"
-      const parts = token.split(".")
-      if (parts.length < 2) return "unknown@example.com"
-      const payload = JSON.parse(atob(parts[1]))
-      return payload?.["https://api.openai.com/profile"]?.email || "unknown@example.com"
-    } catch { return "unknown@example.com" }
-  }
-
-  async function handleVerifyCard() {
-    if (!cardCode.trim()) { setMessage({ text: "请输入激活码", type: "error" }); return }
-    setVerifying(true); setMessage(null); setResult({ status: "idle", message: "" })
-    try {
-      const data = await gptApi("check_cdk", { cdk: cardCode.trim().toUpperCase() })
-      
-      // 检查 Cloudflare 拦截或服务不可用
-      if (data.error?.code === "CLOUDFLARE_BLOCKED" || data.error?.code === "INVALID_RESPONSE") {
-        setMessage({ text: data.error.message || "CK渠道暂时无法访问，请使用极速渠道", type: "warning" })
-        setVerifying(false)
-        return
-      }
-      
-      if (data.success && data.data) {
-        if (data.sessionCookie) {
-          setSessionCookie(data.sessionCookie)
-        }
-        const cardData = data.data
-        const hasExistingRecord = cardData.has_existing_record || false
-        const newCardInfo: CardInfo = {
-          is_new: !hasExistingRecord && cardData.allow_new_submission,
-          code: cardData.code,
-          description: cardData.description,
-          card_type: cardData.card_type,
-          has_existing_record: hasExistingRecord,
-          allow_new_submission: cardData.allow_new_submission,
-          existing_record: cardData.existing_record,
-        }
-        setMessage({ text: "激活码验证成功", type: "success" })
-        setCardInfo(newCardInfo)
-        setStep(2)
-        if (hasExistingRecord && cardData.existing_record?.bound_email_masked) {
-          setBoundEmail(cardData.existing_record.bound_email_masked)
-        }
-      } else { 
-        setMessage({ text: data.error?.message || data.error || data.message || "激活码无效，请检查后重试", type: "error" }) 
-      }
-    } catch { setMessage({ text: "网络错误，请重试", type: "error" }) }
-    setVerifying(false)
-  }
-
-  async function handleSubmitJson(jsonStr: string) {
-    try {
-      const parsed = JSON.parse(jsonStr)
-      if (!parsed.user?.id || !parsed.account?.id || !parsed.accessToken) { setMessage({ text: "用户数据缺少必要字段（user.id, account.id, accessToken）", type: "error" }); return }
-      if (parsed.account?.planType === "team") { setMessage({ text: "不支持团队账户（Team），请使用个人账户", type: "error" }); return }
-      if (parsed.account?.planType === "pro") { setMessage({ text: "您的账户未到期，请到期后再充值", type: "warning" }); return }
-      const email = getEmailFromToken(parsed.accessToken)
-      if (!email || email === "unknown@example.com") { setMessage({ text: "无法解析账户邮箱，请确认已在个人账号登录后获取数据", type: "error" }); return }
-      setConfirmEmail(email); setShowConfirmModal(true)
-    } catch { setMessage({ text: "JSON 格式错误，请检查数据", type: "error" }) }
-  }
-
-  // 构建 platformCredential
-  function buildPlatformCredential(jsonStr: string) {
-    try {
-      const parsed = JSON.parse(jsonStr)
-      return {
-        platform: "chatgpt",
-        data: {
-          user: parsed.user || {},
-          account: {
-            id: parsed.account?.id || parsed.user?.id || "",
-            planType: parsed.account?.planType || "free"
-          },
-          accessToken: parsed.accessToken
-        }
-      }
-    } catch { return null }
-  }
-
-  async function confirmRecharge() {
-    setShowConfirmModal(false); setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在验证账号信息..." })
-    try {
-      const credential = buildPlatformCredential(userData)
-      if (!credential) {
-        setResult({ status: "failed", message: "JSON 数据格式错误" })
-        setSubmitting(false)
-        return
-      }
-
-      // 第一步：验证
-      const verifyData = await gptApi("redeem_verify", {
-        cdk: cardCode.trim().toUpperCase(),
-        platformCredential: credential
-      } as any, sessionCookie)
-
-      if (!verifyData.success) {
-        setResult({ status: "failed", message: verifyData.error?.message || verifyData.message || "验证失败" })
-        setSubmitting(false)
-        return
-      }
-
-      // 第二步：确认兑换
-      setResult({ status: "processing", message: "正在充值 Plus 会员..." })
-      const confirmData = await gptApi("redeem_confirm", {
-        cdk: cardCode.trim().toUpperCase(),
-        platformCredential: credential
-      } as any, sessionCookie)
-
-      if (confirmData.success) {
-        setResult({ status: "success", message: confirmData.message || "充值成功！ChatGPT Plus 已激活" })
-        setStep(3)
-      } else {
-        setResult({ status: "failed", message: confirmData.error?.message || confirmData.message || "充值失败，请重试" })
-      }
-    } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
-    setSubmitting(false)
-  }
-
-  async function handleReuseRecord() {
-    setSubmitting(true); setMessage(null)
-    setResult({ status: "failed", message: "此激活码已被使用，无法重复使用。请联系客服或使用新的激活码。" })
-    setSubmitting(false)
-  }
-
-  async function handleUpdateToken() {
-    if (!newTokenData.trim()) { setMessage({ text: "请输入新的 JSON 数据", type: "error" }); return }
-    try {
-      const parsed = JSON.parse(newTokenData)
-      if (!parsed.accessToken) { setMessage({ text: "JSON 中缺少 accessToken 字段", type: "error" }); return }
-      if (parsed.account?.planType === "team") { setMessage({ text: "不支持团队账户（Team），请使用个人账户", type: "error" }); return }
-    } catch { setMessage({ text: "JSON 格式错误", type: "error" }); return }
-
-    setUpdatingToken(true); setMessage(null); setResult({ status: "processing", message: "正在验证新 Token..." })
-    try {
-      const credential = buildPlatformCredential(newTokenData)
-      if (!credential) {
-        setResult({ status: "failed", message: "JSON 数据格式错误" })
-        setUpdatingToken(false)
-        return
-      }
-
-      // 验证
-      const verifyData = await gptApi("redeem_verify", {
-        cdk: cardCode.trim().toUpperCase(),
-        platformCredential: credential
-      } as any, sessionCookie)
-
-      if (!verifyData.success) {
-        setResult({ status: "failed", message: verifyData.error?.message || "验证失败" })
-        setUpdatingToken(false)
-        return
-      }
-
-      // 确认兑换
-      setResult({ status: "processing", message: "正在充值 Plus 会员..." })
-      const confirmData = await gptApi("redeem_confirm", {
-        cdk: cardCode.trim().toUpperCase(),
-        platformCredential: credential
-      } as any, sessionCookie)
-
-      if (confirmData.success) { 
-        setShowUpdateToken(false); setNewTokenData("")
-        setResult({ status: "success", message: confirmData.message || "更新成功，ChatGPT Plus 已激活" })
-        setStep(3) 
-      } else { 
-        setResult({ status: "failed", message: confirmData.error?.message || "更新失败，请重试" }) 
-      }
-    } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
-    setUpdatingToken(false)
-  }
-
-  function handleBack() {
-    setStep(1); setCardInfo(null); setBoundEmail(""); setMessage(null); setResult({ status: "idle", message: "" }); setUserData(""); setCardCode(""); setShowUpdateToken(false)
-  }
+  const [resultStatus, setResultStatus] = useState<"success" | "failed" | "idle">("idle")
+  const [resultMessage, setResultMessage] = useState("")
 
   const [showVideo, setShowVideo] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  // 步骤1：验证 CDK 和凭证
+  async function handleVerify() {
+    setMessage(null)
+    
+    // 验证 CDK 格式
+    const trimmedCdk = cdk.trim()
+    if (!trimmedCdk) {
+      setMessage({ text: "请输入 CDK", type: "error" })
+      return
+    }
+    if (!validateCdk(trimmedCdk)) {
+      setMessage({ text: "CDK 格式无效，请检查后重试", type: "error" })
+      return
+    }
+    
+    // 验证凭证 JSON
+    const validation = validateCredential(credentialJson)
+    if (!validation.valid) {
+      setMessage({ text: validation.error || "凭证数据无效", type: "error" })
+      return
+    }
+    
+    // 检查是否为团队账户
+    if (validation.data.account.planType === "team") {
+      setMessage({ text: "不支持团队账户（Team），请使用个人账户", type: "error" })
+      return
+    }
+    
+    setLoading(true)
+    
+    try {
+      const platformCredential = buildPlatformCredential(validation.data)
+      const response = await gptApi("redeem_verify", {
+        cdk: trimmedCdk,
+        platformCredential
+      })
+      
+      if (response.success && response.data) {
+        setVerifyResult(response.data)
+        setCredentialData(validation.data)
+        setStep("confirm")
+      } else {
+        setMessage({ text: getErrorMessage(response.error || response.message || "验证失败"), type: "error" })
+      }
+    } catch {
+      setMessage({ text: "网络异常，请重试", type: "error" })
+    }
+    
+    setLoading(false)
+  }
+
+  // 步骤2：确认兑换
+  async function handleConfirm() {
+    if (!credentialData) return
+    
+    setLoading(true)
+    setMessage(null)
+    
+    try {
+      const platformCredential = buildPlatformCredential(credentialData)
+      const response = await gptApi("redeem_confirm", {
+        cdk: cdk.trim(),
+        platformCredential
+      })
+      
+      if (response.success) {
+        setResultStatus("success")
+        setResultMessage(response.data?.message || response.message || "兑换成功！ChatGPT Plus 已激活")
+        setStep("result")
+      } else {
+        setResultStatus("failed")
+        setResultMessage(getErrorMessage(response.error || response.message || "兑换失败"))
+        setStep("result")
+      }
+    } catch {
+      setResultStatus("failed")
+      setResultMessage("网络异常，请重试")
+      setStep("result")
+    }
+    
+    setLoading(false)
+  }
+
+  // 重置
+  function handleReset() {
+    setStep("input")
+    setCdk("")
+    setCredentialJson("")
+    setVerifyResult(null)
+    setCredentialData(null)
+    setMessage(null)
+    setResultStatus("idle")
+    setResultMessage("")
+  }
 
   const msgTypeMap: Record<MessageType, "success" | "error" | "warning" | "info"> = { success: "success", error: "error", warning: "warning", info: "info" }
 
@@ -248,7 +224,6 @@ export default function GptActivateCkPage() {
       icon={<svg viewBox="0 0 24 24" className="w-7 h-7" style={{ color: BRAND }} fill="currentColor"><path d="M22.2 8.59c.4-1.55.1-3.22-.85-4.43A5.2 5.2 0 0016.39 2a5.26 5.26 0 00-4.7 2.82A5.21 5.21 0 005.6 7.14a5.26 5.26 0 00-3.4 6.27c-.4 1.55-.1 3.22.85 4.43A5.2 5.2 0 008 19.98a5.26 5.26 0 004.7-2.82 5.21 5.21 0 006.1-2.32A5.26 5.26 0 0022.2 8.6z"/></svg>}
       title="ChatGPT Plus 充值"
       subtitle="CK渠道 - 安全快速的会员激活服务"
-      brandColor={BRAND}
       features={[
         { icon: <Shield className="w-5 h-5" style={{ color: BRAND }} />, label: "非零元购" },
         { icon: <Zap className="w-5 h-5" style={{ color: BRAND }} />, label: "无需上号" },
@@ -256,8 +231,8 @@ export default function GptActivateCkPage() {
       ]}
     >
       <StepIndicator
-        steps={[{ num: 1, label: "验证卡密" }, { num: 2, label: "提交数据" }, { num: 3, label: "充值完成" }]}
-        currentStep={step}
+        steps={[{ num: 1, label: "输入信息" }, { num: 2, label: "确认兑换" }, { num: 3, label: "完成" }]}
+        currentStep={step === "input" ? 1 : step === "confirm" ? 2 : 3}
         brandColor={BRAND}
       />
 
@@ -304,175 +279,151 @@ export default function GptActivateCkPage() {
       {/* Global message */}
       {message && <AlertMessage type={msgTypeMap[message.type]}>{message.text}</AlertMessage>}
 
-      {/* Step 1 */}
-      {step === 1 && (
-        <div className="space-y-4">
+      {/* Step: Input */}
+      {step === "input" && (
+        <div className="space-y-5">
+          {/* CDK Input */}
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-2">卡密</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">
+              <Key className="w-4 h-4 inline mr-1.5" style={{ color: BRAND }} />
+              CDK 激活码
+            </label>
             <ActivateInput
-              type="text" value={cardCode}
-              onChange={(e) => { setCardCode(e.target.value.toUpperCase()); setMessage(null) }}
-              onKeyDown={(e) => { if (e.key === "Enter") handleVerifyCard() }}
-              placeholder="请输入您的卡密"
+              type="text"
+              value={cdk}
+              onChange={(e) => { setCdk(e.target.value.toUpperCase()); setMessage(null) }}
+              placeholder="请输入您的 CDK 激活码"
             />
-            <p className="mt-2 text-xs text-muted-foreground">购买后您将立即收到卡密激活码</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">购买后您将收到 CDK 激活码</p>
           </div>
-          <ActivateButton brandColor={BRAND} onClick={handleVerifyCard} disabled={verifying}>
-            {verifying ? <><Loader2 className="w-4 h-4 animate-spin" />验证中...</> : <><Check className="w-4 h-4" />立即验证</>}
-          </ActivateButton>
+
+          {/* Credential JSON Input */}
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-2">
+              <User className="w-4 h-4 inline mr-1.5" style={{ color: BRAND }} />
+              账号凭证 JSON
+            </label>
+            <ActivateTextarea
+              value={credentialJson}
+              onChange={(e) => { setCredentialJson(e.target.value); setMessage(null) }}
+              placeholder={'请粘贴从 ChatGPT 获取的 JSON 数据...\n\n获取步骤：\n1. 登录 chatgpt.com\n2. 访问 chatgpt.com/api/auth/session\n3. 复制页面内容粘贴到此处'}
+              rows={8}
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => window.open("https://chatgpt.com/api/auth/session", "_blank")}
+              variant="outline"
+              className="h-11 rounded-xl text-sm"
+            >
+              <ExternalLink className="w-4 h-4 mr-1.5" /> 获取凭证
+            </Button>
+            <ActivateButton brandColor={BRAND} onClick={handleVerify} disabled={loading || !cdk.trim() || !credentialJson.trim()}>
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" />验证中...</> : <><Check className="w-4 h-4" />验证并继续</>}
+            </ActivateButton>
+          </div>
+
           <div className="text-center">
             <a href="/activate/gpt" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {"或使用 "}
-              <span className="text-accent underline">极速渠道</span>
+              <span className="underline" style={{ color: BRAND }}>CZ渠道</span>
               {" 进行激活"}
             </a>
           </div>
         </div>
       )}
 
-      {/* Step 2 */}
-      {step === 2 && (
-        <div className="space-y-4">
-          {/* Already bound account */}
-          {cardInfo && !cardInfo.is_new && (
-            <div className="space-y-4">
-              <AlertMessage type="info">
-                <span className="flex items-center gap-1.5 font-bold"><AlertTriangle className="w-4 h-4" /> 发现已绑定账户</span>
-                {boundEmail && <p className="text-sm mt-1 ml-5.5 opacity-80">此激活码已使用，已绑定邮箱：<strong className="text-foreground">{boundEmail}</strong></p>}
-              </AlertMessage>
-              <AlertMessage type="warning">此激活码已使用，只能复用已有记录</AlertMessage>
-
-              <ActivateButton brandColor={BRAND} onClick={handleReuseRecord} disabled={submitting}>
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                使用已有记录充值
-              </ActivateButton>
-              <Button onClick={() => setShowUpdateToken(true)} variant="outline" className="w-full h-11 rounded-xl text-sm">
-                更新 Token
-              </Button>
-
-              {showUpdateToken && (
-                <div className="border border-border rounded-xl p-4 space-y-3">
-                  <h4 className="text-sm font-semibold text-foreground">更新 Token</h4>
-                  <p className="text-[11px] text-muted-foreground">如果您的 Token 已过期，请获取最新 JSON 数据粘贴到下方��新。</p>
-                  <ActivateTextarea value={newTokenData} onChange={(e) => setNewTokenData(e.target.value)} placeholder="请粘贴完整的 JSON 数据" rows={6} />
-                  <div className="flex gap-2">
-                    <Button onClick={() => window.open("https://chatgpt.com/api/auth/session", "_blank")} variant="outline" className="flex-1 h-10 rounded-xl text-xs">
-                      <ExternalLink className="w-3 h-3 mr-1" /> 获取数据
-                    </Button>
-                    <ActivateButton brandColor={BRAND} onClick={handleUpdateToken} disabled={updatingToken} className="flex-1 !h-10 !text-xs">
-                      {updatingToken ? <Loader2 className="w-3 h-3 animate-spin" /> : null} 更新 Token
-                    </ActivateButton>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* New card */}
-          {cardInfo && cardInfo.is_new && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-foreground">提交充值信息</h3>
-                <button onClick={handleBack} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> 返回</button>
+      {/* Step: Confirm */}
+      {step === "confirm" && verifyResult && (
+        <div className="space-y-5">
+          <div className="bg-secondary/50 border border-border rounded-xl p-4 space-y-3">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" style={{ color: BRAND }} />
+              验证成功，请确认信息
+            </h3>
+            
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Mail className="w-4 h-4" />
+                <span>账号邮箱：</span>
+                <strong className="text-foreground">{verifyResult.platformResult?.data?.account?.email || "未知"}</strong>
               </div>
-              <ActivateTextarea value={userData} onChange={(e) => setUserData(e.target.value)} placeholder="请粘贴您的账户 JSON 数据..." rows={10} />
-              <div className="grid grid-cols-2 gap-3">
-                <Button onClick={() => setShowLoginModal(true)} variant="outline" className="h-11 rounded-xl text-sm">
-                  <ExternalLink className="w-4 h-4 mr-1.5" /> 登入帐号
-                </Button>
-                <ActivateButton brandColor={BRAND} onClick={() => handleSubmitJson(userData)} disabled={submitting || !userData.trim()} className="!text-sm">
-                  {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />处理中...</> : "开始��值"}
-                </ActivateButton>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <CreditCard className="w-4 h-4" />
+                <span>当前订阅：</span>
+                <strong className="text-foreground">{verifyResult.platformResult?.data?.account?.planType || "free"}</strong>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Key className="w-4 h-4" />
+                <span>CDK 状态：</span>
+                <strong className="text-foreground">{verifyResult.cdk?.status === "unused" ? "未使用" : verifyResult.cdk?.status}</strong>
               </div>
             </div>
-          )}
+          </div>
+
+          <AlertMessage type="warning">
+            确认后将为上述账号充值 ChatGPT Plus 会员，此操作不可撤销。
+          </AlertMessage>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button onClick={() => setStep("input")} variant="outline" className="h-11 rounded-xl text-sm">
+              返回修改
+            </Button>
+            <ActivateButton brandColor={BRAND} onClick={handleConfirm} disabled={loading}>
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" />兑换中...</> : <><Check className="w-4 h-4" />确认兑换</>}
+            </ActivateButton>
+          </div>
         </div>
       )}
 
-      {/* Step 3 */}
-      {step === 3 && (
+      {/* Step: Result */}
+      {step === "result" && (
         <div>
-          {result.status === "success" && (
+          {resultStatus === "success" && (
             <div className="bg-accent/10 border border-accent/20 rounded-xl p-6 text-center">
-              <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-7 h-7 text-accent" /></div>
-              <h3 className="text-lg font-bold text-foreground mb-2">充值成功！</h3>
-              <p className="text-sm text-muted-foreground mb-4">{result.message}</p>
-              <div className="bg-secondary border border-border rounded-xl p-4 text-left space-y-2 mb-5">
-                <p className="text-sm text-muted-foreground"><Key className="w-3.5 h-3.5 inline mr-1.5" /><strong className="text-foreground">卡密：</strong>{cardCode}</p>
-                {(confirmEmail || boundEmail) && <p className="text-sm text-muted-foreground"><span className="inline mr-1.5">@</span><strong className="text-foreground">充值账号：</strong>{confirmEmail || boundEmail}</p>}
+              <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-7 h-7 text-accent" />
               </div>
-              <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm" style={{ backgroundColor: BRAND }}>
+              <h3 className="text-lg font-bold text-foreground mb-2">兑换成功！</h3>
+              <p className="text-sm text-muted-foreground mb-4">{resultMessage}</p>
+              <div className="bg-secondary border border-border rounded-xl p-4 text-left space-y-2 mb-5">
+                <p className="text-sm text-muted-foreground">
+                  <Key className="w-3.5 h-3.5 inline mr-1.5" />
+                  <strong className="text-foreground">CDK：</strong>{cdk}
+                </p>
+                {verifyResult?.platformResult?.data?.account?.email && (
+                  <p className="text-sm text-muted-foreground">
+                    <Mail className="w-3.5 h-3.5 inline mr-1.5" />
+                    <strong className="text-foreground">充值账号：</strong>{verifyResult.platformResult.data.account.email}
+                  </p>
+                )}
+              </div>
+              <a
+                href="https://chatgpt.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm"
+                style={{ backgroundColor: BRAND }}
+              >
                 前往 ChatGPT <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
           )}
-          {result.status === "failed" && (
+          
+          {resultStatus === "failed" && (
             <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center">
-              <div className="w-14 h-14 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-4"><XCircle className="w-7 h-7 text-destructive" /></div>
-              <h3 className="text-lg font-bold text-destructive mb-2">充值失败</h3>
-              <p className="text-sm text-muted-foreground mb-4">{result.message}</p>
-              <Button onClick={handleBack} variant="outline" className="rounded-xl">重试</Button>
+              <div className="w-14 h-14 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-4">
+                <XCircle className="w-7 h-7 text-destructive" />
+              </div>
+              <h3 className="text-lg font-bold text-destructive mb-2">兑换失败</h3>
+              <p className="text-sm text-muted-foreground mb-4">{resultMessage}</p>
+              <Button onClick={handleReset} variant="outline" className="rounded-xl">
+                重新尝试
+              </Button>
             </div>
           )}
-          {result.status === "processing" && (
-            <div className="text-center py-8">
-              <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4" style={{ color: BRAND }} />
-              <p className="text-sm text-muted-foreground">{result.message}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Login Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowLoginModal(false)} />
-          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-lg">
-            <div className="text-center mb-5">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: `${BRAND}15` }}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" style={{ color: BRAND }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-              <h3 className="text-base font-bold text-foreground mb-1">确认登录状态</h3>
-              <p className="text-xs text-muted-foreground">请确认您已在 chatgpt.com 登录账户</p>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              <ActivateButton brandColor={BRAND} onClick={() => { setShowLoginModal(false); window.open("https://chatgpt.com/api/auth/session", "_blank") }}>
-                <Check className="w-4 h-4" /> 已登录，获取数据
-              </ActivateButton>
-              <ActivateButton brandColor="#e17055" onClick={() => { setShowLoginModal(false); window.open("https://chatgpt.com/", "_blank") }}>
-                <ExternalLink className="w-4 h-4" /> 前往登录
-              </ActivateButton>
-              <Button onClick={() => setShowLoginModal(false)} variant="outline" className="w-full h-12 rounded-xl text-sm">取消</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)} />
-          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-lg">
-            <div className="text-center mb-5">
-              <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-              </div>
-              <h3 className="text-base font-bold text-foreground mb-2">确认充值账户</h3>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary border border-border mb-2">
-                <span className="text-sm text-muted-foreground">@</span>
-                <span className="text-sm font-semibold text-foreground">{confirmEmail}</span>
-              </div>
-              <p className="text-xs text-amber-500 mt-2 flex items-center justify-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> 请确认邮箱地址正确，充值后无法更改
-              </p>
-            </div>
-            <div className="flex gap-2.5">
-              <Button onClick={() => setShowConfirmModal(false)} variant="outline" className="flex-1 h-11 rounded-xl text-sm">取消</Button>
-              <ActivateButton brandColor={BRAND} onClick={confirmRecharge} className="flex-1 !h-11 !text-sm">
-                <Check className="w-4 h-4" /> 确认充值
-              </ActivateButton>
-            </div>
-          </div>
         </div>
       )}
     </ActivateLayout>
