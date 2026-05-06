@@ -160,7 +160,7 @@ export default function Navbar() {
                                       : "hover:bg-secondary"
                                   }`}
                                 >
-                                  <span className="text-sm font-medium">{child.label}</span>
+                                  <span className={`text-sm font-medium ${child.label === "ChatGPT CK" ? "text-purple-500" : ""}`}>{child.label}</span>
                                   <span className="text-xs text-muted-foreground">{child.description}</span>
                                 </Link>
                               )
@@ -260,7 +260,9 @@ export default function Navbar() {
                                 className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
                                   isActive(child.href)
                                     ? "text-accent bg-accent/10"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                                    : child.label === "ChatGPT CK" 
+                                      ? "text-purple-500 hover:text-purple-600 hover:bg-secondary"
+                                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                 }`}
                               >
                                 {child.label}
