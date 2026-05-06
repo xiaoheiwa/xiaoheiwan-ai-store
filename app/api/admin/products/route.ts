@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (authError) return authError
   try {
     const body = await request.json()
-    const { name, description, details, price, original_price, sku, sort_order, delivery_type, price_tiers, category_id, region_options, require_region_selection } = body
+    const { name, description, details, price, original_price, sku, sort_order, delivery_type, price_tiers, category_id, region_options, require_region_selection, activate_channel } = body
 
     if (!name || !price) {
       return NextResponse.json({ error: "Name and price are required" }, { status: 400 })
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       category_id: category_id || null,
       region_options: region_options || null,
       require_region_selection: require_region_selection || false,
+      activate_channel: activate_channel || null,
     })
 
     return NextResponse.json(product)
@@ -72,6 +73,7 @@ export async function PUT(request: NextRequest) {
     if (updates.require_region_selection !== undefined) updates.require_region_selection = !!updates.require_region_selection
     if (updates.details !== undefined) updates.details = updates.details || null
     if (updates.image_url !== undefined) updates.image_url = updates.image_url || null
+    if (updates.activate_channel !== undefined) updates.activate_channel = updates.activate_channel || null
 
     console.log("[v0] Calling Database.updateProduct with id:", id, "updates:", JSON.stringify(updates))
     const product = await Database.updateProduct(id, updates)
