@@ -328,7 +328,7 @@ export default function GptActivateCkPage() {
           <div className="text-center">
             <a href="/activate/gpt" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {"或使用 "}
-              <span className="underline" style={{ color: BRAND }}>CZ渠道</span>
+              <span className="text-emerald-500 hover:text-emerald-600 underline">CZ渠道</span>
               {" 进行激活"}
             </a>
           </div>
