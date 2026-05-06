@@ -92,11 +92,12 @@ interface Product {
   price: number
   original_price: number | null
   sku: string
-  status: "active" | "inactive"
+  status: "active" | "paused" | "inactive"
   sort_order: number
   stock_count?: number
   region_options?: RegionOption[] | null
   require_region_selection?: boolean
+  activate_channel?: string | null
   created_at: string
   updated_at: string
 }
@@ -218,7 +219,7 @@ export default function AdminPage() {
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [showProductForm, setShowProductForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [productForm, setProductForm] = useState({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined, region_options: [] as RegionOption[], require_region_selection: false, image_url: "" })
+  const [productForm, setProductForm] = useState({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined, region_options: [] as RegionOption[], require_region_selection: false, image_url: "", activate_channel: "" as string })
   const [productLoading, setProductLoading] = useState(false)
   const [importProductId, setImportProductId] = useState("")
   const [importBatchName, setImportBatchName] = useState("")
@@ -2977,10 +2978,10 @@ const renderSettings = () => (
         body: JSON.stringify(productForm),
       })
       if (response.ok) {
-        setMessage("产品创建成功")
-        setShowProductForm(false)
-        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
-        loadData()
+setMessage("产品创建成功")
+  setShowProductForm(false)
+  setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "", activate_channel: "" })
+  loadData()
       } else {
         setMessage("创建产品失败")
       }
@@ -3004,11 +3005,11 @@ const renderSettings = () => (
       const result = await response.json()
       console.log("[v0] Update response:", result)
       if (response.ok) {
-        setMessage("产品更新成功")
-        setEditingProduct(null)
-        setShowProductForm(false)
-        setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" })
-        loadData()
+setMessage("产品更新成功")
+  setEditingProduct(null)
+  setShowProductForm(false)
+  setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "", activate_channel: "" })
+  loadData()
       } else {
         console.error("[v0] Update failed:", result)
         setMessage("更新产品失败: " + (result.error || "未知错误"))
@@ -3063,13 +3064,14 @@ const renderSettings = () => (
       description: product.description || "",
       details: parseDetailsToHtml((product as any).details || ""),
       price: product.price.toString(),
-      original_price: product.original_price?.toString() || "",
-      sku: product.sku || "",
-      sort_order: product.sort_order?.toString() || "0",
-      delivery_type: (product as any).delivery_type || "auto",
-      price_tiers: (product as any).price_tiers || [],
-      category_id: (product as any).category_id || undefined,
-      region_options: product.region_options || [],
+original_price: product.original_price?.toString() || "",
+  sku: product.sku || "",
+  sort_order: product.sort_order?.toString() || "0",
+  delivery_type: (product as any).delivery_type || "auto",
+  price_tiers: (product as any).price_tiers || [],
+  category_id: (product as any).category_id || undefined,
+  region_options: product.region_options || [],
+  activate_channel: product.activate_channel || "",
       require_region_selection: product.require_region_selection || false,
       image_url: (product as any).image_url || "",
     })
@@ -3283,7 +3285,7 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
           <h2 className="text-lg font-semibold">产品���表</h2>
           <p className="text-sm text-muted-foreground">管理可销售的产品品类</p>
         </div>
-        <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "" }); setShowProductForm(true) }}>
+        <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "", activate_channel: "" }); setShowProductForm(true) }}>
           <Plus className="w-4 h-4 mr-2" />
           添加产品
         </Button>
@@ -3385,10 +3387,27 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
                 <option value="auto">{"自动发货（支付后自动分配激活码）"}</option>
                 <option value="manual">{"手动发货（支付后人工处理）"}</option>
               </select>
-              {productForm.delivery_type === "manual" && (
-                <p className="text-xs text-amber-600 mt-1">{"人工发货模式：用户下单后需要您在后台手动发货，适用于成品账号等时效性商品"}</p>
-              )}
-            </div>
+{productForm.delivery_type === "manual" && (
+  <p className="text-xs text-amber-600 mt-1">{"人工发货模式：用户下单后需要您在后台手动发货，适用于成品账号等时效性商品"}</p>
+  )}
+  </div>
+  
+  {/* 激活渠道选择 */}
+  <div>
+  <Label>{"激活渠道（可选）"}</Label>
+  <select
+  value={productForm.activate_channel}
+  onChange={(e) => setProductForm({ ...productForm, activate_channel: e.target.value })}
+  className="w-full mt-1 px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+  >
+  <option value="">{"无（不关联激活渠道）"}</option>
+  <option value="gpt">{"ChatGPT Plus - 极速渠道 (chongzhi.pro)"}</option>
+  <option value="gpt-ck">{"ChatGPT Plus - CK渠道 (ck.duolg.com)"}</option>
+  <option value="copilot">{"GitHub Copilot 激活"}</option>
+  <option value="claude">{"Claude Pro 激活"}</option>
+  </select>
+  <p className="text-xs text-muted-foreground mt-1">{"关联激活渠道后，购买此产品的用户可以在订单页面直接跳转到对应激活入口"}</p>
+  </div>
 
             {/* Price Tiers */}
             <div className="p-3 rounded-lg bg-secondary/50 border border-border space-y-3">
@@ -3602,6 +3621,14 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
                       {(product as any).price_tiers?.length > 0 && (
                         <Badge variant="outline" className="text-xs border-blue-500/50 text-blue-600">
                           {"阶梯价"}
+                        </Badge>
+                      )}
+                      {product.activate_channel && (
+                        <Badge variant="outline" className="text-xs border-purple-500/50 text-purple-600">
+                          {product.activate_channel === "gpt" ? "GPT极速" : 
+                           product.activate_channel === "gpt-ck" ? "GPT-CK" : 
+                           product.activate_channel === "copilot" ? "Copilot" :
+                           product.activate_channel === "claude" ? "Claude" : product.activate_channel}
                         </Badge>
                       )}
                       {product.sku && (
