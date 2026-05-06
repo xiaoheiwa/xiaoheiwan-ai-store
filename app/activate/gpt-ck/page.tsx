@@ -5,7 +5,8 @@ import { ArrowLeft, Check, Loader2, ExternalLink, Key, Shield, Zap, AlertTriangl
 import { Button } from "@/components/ui/button"
 import ActivateLayout, { StepIndicator, AlertMessage, ActivateInput, ActivateButton, ActivateTextarea } from "@/components/activate-layout"
 
-const BRAND = "#10A37F"
+// CK渠道使用紫色主题，与CZ渠道的绿色区分
+const BRAND = "#8B5CF6"
 
 type Step = 1 | 2 | 3
 type MessageType = "success" | "error" | "info" | "warning"
@@ -246,7 +247,8 @@ export default function GptActivateCkPage() {
       brandColor={BRAND}
       icon={<svg viewBox="0 0 24 24" className="w-7 h-7" style={{ color: BRAND }} fill="currentColor"><path d="M22.2 8.59c.4-1.55.1-3.22-.85-4.43A5.2 5.2 0 0016.39 2a5.26 5.26 0 00-4.7 2.82A5.21 5.21 0 005.6 7.14a5.26 5.26 0 00-3.4 6.27c-.4 1.55-.1 3.22.85 4.43A5.2 5.2 0 008 19.98a5.26 5.26 0 004.7-2.82 5.21 5.21 0 006.1-2.32A5.26 5.26 0 0022.2 8.6z"/></svg>}
       title="ChatGPT Plus 充值"
-      subtitle="CK渠道 - 安全快速的 ChatGPT Plus 会员激活服务"
+      subtitle="CK渠道 - 安全快速的会员激活服务"
+      brandColor={BRAND}
       features={[
         { icon: <Shield className="w-5 h-5" style={{ color: BRAND }} />, label: "非零元购" },
         { icon: <Zap className="w-5 h-5" style={{ color: BRAND }} />, label: "无需上号" },
