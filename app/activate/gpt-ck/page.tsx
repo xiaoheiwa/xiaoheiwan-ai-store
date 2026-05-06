@@ -74,6 +74,14 @@ export default function GptActivateCkPage() {
     setVerifying(true); setMessage(null); setResult({ status: "idle", message: "" })
     try {
       const data = await gptApi("check_cdk", { cdk: cardCode.trim().toUpperCase() })
+      
+      // 检查渠道是否正在对接中
+      if (data.error?.code === "CHANNEL_PENDING" || data.redirect) {
+        setMessage({ text: "CK渠道正在对接中，请使用极速渠道", type: "warning" })
+        setVerifying(false)
+        return
+      }
+      
       if (data.success && data.data) {
         if (data.sessionCookie) {
           setSessionCookie(data.sessionCookie)
@@ -96,7 +104,7 @@ export default function GptActivateCkPage() {
           setBoundEmail(cardData.existing_record.bound_email_masked)
         }
       } else { 
-        setMessage({ text: data.error || data.message || "激活码无效，请检查后重试", type: "error" }) 
+        setMessage({ text: data.error?.message || data.error || data.message || "激活码无效，请检查后重试", type: "error" }) 
       }
     } catch { setMessage({ text: "网络错误，请重试", type: "error" }) }
     setVerifying(false)
@@ -171,7 +179,7 @@ export default function GptActivateCkPage() {
       brandColor={BRAND}
       icon={<svg viewBox="0 0 24 24" className="w-7 h-7" style={{ color: BRAND }} fill="currentColor"><path d="M22.2 8.59c.4-1.55.1-3.22-.85-4.43A5.2 5.2 0 0016.39 2a5.26 5.26 0 00-4.7 2.82A5.21 5.21 0 005.6 7.14a5.26 5.26 0 00-3.4 6.27c-.4 1.55-.1 3.22.85 4.43A5.2 5.2 0 008 19.98a5.26 5.26 0 004.7-2.82 5.21 5.21 0 006.1-2.32A5.26 5.26 0 0022.2 8.6z"/></svg>}
       title="ChatGPT Plus 充值"
-      subtitle="CK渠道 - 安全快速的 ChatGPT Plus 会员激活服务"
+      subtitle="CK渠道（对接中）- 暂时请使用极速渠道"
       features={[
         { icon: <Shield className="w-5 h-5" style={{ color: BRAND }} />, label: "非零元购" },
         { icon: <Zap className="w-5 h-5" style={{ color: BRAND }} />, label: "无需上号" },
@@ -243,6 +251,13 @@ export default function GptActivateCkPage() {
           <ActivateButton brandColor={BRAND} onClick={handleVerifyCard} disabled={verifying}>
             {verifying ? <><Loader2 className="w-4 h-4 animate-spin" />验证中...</> : <><Check className="w-4 h-4" />立即验证</>}
           </ActivateButton>
+          <div className="text-center">
+            <a href="/activate/gpt" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {"或使用 "}
+              <span className="text-accent underline">极速渠道</span>
+              {" 进行激活"}
+            </a>
+          </div>
         </div>
       )}
 
@@ -297,7 +312,7 @@ export default function GptActivateCkPage() {
                   <ExternalLink className="w-4 h-4 mr-1.5" /> 登入帐号
                 </Button>
                 <ActivateButton brandColor={BRAND} onClick={() => handleSubmitJson(userData)} disabled={submitting || !userData.trim()} className="!text-sm">
-                  {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />处理中...</> : "开始充值"}
+                  {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />处理中...</> : "开始��值"}
                 </ActivateButton>
               </div>
             </div>

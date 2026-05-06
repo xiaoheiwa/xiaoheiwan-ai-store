@@ -73,15 +73,10 @@ export default function GptActivatePage() {
     setVerifying(true); setMessage(null); setResult({ status: "idle", message: "" })
     try {
       const data = await gptApi("check_cdk", { cdk: cardCode.trim().toUpperCase() })
-      console.log("[v0] check_cdk response:", data)
       if (data.success && data.data) {
         // 保存 session cookie 用于后续请求
-        console.log("[v0] sessionCookie from response:", data.sessionCookie)
         if (data.sessionCookie) {
           setSessionCookie(data.sessionCookie)
-          console.log("[v0] sessionCookie saved:", data.sessionCookie)
-        } else {
-          console.warn("[v0] No sessionCookie in response!")
         }
         const cardData = data.data
         const hasExistingRecord = cardData.has_existing_record || false
@@ -119,28 +114,66 @@ export default function GptActivatePage() {
     } catch { setMessage({ text: "JSON 格式错误，请检查数据", type: "error" }) }
   }
 
-async function confirmRecharge() {
-  console.log("[v0] confirmRecharge called, sessionCookie:", sessionCookie)
-  setShowConfirmModal(false); setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在处理充值..." })
-  try {
-  const data = await gptApi("recharge", {
-  cdk: cardCode.trim().toUpperCase(),
-  user_data: userData
-  }, sessionCookie)
-  console.log("[v0] recharge response:", data)
-      if (data.success) { setResult({ status: "success", message: data.message || "充值成功！ChatGPT Plus 已激活" }); setStep(3) }
-      else { setResult({ status: "failed", message: data.message || data.error || "充值失败，请重试" }) }
+// 构建 platformCredential
+  function buildPlatformCredential(jsonStr: string) {
+    try {
+      const parsed = JSON.parse(jsonStr)
+      return {
+        platform: "chatgpt",
+        data: {
+          user: parsed.user || {},
+          account: {
+            id: parsed.account?.id || parsed.user?.id || "",
+            planType: parsed.account?.planType || "free"
+          },
+          accessToken: parsed.accessToken
+        }
+      }
+    } catch { return null }
+  }
+
+  async function confirmRecharge() {
+    setShowConfirmModal(false); setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在验证账号信息..." })
+    try {
+      const credential = buildPlatformCredential(userData)
+      if (!credential) {
+        setResult({ status: "failed", message: "JSON 数据格式错误" })
+        setSubmitting(false)
+        return
+      }
+
+      // 第一步：验证
+      const verifyData = await gptApi("redeem_verify", {
+        cdk: cardCode.trim().toUpperCase(),
+        platformCredential: credential
+      } as any, sessionCookie)
+
+      if (!verifyData.success) {
+        setResult({ status: "failed", message: verifyData.error?.message || verifyData.message || "验证失败" })
+        setSubmitting(false)
+        return
+      }
+
+      // 第二步：确认兑换
+      setResult({ status: "processing", message: "正在充值 Plus 会员..." })
+      const confirmData = await gptApi("redeem_confirm", {
+        cdk: cardCode.trim().toUpperCase(),
+        platformCredential: credential
+      } as any, sessionCookie)
+
+      if (confirmData.success) {
+        setResult({ status: "success", message: confirmData.message || "充值成功！ChatGPT Plus 已激活" })
+        setStep(3)
+      } else {
+        setResult({ status: "failed", message: confirmData.error?.message || confirmData.message || "充值失败，请重试" })
+      }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
     setSubmitting(false)
   }
 
   async function handleReuseRecord() {
-    setSubmitting(true); setMessage(null); setResult({ status: "processing", message: "正在使用已有记录充值..." })
-    try {
-      const data = await gptApi("reuse_existing", { cdk: cardCode.trim().toUpperCase() }, sessionCookie)
-      if (data.success) { setResult({ status: "success", message: data.message || "充值成功！ChatGPT Plus 已激活" }); setStep(3) }
-      else { setResult({ status: "failed", message: data.message || data.error || "复用失败，请重试" }) }
-    } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
+    setSubmitting(true); setMessage(null)
+    setResult({ status: "failed", message: "此激活码已被使用，无法重复使用。请联系客服或使用新的激活码。" })
     setSubmitting(false)
   }
 
@@ -152,14 +185,41 @@ async function confirmRecharge() {
       if (parsed.account?.planType === "team") { setMessage({ text: "不支持团队账户（Team），请使用个人账户", type: "error" }); return }
     } catch { setMessage({ text: "JSON 格式错误", type: "error" }); return }
 
-    setUpdatingToken(true); setMessage(null); setResult({ status: "processing", message: "正在更新 Token 并充值..." })
+    setUpdatingToken(true); setMessage(null); setResult({ status: "processing", message: "正在验证新 Token..." })
     try {
-      const data = await gptApi("recharge", { 
+      const credential = buildPlatformCredential(newTokenData)
+      if (!credential) {
+        setResult({ status: "failed", message: "JSON 数据格式错误" })
+        setUpdatingToken(false)
+        return
+      }
+
+      // 验证
+      const verifyData = await gptApi("redeem_verify", {
         cdk: cardCode.trim().toUpperCase(),
-        user_data: newTokenData 
-      }, sessionCookie)
-      if (data.success) { setShowUpdateToken(false); setNewTokenData(""); setResult({ status: "success", message: data.message || "更新成功，ChatGPT Plus 已激活" }); setStep(3) }
-      else { setResult({ status: "failed", message: data.message || data.error || "更新失败，请重试" }) }
+        platformCredential: credential
+      } as any, sessionCookie)
+
+      if (!verifyData.success) {
+        setResult({ status: "failed", message: verifyData.error?.message || "验证失败" })
+        setUpdatingToken(false)
+        return
+      }
+
+      // 确认兑换
+      setResult({ status: "processing", message: "正在充值 Plus 会员..." })
+      const confirmData = await gptApi("redeem_confirm", {
+        cdk: cardCode.trim().toUpperCase(),
+        platformCredential: credential
+      } as any, sessionCookie)
+
+      if (confirmData.success) {
+        setShowUpdateToken(false); setNewTokenData("")
+        setResult({ status: "success", message: confirmData.message || "更新成功，ChatGPT Plus 已激活" })
+        setStep(3)
+      } else {
+        setResult({ status: "failed", message: confirmData.error?.message || "更新失败，请重试" })
+      }
     } catch { setResult({ status: "failed", message: "网络错误，请重试" }) }
     setUpdatingToken(false)
   }
