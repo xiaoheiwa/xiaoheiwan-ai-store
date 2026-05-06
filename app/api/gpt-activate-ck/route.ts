@@ -56,11 +56,20 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
     }
 
-    // 构建请求头
+    // 构建请求头 - 使用更完整的浏览器 headers 避免 Cloudflare 拦截
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "Accept": "application/json",
-      "User-Agent": "XiaoHeiWan-Store/1.0",
+      "Accept": "application/json, text/plain, */*",
+      "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Origin": "https://shop.xiaoheiwan.com",
+      "Referer": "https://shop.xiaoheiwan.com/",
+      "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"macOS"',
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-origin",
     }
 
     if (sessionCookie) {
@@ -80,6 +89,18 @@ export async function POST(request: NextRequest) {
     try {
       data = JSON.parse(text)
     } catch {
+      // 检查是否是 Cloudflare 拦截
+      if (text.includes("Just a moment") || text.includes("Cloudflare")) {
+        console.error("[v0] CK API blocked by Cloudflare")
+        return NextResponse.json({
+          success: false,
+          error: { 
+            code: "CLOUDFLARE_BLOCKED", 
+            message: "CK渠道暂时无法访问，请稍后重试或使用极速渠道",
+            fallback_url: "/activate/gpt"
+          }
+        }, { status: 503 })
+      }
       console.error("[v0] CK API Invalid JSON response:", text.substring(0, 200))
       return NextResponse.json({
         success: false,

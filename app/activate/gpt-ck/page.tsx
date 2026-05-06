@@ -74,6 +74,14 @@ export default function GptActivateCkPage() {
     setVerifying(true); setMessage(null); setResult({ status: "idle", message: "" })
     try {
       const data = await gptApi("check_cdk", { cdk: cardCode.trim().toUpperCase() })
+      
+      // 检查 Cloudflare 拦截或服务不可用
+      if (data.error?.code === "CLOUDFLARE_BLOCKED" || data.error?.code === "INVALID_RESPONSE") {
+        setMessage({ text: data.error.message || "CK渠道暂时无法访问，请使用极速渠道", type: "warning" })
+        setVerifying(false)
+        return
+      }
+      
       if (data.success && data.data) {
         if (data.sessionCookie) {
           setSessionCookie(data.sessionCookie)
@@ -343,7 +351,7 @@ export default function GptActivateCkPage() {
               {showUpdateToken && (
                 <div className="border border-border rounded-xl p-4 space-y-3">
                   <h4 className="text-sm font-semibold text-foreground">更新 Token</h4>
-                  <p className="text-[11px] text-muted-foreground">如果您的 Token 已过期，请获取最新 JSON 数据粘贴到下方更新。</p>
+                  <p className="text-[11px] text-muted-foreground">如果您的 Token 已过期，请获取最新 JSON 数据粘贴到下方��新。</p>
                   <ActivateTextarea value={newTokenData} onChange={(e) => setNewTokenData(e.target.value)} placeholder="请粘贴完整的 JSON 数据" rows={6} />
                   <div className="flex gap-2">
                     <Button onClick={() => window.open("https://chatgpt.com/api/auth/session", "_blank")} variant="outline" className="flex-1 h-10 rounded-xl text-xs">
