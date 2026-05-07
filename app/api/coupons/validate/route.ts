@@ -1,11 +1,14 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+function getDb() {
+  return neon(process.env.DATABASE_URL!)
+}
 
 // 验证优惠码
 export async function POST(request: Request) {
   try {
+    const sql = getDb()
     const body = await request.json()
     const { code, order_amount, product_id, user_email } = body
 
@@ -96,7 +99,10 @@ export async function POST(request: Request) {
       }
     })
   } catch (error) {
-    console.error("验证优惠码失败:", error)
-    return NextResponse.json({ success: false, error: "验证优惠码失败" }, { status: 500 })
+    console.error("[v0] 验证优惠码失败:", error)
+    return NextResponse.json({ 
+      success: false, 
+      error: "验证优惠码失败: " + (error instanceof Error ? error.message : String(error)) 
+    }, { status: 500 })
   }
 }
