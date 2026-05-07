@@ -100,12 +100,20 @@ export function CouponManager() {
   async function loadReferrers() {
     try {
       const res = await fetch("/api/referrers")
+      if (!res.ok) {
+        console.log("[v0] 推广用户API返回非200:", res.status)
+        setReferrers([])
+        return
+      }
       const data = await res.json()
-      if (data.success) {
-        setReferrers(data.data.filter((r: Referrer) => r.status === "active"))
+      if (data.success && Array.isArray(data.data)) {
+        setReferrers(data.data)
+      } else {
+        setReferrers([])
       }
     } catch (err) {
-      console.error("加载推广用户失败:", err)
+      console.error("[v0] 加载推广用户失败:", err)
+      setReferrers([])
     }
   }
 
@@ -192,6 +200,7 @@ export function CouponManager() {
     }
 
     setCreating(true)
+    
     try {
       const payload = {
         code: formData.code.trim().toUpperCase(),
@@ -207,8 +216,6 @@ export function CouponManager() {
         commission_rate: formData.commission_rate ? parseFloat(formData.commission_rate) : null
       }
       
-      console.log("[v0] 发送创建优惠码请求:", payload)
-      
       const res = await fetch("/api/coupons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -216,7 +223,6 @@ export function CouponManager() {
       })
       
       const data = await res.json()
-      console.log("[v0] 创建优惠码响应:", data)
       
       if (data.success) {
         setDialogOpen(false)
