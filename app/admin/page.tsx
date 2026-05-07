@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import { BlogManager } from "@/components/blog-manager"
 import { AffiliateManager } from "@/components/affiliate-manager"
+import { CouponManager } from "@/components/coupon-manager"
 import { FinancePanel } from "@/components/finance-panel"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
@@ -2967,7 +2968,7 @@ const renderSettings = () => (
   // ========== Product Handlers ==========
   const handleCreateProduct = async () => {
     if (!productForm.name || !productForm.price) {
-      setMessage("请填写产品名称和价格")
+      setMessage("��填写产品名称和价格")
       return
     }
     setProductLoading(true)
@@ -3694,9 +3695,11 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
         return renderCodes()
       case "finance":
         return <FinancePanel adminToken={adminToken} />
-      case "blog":
-        return <BlogManager adminToken={adminToken} />
-      case "affiliates":
+case "blog":
+return <BlogManager adminToken={adminToken} />
+  case "coupons":
+return <CouponManager />
+  case "affiliates":
         return <AffiliateManager adminToken={adminToken} />
       case "settings":
         return renderSettings()
@@ -3863,8 +3866,9 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
                   {activeTab === "categories" && "分类管理"}
                   {activeTab === "codes" && "激活码管理"}
                   {activeTab === "finance" && "财务管理"}
-                {activeTab === "blog" && "博客管理"}
-                {activeTab === "affiliates" && "推广管理"}
+{activeTab === "blog" && "博客管理"}
+  {activeTab === "coupons" && "优惠码管理"}
+  {activeTab === "affiliates" && "推广管理"}
                 {activeTab === "settings" && "系统设置"}
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">

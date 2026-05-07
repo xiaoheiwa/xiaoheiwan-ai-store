@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { AlertMessage } from "@/components/alert-message"
-import { CreditCard, Mail, ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, Sparkles, Box, Zap } from "lucide-react"
+import { CreditCard, Mail, ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, Sparkles, Box, Zap, Ticket, X } from "lucide-react"
 import Link from "next/link"
 
 interface PriceTier {
@@ -57,6 +57,18 @@ function PurchaseContent() {
   const [selectedRegion, setSelectedRegion] = useState<RegionOption | null>(null)
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
   const [paymentConfig, setPaymentConfig] = useState({ alipay: true, usdt: true, wxpay: false })
+  
+  // 优惠码相关状态
+  const [couponCode, setCouponCode] = useState("")
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    coupon_id: string
+    code: string
+    discount_type: string
+    discount_value: number
+    discount_amount: number
+    description: string
+  } | null>(null)
 
   // Backwards compat: fallback price/stock for when no products exist
   const [fallbackPrice, setFallbackPrice] = useState(99)
@@ -119,9 +131,56 @@ function PurchaseContent() {
   // Use region-specific price if available, otherwise use product price
   const basePrice = selectedRegion?.price ?? selectedProduct?.price ?? fallbackPrice
   const unitPrice = selectedProduct ? getUnitPrice({ ...selectedProduct, price: basePrice }, quantity) : fallbackPrice
-  const currentPrice = Number((unitPrice * quantity).toFixed(2))
+  const subtotalPrice = Number((unitPrice * quantity).toFixed(2))
+  // 应用优惠码折扣
+  const discountAmount = appliedCoupon ? appliedCoupon.discount_amount : 0
+  const currentPrice = Math.max(0, Number((subtotalPrice - discountAmount).toFixed(2)))
   const currentOriginalPrice = selectedProduct?.original_price || null
   const stockCount = isManual ? 999 : (selectedProduct ? Number(selectedProduct.stock_count) : fallbackStock)
+  
+  // 验证优惠码
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setMessage({ text: "请输入优惠码", type: "error" })
+      return
+    }
+    
+    setCouponLoading(true)
+    setMessage(null)
+    
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponCode.trim(),
+          order_amount: subtotalPrice,
+          product_id: selectedProduct?.id,
+          user_email: email
+        })
+      })
+      
+      const data = await res.json()
+      
+      if (data.success) {
+        setAppliedCoupon(data.data)
+        setCouponCode("")
+        setMessage({ text: `优惠码已应用：${data.data.description}`, type: "success" })
+      } else {
+        setMessage({ text: data.error || "优惠码无效", type: "error" })
+      }
+    } catch {
+      setMessage({ text: "验证优惠码失败，请重试", type: "error" })
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+  
+  // 移除优惠码
+  const removeCoupon = () => {
+    setAppliedCoupon(null)
+    setMessage(null)
+  }
 
   // Reset region when product changes
   useEffect(() => {
@@ -169,18 +228,22 @@ function PurchaseContent() {
         const response = await fetch("/api/order/crypto", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            amount: currentPrice,
-            productId: selectedProduct?.id || null,
-            productName: selectedProduct?.name || "激活码",
-            queryPassword,
-            quantity,
-            deliveryType: selectedProduct?.delivery_type || "auto",
-            selectedRegion: selectedRegion?.code || null,
-            regionName: selectedRegion?.name || null,
-          }),
-        })
+body: JSON.stringify({
+  email,
+  amount: currentPrice,
+  originalAmount: subtotalPrice,
+  productId: selectedProduct?.id || null,
+  productName: selectedProduct?.name || "激活码",
+  queryPassword,
+  quantity,
+  deliveryType: selectedProduct?.delivery_type || "auto",
+  selectedRegion: selectedRegion?.code || null,
+  regionName: selectedRegion?.name || null,
+  couponId: appliedCoupon?.coupon_id || null,
+  couponCode: appliedCoupon?.code || null,
+  discountAmount: appliedCoupon?.discount_amount || 0,
+  }),
+  })
 
         const data = await response.json()
 
@@ -202,18 +265,22 @@ function PurchaseContent() {
       const response = await fetch("/api/order/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          paymentMethod,
-          amount: currentPrice,
-          productId: selectedProduct?.id || null,
-          productName: selectedProduct?.name || "激活码",
-          queryPassword,
-          quantity,
-          deliveryType: selectedProduct?.delivery_type || "auto",
-          selectedRegion: selectedRegion?.code || null,
-          regionName: selectedRegion?.name || null,
-        }),
+body: JSON.stringify({
+  email,
+  paymentMethod,
+  amount: currentPrice,
+  originalAmount: subtotalPrice,
+  productId: selectedProduct?.id || null,
+  productName: selectedProduct?.name || "激活码",
+  queryPassword,
+  quantity,
+  deliveryType: selectedProduct?.delivery_type || "auto",
+  selectedRegion: selectedRegion?.code || null,
+  regionName: selectedRegion?.name || null,
+  couponId: appliedCoupon?.coupon_id || null,
+  couponCode: appliedCoupon?.code || null,
+  discountAmount: appliedCoupon?.discount_amount || 0,
+  }),
       })
 
       const data = await response.json()
@@ -385,12 +452,19 @@ function PurchaseContent() {
               <span className="text-muted-foreground text-sm uppercase tracking-wider">
                 {selectedProduct ? selectedProduct.name : "当前价格"}
               </span>
-              <div className="text-right">
-                <span className="text-3xl font-bold text-foreground">{"\u00a5"}{currentPrice}</span>
-                {quantity > 1 && (
-                  <span className="text-sm text-muted-foreground ml-2">({"\u00a5"}{unitPrice}/{"个"} x {quantity})</span>
-                )}
-              </div>
+<div className="text-right">
+  {appliedCoupon ? (
+    <>
+      <span className="text-lg text-muted-foreground line-through mr-2">{"\u00a5"}{subtotalPrice}</span>
+      <span className="text-3xl font-bold text-accent">{"\u00a5"}{currentPrice}</span>
+    </>
+  ) : (
+    <span className="text-3xl font-bold text-foreground">{"\u00a5"}{currentPrice}</span>
+  )}
+  {quantity > 1 && (
+  <span className="text-sm text-muted-foreground ml-2">({"\u00a5"}{unitPrice}/{"个"} x {quantity})</span>
+  )}
+  </div>
             </div>
 
             {/* Quantity selector */}
@@ -519,6 +593,54 @@ function PurchaseContent() {
                   <span>{"重要：此密码是查看订单和激活码的唯一凭证，忘记后将无法找回，请务必牢记！"}</span>
                 </p>
               </div>
+            </div>
+
+            {/* 优惠码输入 */}
+            <div className="opacity-0 animate-fade-up delay-175" style={{ animationFillMode: "forwards" }}>
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
+                <Ticket className="w-4 h-4 text-accent" />
+                优惠码
+                <span className="text-xs text-muted-foreground font-normal">（可选）</span>
+              </label>
+              
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between p-4 bg-accent/10 border border-accent/30 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center">
+                      <Ticket className="w-5 h-5 text-accent" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-foreground">{appliedCoupon.code}</div>
+                      <div className="text-sm text-accent">{appliedCoupon.description}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeCoupon}
+                    className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4 text-destructive" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="flex-1 px-5 py-4 bg-input border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all duration-200"
+                    placeholder="输入优惠码"
+                  />
+                  <button
+                    type="button"
+                    onClick={validateCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="px-6 py-4 bg-accent/10 hover:bg-accent/20 text-accent font-medium rounded-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "使用"}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="opacity-0 animate-fade-up delay-200" style={{ animationFillMode: "forwards" }}>

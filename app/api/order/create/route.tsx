@@ -30,9 +30,9 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const { email, paymentMethod, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, clientip } = body
+    const { email, paymentMethod, amount, originalAmount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, clientip, couponId, couponCode, discountAmount = 0 } = body
     console.log("[v0] Order creation request - paymentMethod:", paymentMethod, "type:", typeof paymentMethod)
-    console.log("[v0] Order creation request:", { email, paymentMethod, amount, productId, productName, quantity, deliveryType, selectedRegion, regionName, hasQueryPassword: !!queryPassword, clientip })
+    console.log("[v0] Order creation request:", { email, paymentMethod, amount, originalAmount, productId, productName, quantity, deliveryType, selectedRegion, regionName, hasQueryPassword: !!queryPassword, clientip, couponId, couponCode, discountAmount })
     
     // 确定支付渠道显示名称
     let payChannel = "其他"
@@ -72,10 +72,36 @@ export async function POST(req: Request) {
     
     // Calculate expected price based on tier pricing and quantity
     const unitPrice = getUnitPrice(Number(product.price), product.price_tiers, quantity)
-    const expectedAmount = Number((unitPrice * quantity).toFixed(2))
+    const expectedSubtotal = Number((unitPrice * quantity).toFixed(2))
+    
+    // 验证优惠码折扣
+    let verifiedDiscount = 0
+    if (couponId && discountAmount > 0) {
+      // 验证优惠码是否有效
+      const sqlConn = neon(process.env.DATABASE_URL!)
+      const couponResult = await sqlConn`
+        SELECT * FROM coupon_codes 
+        WHERE id = ${couponId} AND status = 'active'
+      `
+      if (couponResult.length > 0) {
+        const coupon = couponResult[0]
+        // 重新计算折扣金额以防篡改
+        if (coupon.discount_type === "fixed") {
+          verifiedDiscount = Math.min(Number(coupon.discount_value), expectedSubtotal)
+        } else if (coupon.discount_type === "percent") {
+          verifiedDiscount = expectedSubtotal * (Number(coupon.discount_value) / 100)
+          if (coupon.max_discount_amount && verifiedDiscount > Number(coupon.max_discount_amount)) {
+            verifiedDiscount = Number(coupon.max_discount_amount)
+          }
+        }
+        verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+      }
+    }
+    
+    const expectedAmount = Math.max(0, Number((expectedSubtotal - verifiedDiscount).toFixed(2)))
     // Allow only exact match or slight floating point tolerance
     if (Math.abs(Number(amount) - expectedAmount) > 0.01) {
-      console.error("[v0] SECURITY: Price tampering detected!", { claimed: amount, expected: expectedAmount, productId, unitPrice, quantity, priceTiers: product.price_tiers })
+      console.error("[v0] SECURITY: Price tampering detected!", { claimed: amount, expected: expectedAmount, productId, unitPrice, quantity, priceTiers: product.price_tiers, discount: verifiedDiscount })
       return NextResponse.json({ error: "价格验证失败" }, { status: 400 })
     }
     const verifiedAmount = expectedAmount
@@ -124,6 +150,27 @@ export async function POST(req: Request) {
       region_name: regionName || null,
     })
     console.log("[v0] Order created:", order.out_trade_no)
+
+    // 记录优惠码使用
+    if (couponId && verifiedDiscount > 0) {
+      try {
+        const sqlConn = neon(process.env.DATABASE_URL!)
+        // 插入使用记录
+        await sqlConn`
+          INSERT INTO coupon_usage (coupon_id, order_no, user_email, discount_amount)
+          VALUES (${couponId}, ${orderNo}, ${email}, ${verifiedDiscount})
+        `
+        // 增加使用次数
+        await sqlConn`
+          UPDATE coupon_codes SET used_count = used_count + 1, updated_at = NOW()
+          WHERE id = ${couponId}
+        `
+        console.log("[v0] Coupon usage recorded:", { couponId, couponCode, discount: verifiedDiscount })
+      } catch (couponError) {
+        console.error("[v0] Failed to record coupon usage:", couponError)
+        // 不阻止订单创建
+      }
+    }
 
     const baseUrl = getEnv("SITE_BASE")
     if (!baseUrl || baseUrl.includes("localhost")) {
