@@ -21,15 +21,18 @@ export async function GET() {
     `
     return NextResponse.json({ success: true, data: coupons })
   } catch (error) {
-    console.error("获取优惠码失败:", error)
+    console.error("[v0] 获取优惠码失败:", error)
     return NextResponse.json({ success: false, error: "获取优惠码失败" }, { status: 500 })
   }
 }
 
 // 创建优惠码
 export async function POST(request: Request) {
+  console.log("[v0] POST /api/coupons called")
   try {
     const body = await request.json()
+    console.log("[v0] 创建优惠码请求体:", JSON.stringify(body))
+    
     const {
       code,
       discount_type = "fixed",
@@ -38,41 +41,65 @@ export async function POST(request: Request) {
       max_discount_amount = null,
       usage_limit = null,
       per_user_limit = 1,
-      applicable_products = null,
-      valid_from = new Date().toISOString(),
       valid_until = null,
-      status = "active",
       notes = null,
       referrer_id = null,
       commission_rate = null
     } = body
 
-    if (!code || !discount_value) {
+    if (!code || discount_value === undefined || discount_value === null) {
+      console.log("[v0] 缺少必填字段: code=", code, "discount_value=", discount_value)
       return NextResponse.json({ success: false, error: "优惠码和折扣值为必填项" }, { status: 400 })
     }
 
     // 检查优惠码是否已存在
     const existing = await sql`SELECT id FROM coupon_codes WHERE code = ${code.toUpperCase()}`
     if (existing.length > 0) {
+      console.log("[v0] 优惠码已存在:", code)
       return NextResponse.json({ success: false, error: "优惠码已存在" }, { status: 400 })
     }
+
+    console.log("[v0] 准备插入优惠码:", {
+      code: code.toUpperCase(),
+      discount_type,
+      discount_value,
+      min_order_amount,
+      max_discount_amount,
+      usage_limit,
+      per_user_limit,
+      valid_until,
+      notes,
+      referrer_id,
+      commission_rate
+    })
 
     const result = await sql`
       INSERT INTO coupon_codes (
         code, discount_type, discount_value, min_order_amount, max_discount_amount,
-        usage_limit, per_user_limit, applicable_products, valid_from, valid_until, 
+        usage_limit, per_user_limit, valid_from, valid_until, 
         status, notes, referrer_id, commission_rate
       ) VALUES (
-        ${code.toUpperCase()}, ${discount_type}, ${discount_value}, ${min_order_amount}, ${max_discount_amount},
-        ${usage_limit}, ${per_user_limit}, ${applicable_products}, ${valid_from}, ${valid_until}, 
-        ${status}, ${notes}, ${referrer_id}, ${commission_rate}
+        ${code.toUpperCase()}, 
+        ${discount_type}, 
+        ${discount_value}, 
+        ${min_order_amount || 0}, 
+        ${max_discount_amount},
+        ${usage_limit}, 
+        ${per_user_limit || 1}, 
+        NOW(),
+        ${valid_until}, 
+        'active', 
+        ${notes}, 
+        ${referrer_id}, 
+        ${commission_rate}
       ) RETURNING *
     `
 
+    console.log("[v0] 优惠码创建成功:", result[0]?.id)
     return NextResponse.json({ success: true, data: result[0] })
   } catch (error) {
-    console.error("创建优惠码失败:", error)
-    return NextResponse.json({ success: false, error: "创建优惠码失败" }, { status: 500 })
+    console.error("[v0] 创建优惠码失败:", error)
+    return NextResponse.json({ success: false, error: "创建优惠码失败: " + (error instanceof Error ? error.message : String(error)) }, { status: 500 })
   }
 }
 
@@ -89,7 +116,7 @@ export async function DELETE(request: Request) {
     await sql`DELETE FROM coupon_codes WHERE id = ${id}`
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("删除优惠码失败:", error)
+    console.error("[v0] 删除优惠码失败:", error)
     return NextResponse.json({ success: false, error: "删除优惠码失败" }, { status: 500 })
   }
 }
@@ -98,25 +125,19 @@ export async function DELETE(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json()
-    const { id, ...updates } = body
+    const { id, status } = body
 
     if (!id) {
       return NextResponse.json({ success: false, error: "缺少优惠码ID" }, { status: 400 })
     }
 
-    const fields = Object.keys(updates)
-    if (fields.length === 0) {
-      return NextResponse.json({ success: false, error: "没有要更新的字段" }, { status: 400 })
-    }
-
-    // 简单更新状态
-    if (updates.status) {
-      await sql`UPDATE coupon_codes SET status = ${updates.status}, updated_at = NOW() WHERE id = ${id}`
+    if (status) {
+      await sql`UPDATE coupon_codes SET status = ${status}, updated_at = NOW() WHERE id = ${id}`
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("更新优惠码失败:", error)
+    console.error("[v0] 更新优惠码失败:", error)
     return NextResponse.json({ success: false, error: "更新优惠码失败" }, { status: 500 })
   }
 }
