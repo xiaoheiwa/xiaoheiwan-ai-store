@@ -5,6 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Clock, Eye, Tag, Share2, Check, Loader2, FileText } from "lucide-react"
 import { contentStyles } from "@/components/content-styles"
+import { CodeHighlighter } from "@/components/code-highlighter"
 
 interface BlogPost {
   id: string
@@ -22,7 +23,14 @@ interface BlogPost {
 
 // Clean and normalize HTML content
 function cleanHtml(html: string): string {
-  return html
+  // 先保护代码块，避免被清理
+  const codeBlocks: string[] = []
+  let protectedHtml = html.replace(/<pre[^>]*>[\s\S]*?<\/pre>/gi, (match) => {
+    codeBlocks.push(match)
+    return `___CODE_BLOCK_${codeBlocks.length - 1}___`
+  })
+  
+  protectedHtml = protectedHtml
     // Remove inline styles that mess up layout
     .replace(/\s*style="[^"]*"/gi, '')
     // Remove class attributes from external sources
@@ -64,25 +72,24 @@ function cleanHtml(html: string): string {
     // Ensure images are self-closing
     .replace(/<img([^>]*)(?<!\/)>/gi, '<img$1 />')
     .trim()
-}
-
-// 处理代码块 - 确保正确的 pre > code 结构和样式
-function processCodeBlocks(html: string): string {
-  // 处理 Tiptap 生成的代码块: <pre><code class="language-xxx">...</code></pre>
-  // 确保代码块有正确的样式类
-  return html
-    // 标准化代码块结构
-    .replace(/<pre([^>]*)><code([^>]*)>/gi, (_match, preAttrs, codeAttrs) => {
-      return `<pre${preAttrs} style="margin:1.25rem 0;border-radius:0.75rem;background:#0d1117;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);"><code${codeAttrs} style="display:block;padding:1rem;color:#e6edf3;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;">`
-    })
+  
+  // 恢复代码块并应用样式
+  codeBlocks.forEach((block, index) => {
+    // 给代码块添加内联样式
+    const styledBlock = block
+      .replace(/<pre([^>]*)>/i, '<pre$1 style="margin:1.25rem 0;border-radius:0.75rem;background:#0d1117;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);">')
+      .replace(/<code([^>]*)>/i, '<code$1 style="display:block;padding:1rem;color:#e6edf3;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;">')
+    protectedHtml = protectedHtml.replace(`___CODE_BLOCK_${index}___`, styledBlock)
+  })
+  
+  return protectedHtml
 }
 
 // Process content - handles both HTML from Tiptap and legacy Markdown
 function processContent(content: string): string {
   // If content already looks like HTML (from Tiptap or pasted), clean it up
   if (content.trim().startsWith('<') && (content.includes('<p>') || content.includes('<h') || content.includes('<div'))) {
-    let cleaned = cleanHtml(content)
-    return processCodeBlocks(cleaned)
+    return cleanHtml(content)
   }
   
   // Otherwise, treat as Markdown and convert to HTML
@@ -235,12 +242,11 @@ export default function BlogPostPage() {
           </div>
         </header>
 
-        {/* Content */}
-        <div
-          className={`max-w-none ${contentStyles}`}
-          onClick={handleContentClick}
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
+{/* Content */}
+  <CodeHighlighter
+    html={htmlContent}
+    className={`max-w-none ${contentStyles}`}
+  />
 
         {/* Footer */}
         <footer className="mt-12 pt-8 border-t border-border">
