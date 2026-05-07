@@ -68,12 +68,14 @@ function cleanHtml(html: string): string {
 
 // 处理代码块 - 确保正确的 pre > code 结构和样式
 function processCodeBlocks(html: string): string {
-  // 处理 Tiptap 生成的代码块: <pre><code class="language-xxx">...</code></pre>
-  // 确保代码块有正确的样式类
+  // 处理 Tiptap 生成的代码块: <pre class="hljs"><code class="language-xxx">...</code></pre>
+  // 匹配各种可能的代码块格式
   return html
-    // 标准化代码块结构
-    .replace(/<pre([^>]*)><code([^>]*)>/gi, (_match, preAttrs, codeAttrs) => {
-      return `<pre${preAttrs} style="margin:1.25rem 0;border-radius:0.75rem;background:#0d1117;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);"><code${codeAttrs} style="display:block;padding:1rem;color:#e6edf3;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;">`
+    // 匹配 <pre...><code...> 结构（可能有空格、属性等）
+    .replace(/<pre([^>]*)>\s*<code([^>]*)>/gi, (_match, preAttrs, codeAttrs) => {
+      // 移除原有的 class 属性中的样式，保留语言类
+      const cleanCodeAttrs = codeAttrs.replace(/class="[^"]*"/, 'class="code-block-content"')
+      return `<pre${preAttrs} style="margin:1.25rem 0;border-radius:0.75rem;background:#0d1117;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);"><code${cleanCodeAttrs} style="display:block;padding:1rem;color:#e6edf3;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;">`
     })
 }
 
