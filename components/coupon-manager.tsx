@@ -180,18 +180,23 @@ export function CouponManager() {
 
   // 创建优惠码
   async function handleCreate() {
+    console.log("[v0] handleCreate 被调用, formData:", formData)
     setError(null)
     
     if (!formData.code.trim()) {
+      console.log("[v0] 验证失败: 优惠码为空")
       setError("请填写优惠码")
       return
     }
     if (!formData.discount_value || parseFloat(formData.discount_value) <= 0) {
+      console.log("[v0] 验证失败: 折扣值无效", formData.discount_value)
       setError("请填写有效的折扣值")
       return
     }
 
+    console.log("[v0] 验证通过, 开始创建优惠码")
     setCreating(true)
+    
     try {
       const payload = {
         code: formData.code.trim().toUpperCase(),
@@ -207,7 +212,7 @@ export function CouponManager() {
         commission_rate: formData.commission_rate ? parseFloat(formData.commission_rate) : null
       }
       
-      console.log("[v0] 发送创建优惠码请求:", payload)
+      console.log("[v0] 发送创建优惠码请求:", JSON.stringify(payload))
       
       const res = await fetch("/api/coupons", {
         method: "POST",
@@ -215,19 +220,22 @@ export function CouponManager() {
         body: JSON.stringify(payload)
       })
       
+      console.log("[v0] 请求完成, 状态:", res.status)
       const data = await res.json()
-      console.log("[v0] 创建优惠码响应:", data)
+      console.log("[v0] 创建优惠码响应:", JSON.stringify(data))
       
       if (data.success) {
+        console.log("[v0] 创建成功, 关闭对话框")
         setDialogOpen(false)
         resetForm()
         loadCoupons()
       } else {
+        console.log("[v0] 创建失败:", data.error)
         setError(data.error || "创建失败")
       }
     } catch (err) {
-      console.error("创建优惠码失败:", err)
-      setError("创建失败，请重试")
+      console.error("[v0] 创建优惠码异常:", err)
+      setError("创建失败，请重试: " + (err instanceof Error ? err.message : String(err)))
     } finally {
       setCreating(false)
     }
