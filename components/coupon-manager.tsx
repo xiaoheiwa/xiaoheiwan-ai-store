@@ -302,18 +302,19 @@ export function CouponManager() {
                     关联推广用户（可选）
                   </Label>
                   <Select 
-                    value={newCoupon.referrer_id} 
+                    value={newCoupon.referrer_id || "none"} 
                     onValueChange={(v) => {
-                      setNewCoupon({ ...newCoupon, referrer_id: v })
+                      const actualValue = v === "none" ? "" : v
+                      setNewCoupon({ ...newCoupon, referrer_id: actualValue })
                       // 自动生成推广用户专属码
-                      if (v) {
-                        const referrer = referrers.find(r => r.id.toString() === v)
+                      if (actualValue) {
+                        const referrer = referrers.find(r => r.id.toString() === actualValue)
                         if (referrer) {
                           generateReferrerCode(referrer.referral_code)
                           // 默认使用推广用户的佣金比例
                           setNewCoupon(prev => ({ 
                             ...prev, 
-                            referrer_id: v,
+                            referrer_id: actualValue,
                             commission_rate: referrer.commission_rate.toString()
                           }))
                         }
@@ -324,7 +325,7 @@ export function CouponManager() {
                       <SelectValue placeholder="不关联（普通优惠码）" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">不关联（普通优惠码）</SelectItem>
+                      <SelectItem value="none">不关联（普通优惠码）</SelectItem>
                       {referrers.map((r) => (
                         <SelectItem key={r.id} value={r.id.toString()}>
                           {r.name} ({r.referral_code}) - 佣金{r.commission_rate}%
