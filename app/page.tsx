@@ -181,9 +181,13 @@ export default function HomePage() {
                       <h3 className="font-semibold text-foreground text-base group-hover:text-accent transition-colors leading-snug">
                         {product.name}
                       </h3>
-                      {(product.delivery_type === "manual" || Number(product.stock_count) > 0) && (
+                      {(product.delivery_type === "manual" || Number(product.stock_count) > 0) ? (
                         <span className="shrink-0 ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent border border-accent/20">
                           {"\u73b0\u8d27"}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/10 text-destructive border border-destructive/20">
+                          {"缺货"}
                         </span>
                       )}
                     </div>
