@@ -139,10 +139,10 @@ export function CouponManager() {
     setNewCoupon({ ...newCoupon, code })
   }
 
-  // 为推广用户生成专属码
-  function generateReferrerCode(referrerCode: string) {
+  // 为推广用户生成专属码（返回生成的code，不直接setState）
+  function generateReferrerCode(referrerCode: string): string {
     const suffix = Math.random().toString(36).substring(2, 6).toUpperCase()
-    setNewCoupon({ ...newCoupon, code: `${referrerCode}${suffix}` })
+    return `${referrerCode}${suffix}`
   }
 
   // 创建优惠码
@@ -305,19 +305,24 @@ export function CouponManager() {
                     value={newCoupon.referrer_id || "none"} 
                     onValueChange={(v) => {
                       const actualValue = v === "none" ? "" : v
-                      setNewCoupon({ ...newCoupon, referrer_id: actualValue })
                       // 自动生成推广用户专属码
                       if (actualValue) {
                         const referrer = referrers.find(r => r.id.toString() === actualValue)
                         if (referrer) {
-                          generateReferrerCode(referrer.referral_code)
-                          // 默认使用推广用户的佣金比例
+                          const newCode = generateReferrerCode(referrer.referral_code)
+                          // 一次性更新所有字段
                           setNewCoupon(prev => ({ 
                             ...prev, 
                             referrer_id: actualValue,
+                            code: newCode,
                             commission_rate: referrer.commission_rate.toString()
                           }))
+                        } else {
+                          setNewCoupon(prev => ({ ...prev, referrer_id: actualValue }))
                         }
+                      } else {
+                        // 取消关联推广用户
+                        setNewCoupon(prev => ({ ...prev, referrer_id: "", commission_rate: "" }))
                       }
                     }}
                   >
