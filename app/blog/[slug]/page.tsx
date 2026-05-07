@@ -75,8 +75,14 @@ function processContent(content: string): string {
   
   // Otherwise, treat as Markdown and convert to HTML
   let html = content
-    // Code blocks (``` ... ```)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+    // Code blocks (``` ... ```) - 转换为带语言标签的代码块
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang, code) => {
+      const escapedCode = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+      return `<pre><code class="language-${lang || 'text'} hljs">${escapedCode}</code></pre>`
+    })
     // Inline code
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     // Markdown images: ![alt](url)
