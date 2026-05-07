@@ -46,10 +46,10 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { username, referral_code, commission_rate, email } = body
 
-    if (!username || !referral_code || !commission_rate) {
+    if (!username || !email || !referral_code || !commission_rate) {
       return NextResponse.json({
         success: false,
-        error: "缺少必填字段"
+        error: "缺少必填字段（用户名、邮箱、推广码、佣金比例）"
       }, { status: 400 })
     }
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     // 创建推广用户
     const result = await sql`
       INSERT INTO referrers (username, referral_code, commission_rate, email, status)
-      VALUES (${username}, ${referral_code}, ${parseFloat(commission_rate)}, ${email || null}, 'active')
+      VALUES (${username}, ${referral_code}, ${parseFloat(commission_rate)}, ${email}, 'active')
       RETURNING id, username as name, referral_code, commission_rate, status, created_at
     `
 
