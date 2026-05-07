@@ -35,6 +35,7 @@ export function ReferrerManager() {
 
   const [form, setForm] = useState({
     username: "",
+    email: "",
     referral_code: "",
     commission_rate: "10",
   })
@@ -63,6 +64,10 @@ export function ReferrerManager() {
       setError("请填写推广用户名")
       return
     }
+    if (!form.email.trim()) {
+      setError("请填写邮箱地址")
+      return
+    }
     if (!form.referral_code.trim()) {
       setError("请填写推广码")
       return
@@ -79,6 +84,7 @@ export function ReferrerManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: form.username.trim(),
+          email: form.email.trim(),
           referral_code: form.referral_code.trim(),
           commission_rate: parseFloat(form.commission_rate),
         }),
@@ -86,7 +92,7 @@ export function ReferrerManager() {
 
       const data = await res.json()
       if (data.success) {
-        setForm({ username: "", referral_code: "", commission_rate: "10" })
+        setForm({ username: "", email: "", referral_code: "", commission_rate: "10" })
         setDialogOpen(false)
         loadReferrers()
       } else {
@@ -136,6 +142,17 @@ export function ReferrerManager() {
                   placeholder="如: xiaohei"
                   value={form.username}
                   onChange={(e) => setForm({ ...form, username: e.target.value })}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="email">邮箱地址</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="如: xiaohei@example.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
               </div>
 
