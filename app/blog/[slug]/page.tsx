@@ -5,6 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Clock, Eye, Tag, Share2, Check, Loader2, FileText } from "lucide-react"
 import { contentStyles } from "@/components/content-styles"
+import { CodeHighlighter } from "@/components/code-highlighter"
 
 interface BlogPost {
   id: string
@@ -241,12 +242,11 @@ export default function BlogPostPage() {
           </div>
         </header>
 
-        {/* Content */}
-        <div
-          className={`max-w-none ${contentStyles}`}
-          onClick={handleContentClick}
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
+{/* Content */}
+  <CodeHighlighter
+    html={htmlContent}
+    className={`max-w-none ${contentStyles}`}
+  />
 
         {/* Footer */}
         <footer className="mt-12 pt-8 border-t border-border">
