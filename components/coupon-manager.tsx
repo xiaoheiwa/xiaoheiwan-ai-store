@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Trash2, Loader2, Copy, Check, Ticket, Users, Eye, RefreshCw } from "lucide-react"
 
 interface Referrer {
@@ -53,6 +53,20 @@ interface CouponUsage {
   used_at: string
 }
 
+const defaultFormData = {
+  code: "",
+  discount_type: "fixed",
+  discount_value: "",
+  min_order_amount: "0",
+  max_discount_amount: "",
+  usage_limit: "",
+  per_user_limit: "1",
+  valid_until: "",
+  notes: "",
+  referrer_id: "",
+  commission_rate: ""
+}
+
 export function CouponManager() {
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [referrers, setReferrers] = useState<Referrer[]>([])
@@ -65,43 +79,29 @@ export function CouponManager() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("all")
   const [error, setError] = useState<string | null>(null)
-  
-  // 新建优惠码表单 - 使用简单的初始值
-  const [formData, setFormData] = useState({
-    code: "",
-    discount_type: "fixed",
-    discount_value: "",
-    min_order_amount: "0",
-    max_discount_amount: "",
-    usage_limit: "",
-    per_user_limit: "1",
-    valid_until: "",
-    notes: "",
-    referrer_id: "",
-    commission_rate: ""
-  })
+  const [formData, setFormData] = useState(defaultFormData)
 
   // 加载优惠码列表
-  async function loadCoupons() {
+  const loadCoupons = useCallback(async () => {
     try {
       const res = await fetch("/api/coupons")
+      if (!res.ok) throw new Error("请求失败")
       const data = await res.json()
       if (data.success) {
-        setCoupons(data.data)
+        setCoupons(data.data || [])
       }
     } catch (err) {
       console.error("加载优惠码失败:", err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // 加载推广用户列表
-  async function loadReferrers() {
+  const loadReferrers = useCallback(async () => {
     try {
       const res = await fetch("/api/referrers")
       if (!res.ok) {
-        console.log("[v0] 推广用户API返回非200:", res.status)
         setReferrers([])
         return
       }
@@ -112,31 +112,32 @@ export function CouponManager() {
         setReferrers([])
       }
     } catch (err) {
-      console.error("[v0] 加载推广用户失败:", err)
+      console.error("加载推广用户失败:", err)
       setReferrers([])
     }
-  }
+  }, [])
 
   // 加载使用记录
-  async function loadUsageRecords(couponCode?: string) {
+  const loadUsageRecords = useCallback(async (couponCode?: string) => {
     try {
       const url = couponCode 
         ? `/api/coupons/usage?code=${encodeURIComponent(couponCode)}`
         : "/api/coupons/usage"
       const res = await fetch(url)
+      if (!res.ok) throw new Error("请求失败")
       const data = await res.json()
       if (data.success) {
-        setUsageRecords(data.data)
+        setUsageRecords(data.data || [])
       }
     } catch (err) {
       console.error("加载使用记录失败:", err)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadCoupons()
     loadReferrers()
-  }, [])
+  }, [loadCoupons, loadReferrers])
 
   // 生成随机优惠码
   function generateCode() {
@@ -150,26 +151,14 @@ export function CouponManager() {
 
   // 重置表单
   function resetForm() {
-    setFormData({
-      code: "",
-      discount_type: "fixed",
-      discount_value: "",
-      min_order_amount: "0",
-      max_discount_amount: "",
-      usage_limit: "",
-      per_user_limit: "1",
-      valid_until: "",
-      notes: "",
-      referrer_id: "",
-      commission_rate: ""
-    })
+    setFormData(defaultFormData)
     setError(null)
   }
 
   // 选择推广用户时自动生成专属码
   function handleReferrerChange(value: string) {
     if (value === "none" || !value) {
-      setFormData(prev => ({ ...prev, referrer_id: "", commission_rate: "" }))
+      setFormData(prev => ({ ...prev, referrer_id: "", commission_rate: "", code: "" }))
       return
     }
     
@@ -308,7 +297,7 @@ export function CouponManager() {
     total: coupons.length,
     referrer: coupons.filter(c => c.referrer_id).length,
     active: coupons.filter(c => c.status === "active").length,
-    totalUsed: coupons.reduce((sum, c) => sum + c.used_count, 0)
+    totalUsed: coupons.reduce((sum, c) => sum + (c.used_count || 0), 0)
   }
 
   return (
@@ -344,35 +333,37 @@ export function CouponManager() {
                 </div>
               )}
               
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
                 {/* 关联推广用户 */}
-                <div className="grid gap-2">
-                  <Label className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    关联推广用户（可选）
-                  </Label>
-                  <Select 
-                    value={formData.referrer_id || "none"} 
-                    onValueChange={handleReferrerChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="不关联（普通优惠码）" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">不关联（普通优惠码）</SelectItem>
-                      {referrers.map((r) => (
-                        <SelectItem key={r.id} value={r.id.toString()}>
-                          {r.name} ({r.referral_code}) - 佣金{r.commission_rate}%
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {formData.referrer_id && (
-                    <p className="text-xs text-muted-foreground">
-                      已选择推广用户，已自动生成专属码前缀
-                    </p>
-                  )}
-                </div>
+                {referrers.length > 0 && (
+                  <div className="grid gap-2">
+                    <Label className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      关联推广用户（可选）
+                    </Label>
+                    <Select 
+                      value={formData.referrer_id || "none"} 
+                      onValueChange={handleReferrerChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="不关联（普通优惠码）" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">不关联（普通优惠码）</SelectItem>
+                        {referrers.map((r) => (
+                          <SelectItem key={r.id} value={r.id.toString()}>
+                            {r.name} ({r.referral_code}) - 佣金{r.commission_rate}%
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.referrer_id && (
+                      <p className="text-xs text-muted-foreground">
+                        已选择推广用户，已自动生成专属码
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* 优惠码 */}
                 <div className="grid gap-2">
@@ -589,29 +580,32 @@ export function CouponManager() {
                   </TableCell>
                   <TableCell>{formatDiscount(coupon)}</TableCell>
                   <TableCell>
-                    {coupon.used_count}/{coupon.usage_limit || "∞"}
+                    {coupon.used_count || 0}/{coupon.usage_limit || "∞"}
                   </TableCell>
                   <TableCell>
                     {coupon.referrer_name ? (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="flex items-center gap-1 w-fit">
+                        <Users className="w-3 h-3" />
                         {coupon.referrer_name}
-                        {coupon.commission_rate && ` (${coupon.commission_rate}%)`}
+                        {coupon.commission_rate && (
+                          <span className="text-xs">({coupon.commission_rate}%)</span>
+                        )}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground text-xs">-</span>
+                      <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge
+                    <Badge 
                       variant={coupon.status === "active" ? "default" : "secondary"}
                       className="cursor-pointer"
                       onClick={() => toggleStatus(coupon.id, coupon.status)}
                     >
-                      {coupon.status === "active" ? "生效" : "停用"}
+                      {coupon.status === "active" ? "生效中" : "已停用"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -638,24 +632,23 @@ export function CouponManager() {
         <Dialog open={usageDialogOpen} onOpenChange={setUsageDialogOpen}>
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
-              <DialogTitle>优惠码使用记录</DialogTitle>
-              <DialogDescription>
-                {selectedCouponCode && `优惠码: ${selectedCouponCode}`}
-              </DialogDescription>
+              <DialogTitle>使用记录 - {selectedCouponCode}</DialogTitle>
+              <DialogDescription>查看优惠码的使用详情</DialogDescription>
             </DialogHeader>
-            <div className="max-h-[400px] overflow-auto">
-              {usageRecords.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  暂无使用记录
-                </div>
-              ) : (
+            
+            {usageRecords.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                暂无使用记录
+              </div>
+            ) : (
+              <div className="max-h-[400px] overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>订单号</TableHead>
                       <TableHead>用户</TableHead>
                       <TableHead>订单金额</TableHead>
-                      <TableHead>优惠金额</TableHead>
+                      <TableHead>折扣金额</TableHead>
                       <TableHead>佣金</TableHead>
                       <TableHead>时间</TableHead>
                     </TableRow>
@@ -663,30 +656,26 @@ export function CouponManager() {
                   <TableBody>
                     {usageRecords.map((record) => (
                       <TableRow key={record.id}>
-                        <TableCell className="font-mono text-xs">
-                          {record.order_no}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {record.user_email}
-                        </TableCell>
+                        <TableCell className="font-mono text-xs">{record.order_no}</TableCell>
+                        <TableCell className="text-sm">{record.user_email}</TableCell>
                         <TableCell>¥{record.order_amount}</TableCell>
-                        <TableCell className="text-green-600">
-                          -¥{record.discount_amount}
-                        </TableCell>
+                        <TableCell className="text-green-600">-¥{record.discount_amount}</TableCell>
                         <TableCell>
                           {record.commission_amount > 0 ? (
-                            <span className="text-blue-600">¥{record.commission_amount}</span>
-                          ) : "-"}
+                            <span className="text-orange-500">¥{record.commission_amount}</span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-sm text-muted-foreground">
                           {new Date(record.used_at).toLocaleString("zh-CN")}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              )}
-            </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </CardContent>

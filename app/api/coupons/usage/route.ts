@@ -1,11 +1,14 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse, NextRequest } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+function getDb() {
+  return neon(process.env.DATABASE_URL!)
+}
 
 // 获取优惠码使用记录
 export async function GET(request: NextRequest) {
   try {
+    const sql = getDb()
     const { searchParams } = new URL(request.url)
     const code = searchParams.get("code")
     const referrerId = searchParams.get("referrer_id")
@@ -18,7 +21,7 @@ export async function GET(request: NextRequest) {
           u.id, u.order_no, u.user_email, u.discount_amount, 
           u.order_amount, u.commission_amount, u.used_at,
           c.code as coupon_code,
-          r.name as referrer_name
+          r.username as referrer_name
         FROM coupon_usage u
         JOIN coupon_codes c ON u.coupon_id = c.id
         LEFT JOIN referrers r ON u.referrer_id = r.id
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
           u.id, u.order_no, u.user_email, u.discount_amount, 
           u.order_amount, u.commission_amount, u.used_at,
           c.code as coupon_code,
-          r.name as referrer_name
+          r.username as referrer_name
         FROM coupon_usage u
         JOIN coupon_codes c ON u.coupon_id = c.id
         LEFT JOIN referrers r ON u.referrer_id = r.id
@@ -46,7 +49,7 @@ export async function GET(request: NextRequest) {
           u.id, u.order_no, u.user_email, u.discount_amount, 
           u.order_amount, u.commission_amount, u.used_at,
           c.code as coupon_code,
-          r.name as referrer_name
+          r.username as referrer_name
         FROM coupon_usage u
         JOIN coupon_codes c ON u.coupon_id = c.id
         LEFT JOIN referrers r ON u.referrer_id = r.id
@@ -57,14 +60,18 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: records })
   } catch (error) {
-    console.error("获取使用记录失败:", error)
-    return NextResponse.json({ success: false, error: "获取使用记录失败" }, { status: 500 })
+    console.error("[v0] 获取使用记录失败:", error)
+    return NextResponse.json({ 
+      success: false, 
+      error: "获取使用记录失败: " + (error instanceof Error ? error.message : String(error)) 
+    }, { status: 500 })
   }
 }
 
 // 获取推广用户的佣金统计
 export async function POST(request: NextRequest) {
   try {
+    const sql = getDb()
     const { referrer_id } = await request.json()
 
     if (!referrer_id) {
@@ -102,7 +109,10 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error("获取佣金统计失败:", error)
-    return NextResponse.json({ success: false, error: "获取佣金统计失败" }, { status: 500 })
+    console.error("[v0] 获取佣金统计失败:", error)
+    return NextResponse.json({ 
+      success: false, 
+      error: "获取佣金统计失败: " + (error instanceof Error ? error.message : String(error)) 
+    }, { status: 500 })
   }
 }
