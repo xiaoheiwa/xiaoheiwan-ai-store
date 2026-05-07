@@ -1,11 +1,14 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+function getDb() {
+  return neon(process.env.DATABASE_URL!)
+}
 
 // 获取优惠码列表（包含推广用户信息）
 export async function GET() {
   try {
+    const sql = getDb()
     const coupons = await sql`
       SELECT 
         c.id, c.code, c.discount_type, c.discount_value, 
@@ -30,6 +33,7 @@ export async function GET() {
 export async function POST(request: Request) {
   console.log("[v0] POST /api/coupons called")
   try {
+    const sql = getDb()
     const body = await request.json()
     console.log("[v0] 创建优惠码请求体:", JSON.stringify(body))
     
@@ -106,6 +110,7 @@ export async function POST(request: Request) {
 // 删除优惠码
 export async function DELETE(request: Request) {
   try {
+    const sql = getDb()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
 
@@ -124,6 +129,7 @@ export async function DELETE(request: Request) {
 // 更新优惠码
 export async function PATCH(request: Request) {
   try {
+    const sql = getDb()
     const body = await request.json()
     const { id, status } = body
 
