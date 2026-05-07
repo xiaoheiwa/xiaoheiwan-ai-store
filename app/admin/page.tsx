@@ -12,6 +12,7 @@ import { AdminSidebar } from "@/components/admin-sidebar"
 import { BlogManager } from "@/components/blog-manager"
 import { AffiliateManager } from "@/components/affiliate-manager"
 import { CouponManager } from "@/components/coupon-manager"
+import { ReferrerManager } from "@/components/referrer-manager"
 import { FinancePanel } from "@/components/finance-panel"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
@@ -2264,7 +2265,7 @@ const renderSettings = () => (
       <Label htmlFor="notification-title">通知标题</Label>
       <Input
         id="notification-title"
-        placeholder="输入通知标题"
+        placeholder="输入��知标题"
         value={notificationForm.title}
         onChange={(e) => setNotificationForm({ ...notificationForm, title: e.target.value })}
       />
@@ -3697,10 +3698,12 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
         return <FinancePanel adminToken={adminToken} />
 case "blog":
 return <BlogManager adminToken={adminToken} />
-  case "coupons":
-return <CouponManager />
+case "coupons":
+  return <CouponManager />
+  case "referrers":
+  return <ReferrerManager />
   case "affiliates":
-        return <AffiliateManager adminToken={adminToken} />
+  return <AffiliateManager adminToken={adminToken} />
       case "settings":
         return renderSettings()
       default:
@@ -3868,7 +3871,8 @@ return <CouponManager />
                   {activeTab === "finance" && "财务管理"}
 {activeTab === "blog" && "博客管理"}
   {activeTab === "coupons" && "优惠码管理"}
-  {activeTab === "affiliates" && "推广管理"}
+  {activeTab === "referrers" && "推广用户管理"}
+  {activeTab === "affiliates" && "推广链接管理"}
                 {activeTab === "settings" && "系统设置"}
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">

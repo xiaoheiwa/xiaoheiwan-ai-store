@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { LayoutDashboard, ShoppingCart, Key, Settings, LogOut, Menu, X, Box, FileText, TrendingUp, Link2, FolderTree, Ticket } from "lucide-react"
+import { LayoutDashboard, ShoppingCart, Key, Settings, LogOut, Menu, X, Box, FileText, TrendingUp, Link2, FolderTree, Ticket, Users } from "lucide-react"
 
 interface AdminSidebarProps {
   activeTab: string
@@ -68,8 +68,14 @@ export function AdminSidebar({ activeTab, onTabChange, onLogout, stats }: AdminS
       badge: null,
     },
     {
+      id: "referrers",
+      label: "推广用户管理",
+      icon: Users,
+      badge: null,
+    },
+    {
       id: "affiliates",
-      label: "推广管理",
+      label: "推广链接管理",
       icon: Link2,
       badge: null,
     },
