@@ -27,8 +27,46 @@ const listStyles = "[&_ul]:my-4 [&_ul]:pl-6 [&_ul]:list-disc [&_ul]:space-y-1 [&
 // 引用块
 const blockquoteStyles = "[&_blockquote]:my-5 [&_blockquote]:py-3 [&_blockquote]:px-4 [&_blockquote]:rounded-lg [&_blockquote]:bg-muted/40 [&_blockquote]:border-l-4 [&_blockquote]:border-accent [&_blockquote]:text-muted-foreground [&_blockquote]:italic [&_blockquote]:leading-[1.7] [&_blockquote_p]:mb-0 [&_blockquote_p]:text-muted-foreground"
 
-// 代码
-const codeStyles = "[&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_code]:text-accent [&_code]:border [&_code]:border-border/50 [&_pre]:my-5 [&_pre]:p-4 [&_pre]:rounded-xl [&_pre]:bg-[#1a1b26] [&_pre]:dark:bg-muted [&_pre]:overflow-x-auto [&_pre]:text-sm [&_pre]:leading-relaxed [&_pre]:border [&_pre]:border-border/30 [&_pre_code]:bg-transparent [&_pre_code]:border-none [&_pre_code]:p-0 [&_pre_code]:text-[#a9b1d6] [&_pre_code]:dark:text-foreground"
+// 代码 - 行内代码
+const inlineCodeStyles = "[&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_code]:text-accent [&_code]:border [&_code]:border-border/50"
+
+// 代码块样式 - 深色主题，带语法高亮
+const codeBlockStyles = [
+  // 代码块容器
+  "[&_pre]:my-5 [&_pre]:rounded-xl [&_pre]:bg-[#0d1117] [&_pre]:overflow-x-auto [&_pre]:text-sm [&_pre]:leading-relaxed [&_pre]:border [&_pre]:border-border/30 [&_pre]:relative",
+  // 代码块内容
+  "[&_pre_code]:bg-transparent [&_pre_code]:border-none [&_pre_code]:p-4 [&_pre_code]:block [&_pre_code]:text-[#e6edf3] [&_pre_code]:font-mono [&_pre_code]:text-[13px] [&_pre_code]:leading-[1.6]",
+  // 语法高亮 - GitHub Dark 风格
+  "[&_pre_.hljs-keyword]:text-[#ff7b72]",
+  "[&_pre_.hljs-string]:text-[#a5d6ff]",
+  "[&_pre_.hljs-number]:text-[#79c0ff]",
+  "[&_pre_.hljs-function]:text-[#d2a8ff]",
+  "[&_pre_.hljs-title]:text-[#d2a8ff]",
+  "[&_pre_.hljs-params]:text-[#e6edf3]",
+  "[&_pre_.hljs-comment]:text-[#8b949e] [&_pre_.hljs-comment]:italic",
+  "[&_pre_.hljs-variable]:text-[#ffa657]",
+  "[&_pre_.hljs-attr]:text-[#79c0ff]",
+  "[&_pre_.hljs-property]:text-[#79c0ff]",
+  "[&_pre_.hljs-punctuation]:text-[#e6edf3]",
+  "[&_pre_.hljs-operator]:text-[#ff7b72]",
+  "[&_pre_.hljs-built_in]:text-[#ffa657]",
+  "[&_pre_.hljs-literal]:text-[#79c0ff]",
+  "[&_pre_.hljs-type]:text-[#ff7b72]",
+  "[&_pre_.hljs-class]:text-[#ffa657]",
+  "[&_pre_.hljs-selector-tag]:text-[#7ee787]",
+  "[&_pre_.hljs-selector-class]:text-[#d2a8ff]",
+  "[&_pre_.hljs-selector-id]:text-[#79c0ff]",
+  "[&_pre_.hljs-name]:text-[#7ee787]",
+  "[&_pre_.hljs-tag]:text-[#7ee787]",
+  "[&_pre_.hljs-attribute]:text-[#79c0ff]",
+  "[&_pre_.hljs-regexp]:text-[#a5d6ff]",
+  "[&_pre_.hljs-link]:text-[#a5d6ff]",
+  "[&_pre_.hljs-meta]:text-[#79c0ff]",
+  "[&_pre_.hljs-deletion]:text-[#ffa198] [&_pre_.hljs-deletion]:bg-[#490202]",
+  "[&_pre_.hljs-addition]:text-[#7ee787] [&_pre_.hljs-addition]:bg-[#04260f]",
+].join(" ")
+
+const codeStyles = `${inlineCodeStyles} ${codeBlockStyles}`
 
 // 分隔线
 const hrStyles = "[&_hr]:my-8 [&_hr]:border-none [&_hr]:h-px [&_hr]:bg-gradient-to-r [&_hr]:from-transparent [&_hr]:via-border [&_hr]:to-transparent"

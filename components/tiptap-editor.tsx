@@ -12,6 +12,8 @@ import Subscript from '@tiptap/extension-subscript'
 import Superscript from '@tiptap/extension-superscript'
 import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { common, createLowlight } from 'lowlight'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { 
@@ -19,8 +21,12 @@ import {
   List, ListOrdered, Heading1, Heading2, Heading3,
   Link as LinkIcon, Image as ImageIcon, Undo, Redo,
   Quote, Code, Minus, Loader2, AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  Highlighter, Subscript as SubIcon, Superscript as SuperIcon, Palette, Type, ChevronDown
+  Highlighter, Subscript as SubIcon, Superscript as SuperIcon, Palette, Type, ChevronDown,
+  FileCode
 } from 'lucide-react'
+
+// 创建 lowlight 实例，支持常用语言
+const lowlight = createLowlight(common)
 import { cn } from '@/lib/utils'
 
 interface TiptapEditorProps {
@@ -449,6 +455,13 @@ function Toolbar({ editor, uploading }: { editor: Editor | null, uploading: bool
         <Quote className="w-4 h-4" />
       </ToolbarButton>
       <ToolbarButton 
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        active={editor.isActive('codeBlock')}
+        title="代码块"
+      >
+        <FileCode className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton 
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
         title="分隔线"
       >
@@ -512,6 +525,14 @@ export function TiptapEditor({ value, onChange, placeholder = "开始编写产�
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
+        },
+        codeBlock: false, // 禁用默认的代码块，使用 CodeBlockLowlight
+      }),
+      CodeBlockLowlight.configure({
+        lowlight,
+        defaultLanguage: 'javascript',
+        HTMLAttributes: {
+          class: 'hljs',
         },
       }),
       Underline,
@@ -629,7 +650,9 @@ export function TiptapEditor({ value, onChange, placeholder = "开始编写产�
           "[&_.ProseMirror_ul]:my-4 [&_.ProseMirror_ul]:pl-6 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:space-y-1 [&_.ProseMirror_ol]:my-4 [&_.ProseMirror_ol]:pl-6 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:space-y-1 [&_.ProseMirror_li]:text-muted-foreground [&_.ProseMirror_li]:leading-[1.75] [&_.ProseMirror_li_p]:mb-0",
           "[&_.ProseMirror_blockquote]:my-5 [&_.ProseMirror_blockquote]:py-3 [&_.ProseMirror_blockquote]:px-4 [&_.ProseMirror_blockquote]:rounded-lg [&_.ProseMirror_blockquote]:bg-muted/40 [&_.ProseMirror_blockquote]:border-l-4 [&_.ProseMirror_blockquote]:border-accent [&_.ProseMirror_blockquote]:italic [&_.ProseMirror_blockquote_p]:mb-0",
           "[&_.ProseMirror_code]:bg-muted [&_.ProseMirror_code]:px-1.5 [&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:text-sm [&_.ProseMirror_code]:font-mono [&_.ProseMirror_code]:text-accent [&_.ProseMirror_code]:border [&_.ProseMirror_code]:border-border/50",
-          "[&_.ProseMirror_pre]:my-5 [&_.ProseMirror_pre]:p-4 [&_.ProseMirror_pre]:rounded-xl [&_.ProseMirror_pre]:bg-[#1a1b26] [&_.ProseMirror_pre]:overflow-x-auto [&_.ProseMirror_pre_code]:bg-transparent [&_.ProseMirror_pre_code]:border-none [&_.ProseMirror_pre_code]:text-[#a9b1d6] [&_.ProseMirror_pre_code]:p-0",
+          "[&_.ProseMirror_pre]:my-5 [&_.ProseMirror_pre]:rounded-xl [&_.ProseMirror_pre]:bg-[#0d1117] [&_.ProseMirror_pre]:overflow-x-auto [&_.ProseMirror_pre]:border [&_.ProseMirror_pre]:border-border/30",
+          "[&_.ProseMirror_pre_code]:bg-transparent [&_.ProseMirror_pre_code]:border-none [&_.ProseMirror_pre_code]:text-[#e6edf3] [&_.ProseMirror_pre_code]:p-4 [&_.ProseMirror_pre_code]:block [&_.ProseMirror_pre_code]:font-mono [&_.ProseMirror_pre_code]:text-[13px] [&_.ProseMirror_pre_code]:leading-[1.6]",
+          "[&_.ProseMirror_.hljs-keyword]:text-[#ff7b72] [&_.ProseMirror_.hljs-string]:text-[#a5d6ff] [&_.ProseMirror_.hljs-number]:text-[#79c0ff] [&_.ProseMirror_.hljs-function]:text-[#d2a8ff] [&_.ProseMirror_.hljs-comment]:text-[#8b949e] [&_.ProseMirror_.hljs-comment]:italic [&_.ProseMirror_.hljs-variable]:text-[#ffa657] [&_.ProseMirror_.hljs-attr]:text-[#79c0ff] [&_.ProseMirror_.hljs-property]:text-[#79c0ff] [&_.ProseMirror_.hljs-built_in]:text-[#ffa657]",
           "[&_.ProseMirror_hr]:my-8 [&_.ProseMirror_hr]:border-none [&_.ProseMirror_hr]:h-px [&_.ProseMirror_hr]:bg-gradient-to-r [&_.ProseMirror_hr]:from-transparent [&_.ProseMirror_hr]:via-border [&_.ProseMirror_hr]:to-transparent",
           "[&_.ProseMirror_img]:my-5 [&_.ProseMirror_img]:mx-auto [&_.ProseMirror_img]:block [&_.ProseMirror_img]:max-w-full [&_.ProseMirror_img]:h-auto [&_.ProseMirror_img]:rounded-xl [&_.ProseMirror_img]:shadow-md",
           "[&_.ProseMirror_mark]:bg-yellow-200/70 [&_.ProseMirror_mark]:px-1 [&_.ProseMirror_mark]:rounded",
