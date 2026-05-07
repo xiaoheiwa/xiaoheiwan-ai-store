@@ -66,22 +66,34 @@ function cleanHtml(html: string): string {
     .trim()
 }
 
+// 处理代码块 - 确保正确的 pre > code 结构和样式
+function processCodeBlocks(html: string): string {
+  // 处理 Tiptap 生成的代码块: <pre><code class="language-xxx">...</code></pre>
+  // 确保代码块有正确的样式类
+  return html
+    // 标准化代码块结构
+    .replace(/<pre([^>]*)><code([^>]*)>/gi, (_match, preAttrs, codeAttrs) => {
+      return `<pre${preAttrs} style="margin:1.25rem 0;border-radius:0.75rem;background:#0d1117;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);"><code${codeAttrs} style="display:block;padding:1rem;color:#e6edf3;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;">`
+    })
+}
+
 // Process content - handles both HTML from Tiptap and legacy Markdown
 function processContent(content: string): string {
   // If content already looks like HTML (from Tiptap or pasted), clean it up
   if (content.trim().startsWith('<') && (content.includes('<p>') || content.includes('<h') || content.includes('<div'))) {
-    return cleanHtml(content)
+    let cleaned = cleanHtml(content)
+    return processCodeBlocks(cleaned)
   }
   
   // Otherwise, treat as Markdown and convert to HTML
   let html = content
-    // Code blocks (``` ... ```) - 转换为带语言标签的代码块
-    .replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang, code) => {
+    // Code blocks (``` ... ```) - 转换为带内联样式的代码块
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code) => {
       const escapedCode = code
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-      return `<pre><code class="language-${lang || 'text'} hljs">${escapedCode}</code></pre>`
+      return `<pre style="margin:1.25rem 0;border-radius:0.75rem;background:#0d1117;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);"><code style="display:block;padding:1rem;color:#e6edf3;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;">${escapedCode}</code></pre>`
     })
     // Inline code
     .replace(/`([^`]+)`/g, '<code>$1</code>')
