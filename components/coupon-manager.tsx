@@ -335,35 +335,41 @@ export function CouponManager() {
               
               <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
                 {/* 关联推广用户 */}
-                {referrers.length > 0 && (
-                  <div className="grid gap-2">
-                    <Label className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      关联推广用户（可选）
-                    </Label>
-                    <Select 
-                      value={formData.referrer_id || "none"} 
-                      onValueChange={handleReferrerChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="不关联（普通优惠码）" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">不关联（普通优惠码）</SelectItem>
-                        {referrers.map((r) => (
-                          <SelectItem key={r.id} value={r.id.toString()}>
-                            {r.name} ({r.referral_code}) - 佣金{r.commission_rate}%
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {formData.referrer_id && (
-                      <p className="text-xs text-muted-foreground">
-                        已选择推广用户，已自动生成专属码
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div className="grid gap-2">
+                  <Label className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    关联推广用户（可选）
+                  </Label>
+                  {referrers.length > 0 ? (
+                    <>
+                      <Select 
+                        value={formData.referrer_id || "none"} 
+                        onValueChange={handleReferrerChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="不关联（普通优惠码）" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">不关联（普通优惠码）</SelectItem>
+                          {referrers.map((r) => (
+                            <SelectItem key={r.id} value={r.id.toString()}>
+                              {r.name} ({r.referral_code}) - 佣金{r.commission_rate}%
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {formData.referrer_id && (
+                        <p className="text-xs text-muted-foreground">
+                          已选择推广用户，已自动生成专属码
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                      暂无推广用户，请先在「推广管理」中添加推广用户后再创建专属推广码
+                    </div>
+                  )}
+                </div>
 
                 {/* 优惠码 */}
                 <div className="grid gap-2">
