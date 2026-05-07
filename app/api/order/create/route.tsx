@@ -151,21 +151,41 @@ export async function POST(req: Request) {
     })
     console.log("[v0] Order created:", order.out_trade_no)
 
-    // 记录优惠码使用
+    // 记录优惠码使用（包含推广佣金）
     if (couponId && verifiedDiscount > 0) {
       try {
         const sqlConn = neon(process.env.DATABASE_URL!)
-        // 插入使用记录
+        
+        // 获取优惠码的推广用户信息
+        const couponInfo = await sqlConn`
+          SELECT c.referrer_id, c.commission_rate, r.commission_rate as default_rate
+          FROM coupon_codes c
+          LEFT JOIN referrers r ON c.referrer_id = r.id
+          WHERE c.id = ${couponId}
+        `
+        
+        let referrerId = null
+        let commissionAmount = 0
+        
+        if (couponInfo.length > 0 && couponInfo[0].referrer_id) {
+          referrerId = couponInfo[0].referrer_id
+          // 使用优惠码专属佣金比例，如果没有则使用推广用户默认比例
+          const commissionRate = couponInfo[0].commission_rate || couponInfo[0].default_rate || 0
+          // 佣金基于实付金额（扣除优惠后的金额）
+          commissionAmount = Number((verifiedAmount * (commissionRate / 100)).toFixed(2))
+        }
+        
+        // 插入使用记录（包含推广信息和佣金）
         await sqlConn`
-          INSERT INTO coupon_usage (coupon_id, order_no, user_email, discount_amount)
-          VALUES (${couponId}, ${orderNo}, ${email}, ${verifiedDiscount})
+          INSERT INTO coupon_usage (coupon_id, order_no, user_email, discount_amount, referrer_id, commission_amount, order_amount)
+          VALUES (${couponId}, ${orderNo}, ${email}, ${verifiedDiscount}, ${referrerId}, ${commissionAmount}, ${verifiedAmount})
         `
         // 增加使用次数
         await sqlConn`
           UPDATE coupon_codes SET used_count = used_count + 1, updated_at = NOW()
           WHERE id = ${couponId}
         `
-        console.log("[v0] Coupon usage recorded:", { couponId, couponCode, discount: verifiedDiscount })
+        console.log("[v0] Coupon usage recorded:", { couponId, couponCode, discount: verifiedDiscount, referrerId, commission: commissionAmount })
       } catch (couponError) {
         console.error("[v0] Failed to record coupon usage:", couponError)
         // 不阻止订单创建
@@ -261,7 +281,7 @@ export async function POST(req: Request) {
     })
   } catch (error: any) {
     console.error("[v0] ORDER CREATION FAILED:", error?.message)
-    return NextResponse.json({ error: error?.message || "创建订单失败" }, { status: 500 })
+    return NextResponse.json({ error: error?.message || "创建订单���败" }, { status: 500 })
   } finally {
     console.log("[v0] Order creation completed in", Date.now() - t0, "ms")
   }
