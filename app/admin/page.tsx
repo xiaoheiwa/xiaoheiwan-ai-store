@@ -14,6 +14,7 @@ import { AffiliateManager } from "@/components/affiliate-manager"
 import { CouponManager } from "@/components/coupon-manager"
 import { ReferrerManager } from "@/components/referrer-manager"
 import { WithdrawalManager } from "@/components/withdrawal-manager"
+import { ApplicationManager } from "@/components/application-manager"
 import { FinancePanel } from "@/components/finance-panel"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
@@ -2852,7 +2853,7 @@ const renderSettings = () => (
                     rows={3}
                     className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
-                  <p className="text-xs text-muted-foreground">显示为高亮提示块，留空则不显示。支持换行。</p>
+                  <p className="text-xs text-muted-foreground">显示为高亮提��块，留空则不显示。支持换行。</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3703,6 +3704,8 @@ case "coupons":
   return <CouponManager />
   case "referrers":
   return <ReferrerManager />
+  case "applications":
+  return <ApplicationManager />
   case "withdrawals":
   return <WithdrawalManager />
   case "affiliates":
@@ -3875,6 +3878,7 @@ case "coupons":
 {activeTab === "blog" && "博客管理"}
   {activeTab === "coupons" && "优惠码管理"}
   {activeTab === "referrers" && "推广用户管理"}
+  {activeTab === "applications" && "推广员申请"}
   {activeTab === "withdrawals" && "提现管理"}
   {activeTab === "affiliates" && "推广链接管理"}
                 {activeTab === "settings" && "系统设置"}
