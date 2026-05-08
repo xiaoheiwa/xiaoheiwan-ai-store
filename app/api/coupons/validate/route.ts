@@ -22,8 +22,37 @@ export async function POST(request: Request) {
       WHERE UPPER(code) = UPPER(${code}) AND status = 'active'
     `
 
+    // 如果找不到优惠码，尝试作为推广码查找
     if (coupons.length === 0) {
-      return NextResponse.json({ success: false, error: "优惠码不存在或已失效" }, { status: 400 })
+      const referrers = await sql`
+        SELECT id, username, referral_code, commission_rate 
+        FROM referrers 
+        WHERE UPPER(referral_code) = UPPER(${code}) AND status = 'active'
+      `
+      
+      if (referrers.length === 0) {
+        return NextResponse.json({ success: false, error: "优惠码不存在或已失效" }, { status: 400 })
+      }
+      
+      // 找到推广码，动态生成折扣
+      const referrer = referrers[0]
+      const userDiscount = Math.max(5, Math.floor(Number(referrer.commission_rate) / 2))
+      const discountAmount = (order_amount || 0) * (userDiscount / 100)
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          coupon_id: null,
+          code: referrer.referral_code,
+          discount_type: "percent",
+          discount_value: userDiscount,
+          discount_amount: discountAmount,
+          description: `推广优惠：${userDiscount}% 折扣（来自 ${referrer.username}）`,
+          referrer_id: referrer.id,
+          referral_code: referrer.referral_code,
+          is_referral: true
+        }
+      })
     }
 
     const coupon = coupons[0]
