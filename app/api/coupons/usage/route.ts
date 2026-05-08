@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         FROM coupon_usage u
         JOIN coupon_codes c ON u.coupon_id = c.id
         LEFT JOIN referrers r ON u.referrer_id = r.id
-        WHERE c.code = ${code.toUpperCase()}
+        WHERE UPPER(c.code) = UPPER(${code})
         ORDER BY u.used_at DESC
       `
     } else if (referrerId) {

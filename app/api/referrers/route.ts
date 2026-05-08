@@ -7,26 +7,31 @@ function getDb() {
 }
 
 // GET - 获取所有推广用户列表
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const sql = getDb()
+    const { searchParams } = new URL(request.url)
+    const all = searchParams.get("all") === "true"
     
-    const referrers = await sql`
-      SELECT 
-        id, 
-        username as name, 
-        email,
-        referral_code, 
-        commission_rate, 
-        status, 
-        total_orders,
-        total_earnings,
-        available_balance,
-        created_at
-      FROM referrers
-      WHERE status = 'active'
-      ORDER BY created_at DESC
-    `
+    // 如果 all=true 返回所有用户（包括禁用的），否则只返回活跃用户
+    const referrers = all
+      ? await sql`
+          SELECT 
+            id, username as name, email, referral_code, 
+            commission_rate, status, total_orders,
+            total_earnings, available_balance, created_at
+          FROM referrers
+          ORDER BY created_at DESC
+        `
+      : await sql`
+          SELECT 
+            id, username as name, email, referral_code, 
+            commission_rate, status, total_orders,
+            total_earnings, available_balance, created_at
+          FROM referrers
+          WHERE status = 'active'
+          ORDER BY created_at DESC
+        `
     
     return NextResponse.json({
       success: true,
@@ -104,6 +109,71 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: false,
       error: "创建推广用户失败: " + (error instanceof Error ? error.message : String(error))
+    }, { status: 500 })
+  }
+}
+
+// DELETE - 删除推广用户
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+
+    if (!id) {
+      return NextResponse.json({
+        success: false,
+        error: "缺少推广用户ID"
+      }, { status: 400 })
+    }
+
+    const sql = getDb()
+
+    // 删除用户（关联的优惠码 referrer_id 会自动设为 NULL）
+    await sql`DELETE FROM referrers WHERE id = ${id}`
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("[v0] 删除推广用户失败:", error)
+    return NextResponse.json({
+      success: false,
+      error: "删除推广用户失败: " + (error instanceof Error ? error.message : String(error))
+    }, { status: 500 })
+  }
+}
+
+// PATCH - 更新推广用户状态（仅支持状态切换，不支持信息修改）
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json()
+    const { id, status } = body
+
+    if (!id) {
+      return NextResponse.json({
+        success: false,
+        error: "缺少推广用户ID"
+      }, { status: 400 })
+    }
+
+    if (!status || !["active", "inactive"].includes(status)) {
+      return NextResponse.json({
+        success: false,
+        error: "无效的状态值"
+      }, { status: 400 })
+    }
+
+    const sql = getDb()
+    await sql`
+      UPDATE referrers 
+      SET status = ${status}, updated_at = NOW() 
+      WHERE id = ${id}
+    `
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("[v0] 更新推广用户状态失败:", error)
+    return NextResponse.json({
+      success: false,
+      error: "更新状态失败: " + (error instanceof Error ? error.message : String(error))
     }, { status: 500 })
   }
 }

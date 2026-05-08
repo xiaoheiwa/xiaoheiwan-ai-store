@@ -1,15 +1,31 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { 
   User, Mail, Lock, LogOut, TrendingUp, DollarSign, ShoppingCart, 
-  Ticket, Copy, Check, Calendar, Loader2, ArrowLeft
+  Ticket, Copy, Check, Calendar, Loader2, ArrowLeft, Wallet, 
+  CreditCard, AlertCircle, RefreshCw
 } from "lucide-react"
 import Link from "next/link"
 
@@ -47,6 +63,17 @@ interface UsageRecord {
   used_at: string
 }
 
+interface Withdrawal {
+  id: number
+  amount: number
+  payment_method: string
+  payment_account: string
+  status: string
+  admin_note: string | null
+  created_at: string
+  processed_at: string | null
+}
+
 interface Stats {
   total_usage: number
   total_order_amount: number
@@ -55,6 +82,12 @@ interface Stats {
   month_order_amount: number
   month_commission: number
 }
+
+const paymentMethods = [
+  { value: "alipay", label: "支付宝" },
+  { value: "wechat", label: "微信" },
+  { value: "bank", label: "银行卡" },
+]
 
 export default function ReferrerPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -68,20 +101,24 @@ export default function ReferrerPanel() {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [usageRecords, setUsageRecords] = useState<UsageRecord[]>([])
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
 
-  // 检查登录状态
-  useEffect(() => {
-    const token = localStorage.getItem("referrer_token")
-    if (token) {
-      loadData(token)
-    } else {
-      setLoading(false)
-    }
-  }, [])
+  // 提现表单
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false)
+  const [withdrawLoading, setWithdrawLoading] = useState(false)
+  const [withdrawForm, setWithdrawForm] = useState({
+    amount: "",
+    payment_method: "alipay",
+    payment_account: "",
+  })
+  const [withdrawError, setWithdrawError] = useState("")
+
+  // 获取 token
+  const getToken = () => localStorage.getItem("referrer_token")
 
   // 加载数据
-  async function loadData(token: string) {
+  const loadData = useCallback(async (token: string) => {
     try {
       const res = await fetch("/api/referrer/stats", {
         headers: { Authorization: `Bearer ${token}` }
@@ -94,6 +131,8 @@ export default function ReferrerPanel() {
         setUsageRecords(data.data.usage_records)
         setStats(data.data.stats)
         setIsLoggedIn(true)
+        // 同时加载提现记录
+        loadWithdrawals(token)
       } else {
         localStorage.removeItem("referrer_token")
         setIsLoggedIn(false)
@@ -103,7 +142,32 @@ export default function ReferrerPanel() {
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  // 加载提现记录
+  const loadWithdrawals = async (token: string) => {
+    try {
+      const res = await fetch("/api/referrer/withdraw", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.success) {
+        setWithdrawals(data.data)
+      }
+    } catch (err) {
+      console.error("加载提现记录失败:", err)
+    }
   }
+
+  // 检查登录状态
+  useEffect(() => {
+    const token = getToken()
+    if (token) {
+      loadData(token)
+    } else {
+      setLoading(false)
+    }
+  }, [loadData])
 
   // 登录
   async function handleLogin(e: React.FormEvent) {
@@ -141,7 +205,17 @@ export default function ReferrerPanel() {
     setUser(null)
     setCoupons([])
     setUsageRecords([])
+    setWithdrawals([])
     setStats(null)
+  }
+
+  // 刷新数据
+  function handleRefresh() {
+    const token = getToken()
+    if (token) {
+      setLoading(true)
+      loadData(token)
+    }
   }
 
   // 复制推广码
@@ -149,6 +223,79 @@ export default function ReferrerPanel() {
     navigator.clipboard.writeText(code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  // 提交提现申请
+  async function handleWithdraw() {
+    setWithdrawError("")
+
+    const amount = parseFloat(withdrawForm.amount)
+    if (!amount || amount <= 0) {
+      setWithdrawError("请输入有效的提现金额")
+      return
+    }
+
+    if (amount > (user?.available_balance || 0)) {
+      setWithdrawError(`提现金额超出可用余额 ¥${user?.available_balance?.toFixed(2)}`)
+      return
+    }
+
+    if (!withdrawForm.payment_account.trim()) {
+      setWithdrawError("请填写收款账号")
+      return
+    }
+
+    setWithdrawLoading(true)
+
+    try {
+      const token = getToken()
+      const res = await fetch("/api/referrer/withdraw", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount,
+          payment_method: withdrawForm.payment_method,
+          payment_account: withdrawForm.payment_account.trim(),
+        }),
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        setWithdrawDialogOpen(false)
+        setWithdrawForm({ amount: "", payment_method: "alipay", payment_account: "" })
+        // 刷新数据
+        if (token) loadData(token)
+      } else {
+        setWithdrawError(data.error || "提现申请失败")
+      }
+    } catch {
+      setWithdrawError("提现申请失败，请重试")
+    } finally {
+      setWithdrawLoading(false)
+    }
+  }
+
+  // 获取提现状态显示
+  function getWithdrawStatusBadge(status: string) {
+    switch (status) {
+      case "pending":
+        return <Badge variant="outline" className="text-yellow-500 border-yellow-500/30">待处理</Badge>
+      case "approved":
+        return <Badge variant="outline" className="text-green-500 border-green-500/30">已完成</Badge>
+      case "rejected":
+        return <Badge variant="outline" className="text-destructive border-destructive/30">已拒绝</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
+    }
+  }
+
+  // 获取收款方式显示
+  function getPaymentMethodLabel(method: string) {
+    return paymentMethods.find(m => m.value === method)?.label || method
   }
 
   if (loading) {
@@ -231,10 +378,15 @@ export default function ReferrerPanel() {
               <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            退出
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              退出
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -277,17 +429,17 @@ export default function ReferrerPanel() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">累计佣金</p>
-                  <p className="text-2xl font-bold">¥{stats?.total_commission?.toFixed(2) || "0.00"}</p>
+                  <p className="text-2xl font-bold">¥{user?.total_earnings?.toFixed(2) || "0.00"}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:border-accent/50 transition-colors" onClick={() => setWithdrawDialogOpen(true)}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-purple-500" />
+                  <Wallet className="w-6 h-6 text-purple-500" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">可提现余额</p>
@@ -329,6 +481,7 @@ export default function ReferrerPanel() {
           <TabsList className="mb-4">
             <TabsTrigger value="coupons">我的优惠码 ({coupons.length})</TabsTrigger>
             <TabsTrigger value="records">使用记录 ({usageRecords.length})</TabsTrigger>
+            <TabsTrigger value="withdrawals">提现记录 ({withdrawals.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="coupons">
@@ -374,7 +527,7 @@ export default function ReferrerPanel() {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-mono text-sm">{record.coupon_code}</span>
-                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground">-</span>
                             <span className="text-sm text-muted-foreground">{record.order_no}</span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -393,8 +546,146 @@ export default function ReferrerPanel() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="withdrawals">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">提现记录</CardTitle>
+                  <Button onClick={() => setWithdrawDialogOpen(true)}>
+                    <Wallet className="w-4 h-4 mr-2" />
+                    申请提现
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {withdrawals.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">暂无提现记录</p>
+                ) : (
+                  <div className="space-y-3">
+                    {withdrawals.map((withdrawal) => (
+                      <div key={withdrawal.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium">¥{withdrawal.amount.toFixed(2)}</span>
+                            {getWithdrawStatusBadge(withdrawal.status)}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <CreditCard className="w-3 h-3" />
+                            {getPaymentMethodLabel(withdrawal.payment_method)} - {withdrawal.payment_account}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(withdrawal.created_at).toLocaleString("zh-CN")}
+                          </div>
+                        </div>
+                        {withdrawal.admin_note && (
+                          <div className="text-right text-sm text-muted-foreground max-w-[200px]">
+                            {withdrawal.admin_note}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
+
+      {/* 提现对话框 */}
+      <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5" />
+              申请提现
+            </DialogTitle>
+            <DialogDescription>
+              当前可提现余额: <span className="text-accent font-medium">¥{user?.available_balance?.toFixed(2) || "0.00"}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {withdrawError && (
+            <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 px-4 py-2 rounded-lg">
+              <AlertCircle className="w-4 h-4" />
+              {withdrawError}
+            </div>
+          )}
+
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="amount">提现金额</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="输入提现金额"
+                value={withdrawForm.amount}
+                onChange={(e) => setWithdrawForm({ ...withdrawForm, amount: e.target.value })}
+              />
+              <Button
+                type="button"
+                variant="link"
+                className="w-fit p-0 h-auto text-xs"
+                onClick={() => setWithdrawForm({ ...withdrawForm, amount: String(user?.available_balance || 0) })}
+              >
+                全部提现
+              </Button>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>收款方式</Label>
+              <Select
+                value={withdrawForm.payment_method}
+                onValueChange={(v) => setWithdrawForm({ ...withdrawForm, payment_method: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method.value} value={method.value}>
+                      {method.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="payment_account">
+                收款账号
+                {withdrawForm.payment_method === "alipay" && " (支付宝账号)"}
+                {withdrawForm.payment_method === "wechat" && " (微信号)"}
+                {withdrawForm.payment_method === "bank" && " (银行卡号+开户行)"}
+              </Label>
+              <Input
+                id="payment_account"
+                placeholder={
+                  withdrawForm.payment_method === "alipay" ? "手机号或邮箱" :
+                  withdrawForm.payment_method === "wechat" ? "微信号" :
+                  "卡号 + 开户行名称"
+                }
+                value={withdrawForm.payment_account}
+                onChange={(e) => setWithdrawForm({ ...withdrawForm, payment_account: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleWithdraw} disabled={withdrawLoading}>
+              {withdrawLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              提交申请
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

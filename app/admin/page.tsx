@@ -13,6 +13,7 @@ import { BlogManager } from "@/components/blog-manager"
 import { AffiliateManager } from "@/components/affiliate-manager"
 import { CouponManager } from "@/components/coupon-manager"
 import { ReferrerManager } from "@/components/referrer-manager"
+import { WithdrawalManager } from "@/components/withdrawal-manager"
 import { FinancePanel } from "@/components/finance-panel"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
@@ -3228,7 +3229,7 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
             </div>
             <div className="flex gap-2">
               <Button onClick={editingCategory ? handleUpdateCategory : handleCreateCategory} disabled={categoryLoading}>
-                {categoryLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{"处理中..."}</> : (editingCategory ? "更新分类" : "创建分类")}
+                {categoryLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{"处理中..."}</> : (editingCategory ? "更新分类" : "���建分类")}
               </Button>
               <Button variant="outline" onClick={() => { setShowCategoryForm(false); setEditingCategory(null) }}>
                 {"取消"}
@@ -3289,7 +3290,7 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
         </div>
         <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "", activate_channel: "" }); setShowProductForm(true) }}>
           <Plus className="w-4 h-4 mr-2" />
-          添加产品
+          添���产品
         </Button>
       </div>
 
@@ -3702,6 +3703,8 @@ case "coupons":
   return <CouponManager />
   case "referrers":
   return <ReferrerManager />
+  case "withdrawals":
+  return <WithdrawalManager />
   case "affiliates":
   return <AffiliateManager adminToken={adminToken} />
       case "settings":
@@ -3872,6 +3875,7 @@ case "coupons":
 {activeTab === "blog" && "博客管理"}
   {activeTab === "coupons" && "优惠码管理"}
   {activeTab === "referrers" && "推广用户管理"}
+  {activeTab === "withdrawals" && "提现管理"}
   {activeTab === "affiliates" && "推广链接管理"}
                 {activeTab === "settings" && "系统设置"}
                 </h1>
