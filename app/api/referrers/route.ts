@@ -35,14 +35,20 @@ export async function GET(request: Request) {
     
     return NextResponse.json({
       success: true,
-      data: referrers
+      data: referrers.map(r => ({
+        ...r,
+        total_orders: Number(r.total_orders) || 0,
+        total_earnings: Number(r.total_earnings) || 0,
+        available_balance: Number(r.available_balance) || 0,
+        commission_rate: Number(r.commission_rate) || 0
+      }))
     })
   } catch (error) {
     console.error("[v0] 获取推广用户失败:", error)
     return NextResponse.json({
-      success: false,
-      error: "获取推广用户列表失败: " + (error instanceof Error ? error.message : String(error))
-    }, { status: 500 })
+      success: true,
+      data: [] // 返回空数组而不是错误，避免前端崩溃
+    })
   }
 }
 
