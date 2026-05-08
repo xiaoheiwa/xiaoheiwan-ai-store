@@ -61,14 +61,17 @@ function PurchaseContent() {
   // 优惠码相关状态
   const [couponCode, setCouponCode] = useState("")
   const [couponLoading, setCouponLoading] = useState(false)
-  const [appliedCoupon, setAppliedCoupon] = useState<{
-    coupon_id: string
-    code: string
-    discount_type: string
-    discount_value: number
-    discount_amount: number
-    description: string
-  } | null>(null)
+const [appliedCoupon, setAppliedCoupon] = useState<{
+  coupon_id: string | null
+  code: string
+  discount_type: string
+  discount_value: number
+  discount_amount: number
+  description: string
+  referrer_id?: number
+  referral_code?: string
+  is_referral?: boolean
+} | null>(null)
 
   // Backwards compat: fallback price/stock for when no products exist
   const [fallbackPrice, setFallbackPrice] = useState(99)
@@ -201,10 +204,14 @@ function PurchaseContent() {
       
       const data = await res.json()
       
-      if (data.success) {
-        setAppliedCoupon(data.data)
-        setCouponCode("")
-        setMessage({ text: `优惠码已应用：${data.data.description}`, type: "success" })
+if (data.success) {
+  setAppliedCoupon(data.data)
+  setCouponCode("")
+  // 如果是推广码，存储到 localStorage 以便订单创建时使用
+  if (data.data.is_referral && data.data.referral_code) {
+    localStorage.setItem("referral_code", data.data.referral_code)
+  }
+  setMessage({ text: `优惠码已应用：${data.data.description}`, type: "success" })
       } else {
         setMessage({ text: data.error || "优惠码无效", type: "error" })
       }
