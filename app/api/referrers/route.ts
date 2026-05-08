@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import bcrypt from "bcryptjs"
 
 function getDb() {
   return neon(process.env.DATABASE_URL!)
@@ -44,12 +45,19 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { username, referral_code, commission_rate, email } = body
+    const { username, referral_code, commission_rate, email, password } = body
 
-    if (!username || !email || !referral_code || !commission_rate) {
+    if (!username || !email || !password || !referral_code || !commission_rate) {
       return NextResponse.json({
         success: false,
-        error: "缺少必填字段（用户名、邮箱、推广码、佣金比例）"
+        error: "缺少必填字段（用户名、邮箱、密码、推广码、佣金比例）"
+      }, { status: 400 })
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json({
+        success: false,
+        error: "密码至少需要6位"
       }, { status: 400 })
     }
 
@@ -66,10 +74,24 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
+    // 检查邮箱是否已存在
+    const existingEmail = await sql`
+      SELECT id FROM referrers WHERE email = ${email}
+    `
+    if (existingEmail.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: "该邮箱已被注册"
+      }, { status: 400 })
+    }
+
+    // 哈希密码
+    const password_hash = await bcrypt.hash(password, 10)
+
     // 创建推广用户
     const result = await sql`
-      INSERT INTO referrers (username, referral_code, commission_rate, email, status)
-      VALUES (${username}, ${referral_code}, ${parseFloat(commission_rate)}, ${email}, 'active')
+      INSERT INTO referrers (username, referral_code, commission_rate, email, password_hash, status)
+      VALUES (${username}, ${referral_code}, ${parseFloat(commission_rate)}, ${email}, ${password_hash}, 'active')
       RETURNING id, username as name, referral_code, commission_rate, status, created_at
     `
 
