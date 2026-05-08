@@ -627,7 +627,7 @@ body: JSON.stringify({
                   <input
                     type="text"
                     value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    onChange={(e) => setCouponCode(e.target.value)}
                     className="flex-1 px-5 py-4 bg-input border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all duration-200"
                     placeholder="输入优惠码"
                   />
