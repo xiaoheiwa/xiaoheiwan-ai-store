@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 import bcrypt from "bcryptjs"
+import { sendPromoterApprovalEmail, sendPromoterRejectionEmail } from "@/lib/resend"
 
 function getDb() {
   return neon(process.env.DATABASE_URL!)
@@ -133,15 +134,31 @@ export async function POST(request: Request) {
         WHERE id = ${id}
       `
 
-      // TODO: 发送邮件通知用户（包含登录密码）
-      // 这里可以集成邮件服务
+      // 发送邮件通知用户
+      const loginUrl = process.env.NEXT_PUBLIC_BASE_URL 
+        ? `${process.env.NEXT_PUBLIC_BASE_URL}/referrer`
+        : "https://upgrade.xiaoheiwan.com/referrer"
+      
+      try {
+        await sendPromoterApprovalEmail({
+          to: application.email,
+          username: application.username,
+          password: password,
+          referralCode: finalCode,
+          commissionRate: commission_rate,
+          loginUrl: loginUrl
+        })
+      } catch (emailError) {
+        console.error("[v0] 发送批准邮件失败:", emailError)
+        // 邮件发送失败不影响审核结果
+      }
 
       return NextResponse.json({
         success: true,
-        message: "申请已批准",
+        message: "申请已批准，通知邮件已发送",
         data: {
           email: application.email,
-          password: password, // 返回给管理员，用于手动通知用户
+          password: password,
           referral_code: finalCode,
           commission_rate: commission_rate
         }
@@ -154,9 +171,21 @@ export async function POST(request: Request) {
         WHERE id = ${id}
       `
 
+      // 发送拒绝邮件通知用户
+      try {
+        await sendPromoterRejectionEmail({
+          to: application.email,
+          username: application.username,
+          reason: admin_note || undefined
+        })
+      } catch (emailError) {
+        console.error("[v0] 发送拒绝邮件失败:", emailError)
+        // 邮件发送失败不影响审核结果
+      }
+
       return NextResponse.json({
         success: true,
-        message: "申请已拒绝"
+        message: "申请已拒绝，通知邮件已发送"
       })
     }
   } catch (error) {
