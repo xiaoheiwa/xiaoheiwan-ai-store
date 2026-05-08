@@ -283,9 +283,10 @@ body: JSON.stringify({
   regionName: selectedRegion?.name || null,
   couponId: appliedCoupon?.coupon_id || null,
   couponCode: appliedCoupon?.code || null,
-  discountAmount: appliedCoupon?.discount_amount || 0,
+  discountAmount: discountAmount,
+  referralCode: localStorage.getItem("referral_code") || null,
   }),
-  })
+      })
 
         const data = await response.json()
 
@@ -321,7 +322,8 @@ body: JSON.stringify({
   regionName: selectedRegion?.name || null,
   couponId: appliedCoupon?.coupon_id || null,
   couponCode: appliedCoupon?.code || null,
-  discountAmount: appliedCoupon?.discount_amount || 0,
+  discountAmount: discountAmount,
+  referralCode: localStorage.getItem("referral_code") || null,
   }),
       })
 

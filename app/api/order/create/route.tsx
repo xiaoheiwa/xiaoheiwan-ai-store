@@ -30,9 +30,9 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const { email, paymentMethod, amount, originalAmount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, clientip, couponId, couponCode, discountAmount = 0 } = body
+    const { email, paymentMethod, amount, originalAmount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, clientip, couponId, couponCode, discountAmount = 0, referralCode, referrerId } = body
     console.log("[v0] Order creation request - paymentMethod:", paymentMethod, "type:", typeof paymentMethod)
-    console.log("[v0] Order creation request:", { email, paymentMethod, amount, originalAmount, productId, productName, quantity, deliveryType, selectedRegion, regionName, hasQueryPassword: !!queryPassword, clientip, couponId, couponCode, discountAmount })
+    console.log("[v0] Order creation request:", { email, paymentMethod, amount, originalAmount, productId, productName, quantity, deliveryType, selectedRegion, regionName, hasQueryPassword: !!queryPassword, clientip, couponId, couponCode, discountAmount, referralCode, referrerId })
     
     // 确定支付渠道显示名称
     let payChannel = "其他"
@@ -76,9 +76,11 @@ export async function POST(req: Request) {
     
     // 验证优惠码折扣
     let verifiedDiscount = 0
+    let verifiedReferrerId = null
+    const sqlConn = neon(process.env.DATABASE_URL!)
+    
     if (couponId && discountAmount > 0) {
-      // 验证优惠码是否有效
-      const sqlConn = neon(process.env.DATABASE_URL!)
+      // 方式1：通过优惠码ID验证
       const couponResult = await sqlConn`
         SELECT * FROM coupon_codes 
         WHERE id = ${couponId} AND status = 'active'
@@ -95,6 +97,41 @@ export async function POST(req: Request) {
           }
         }
         verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+        verifiedReferrerId = coupon.referrer_id
+      }
+    } else if (referralCode && discountAmount > 0) {
+      // 方式2：通过推广码验证（推广链接进入但无专属优惠码的情况）
+      const referrerResult = await sqlConn`
+        SELECT id, commission_rate FROM referrers 
+        WHERE UPPER(referral_code) = UPPER(${referralCode}) AND status = 'active'
+      `
+      if (referrerResult.length > 0) {
+        const referrer = referrerResult[0]
+        verifiedReferrerId = referrer.id
+        // 动态计算折扣：佣金比例的一半作为用户折扣，最少5%
+        const userDiscount = Math.max(5, Math.floor(Number(referrer.commission_rate) / 2))
+        verifiedDiscount = expectedSubtotal * (userDiscount / 100)
+        verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+        console.log("[v0] Referral discount applied:", { referralCode, commissionRate: referrer.commission_rate, userDiscount, verifiedDiscount })
+      }
+    } else if (couponCode && discountAmount > 0) {
+      // 方式3：通过优惠码code验证（兼容旧逻辑）
+      const couponResult = await sqlConn`
+        SELECT * FROM coupon_codes 
+        WHERE UPPER(code) = UPPER(${couponCode}) AND status = 'active'
+      `
+      if (couponResult.length > 0) {
+        const coupon = couponResult[0]
+        if (coupon.discount_type === "fixed") {
+          verifiedDiscount = Math.min(Number(coupon.discount_value), expectedSubtotal)
+        } else if (coupon.discount_type === "percent") {
+          verifiedDiscount = expectedSubtotal * (Number(coupon.discount_value) / 100)
+          if (coupon.max_discount_amount && verifiedDiscount > Number(coupon.max_discount_amount)) {
+            verifiedDiscount = Number(coupon.max_discount_amount)
+          }
+        }
+        verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+        verifiedReferrerId = coupon.referrer_id
       }
     }
     

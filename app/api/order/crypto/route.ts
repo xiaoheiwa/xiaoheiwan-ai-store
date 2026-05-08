@@ -40,7 +40,7 @@ async function getUsdtRate(): Promise<number> {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
-    const { email, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName } = body
+    const { email, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, couponId, couponCode, discountAmount = 0, referralCode } = body
 
     if (!email || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
@@ -71,9 +71,68 @@ export async function POST(req: Request) {
     
     // Calculate expected price based on tier pricing and quantity
     const unitPrice = getUnitPrice(Number(product.price), product.price_tiers, quantity)
-    const expectedAmount = Number((unitPrice * quantity).toFixed(2))
+    const expectedSubtotal = Number((unitPrice * quantity).toFixed(2))
+    
+    // 验证优惠码或推广码折扣
+    let verifiedDiscount = 0
+    let verifiedReferrerId = null
+    
+    if (couponId && discountAmount > 0) {
+      // 通过优惠码ID验证
+      const couponResult = await sql`
+        SELECT * FROM coupon_codes 
+        WHERE id = ${couponId} AND status = 'active'
+      `
+      if (couponResult.length > 0) {
+        const coupon = couponResult[0]
+        if (coupon.discount_type === "fixed") {
+          verifiedDiscount = Math.min(Number(coupon.discount_value), expectedSubtotal)
+        } else if (coupon.discount_type === "percent") {
+          verifiedDiscount = expectedSubtotal * (Number(coupon.discount_value) / 100)
+          if (coupon.max_discount_amount && verifiedDiscount > Number(coupon.max_discount_amount)) {
+            verifiedDiscount = Number(coupon.max_discount_amount)
+          }
+        }
+        verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+        verifiedReferrerId = coupon.referrer_id
+      }
+    } else if (referralCode && discountAmount > 0) {
+      // 通过推广码验证（推广链接进入但无专属优惠码的情况）
+      const referrerResult = await sql`
+        SELECT id, commission_rate FROM referrers 
+        WHERE UPPER(referral_code) = UPPER(${referralCode}) AND status = 'active'
+      `
+      if (referrerResult.length > 0) {
+        const referrer = referrerResult[0]
+        verifiedReferrerId = referrer.id
+        const userDiscount = Math.max(5, Math.floor(Number(referrer.commission_rate) / 2))
+        verifiedDiscount = expectedSubtotal * (userDiscount / 100)
+        verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+      }
+    } else if (couponCode && discountAmount > 0) {
+      // 通过优惠码code验证
+      const couponResult = await sql`
+        SELECT * FROM coupon_codes 
+        WHERE UPPER(code) = UPPER(${couponCode}) AND status = 'active'
+      `
+      if (couponResult.length > 0) {
+        const coupon = couponResult[0]
+        if (coupon.discount_type === "fixed") {
+          verifiedDiscount = Math.min(Number(coupon.discount_value), expectedSubtotal)
+        } else if (coupon.discount_type === "percent") {
+          verifiedDiscount = expectedSubtotal * (Number(coupon.discount_value) / 100)
+          if (coupon.max_discount_amount && verifiedDiscount > Number(coupon.max_discount_amount)) {
+            verifiedDiscount = Number(coupon.max_discount_amount)
+          }
+        }
+        verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+        verifiedReferrerId = coupon.referrer_id
+      }
+    }
+    
+    const expectedAmount = Math.max(0, Number((expectedSubtotal - verifiedDiscount).toFixed(2)))
     if (Math.abs(Number(amount) - expectedAmount) > 0.01) {
-      console.error("[v0] SECURITY: Crypto price tampering detected!", { claimed: amount, expected: expectedAmount, productId, unitPrice, quantity, priceTiers: product.price_tiers })
+      console.error("[v0] SECURITY: Crypto price tampering detected!", { claimed: amount, expected: expectedAmount, productId, unitPrice, quantity, priceTiers: product.price_tiers, discount: verifiedDiscount })
       return NextResponse.json({ error: "价格验证失败" }, { status: 400 })
     }
     const verifiedAmount = expectedAmount
