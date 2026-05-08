@@ -450,29 +450,51 @@ export default function ReferrerPanel() {
           </Card>
         </div>
 
-        {/* 推广码卡片 */}
+{/* 推广链接卡片 */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Ticket className="w-5 h-5" />
-              我的推广码
+              我的推广链接
             </CardTitle>
-            <CardDescription>分享您的推广码，用户使用后您将获得佣金</CardDescription>
+            <CardDescription>分享您的专属链接，用户点击后购买将自动应用优惠，您获得佣金</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground mb-1">您的推广码</p>
-                <p className="text-2xl font-mono font-bold text-accent">{user?.referral_code}</p>
+          <CardContent className="space-y-4">
+            {/* 推广链接 */}
+            <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl">
+              <p className="text-sm text-muted-foreground mb-2">专属推广链接（推荐分享）</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-sm font-mono bg-muted px-3 py-2 rounded-lg truncate">
+                  {typeof window !== "undefined" ? `${window.location.origin}/ref/${user?.referral_code?.toLowerCase()}` : `/ref/${user?.referral_code?.toLowerCase()}`}
+                </code>
+                <Button 
+                  onClick={() => copyCode(`${window.location.origin}/ref/${user?.referral_code?.toLowerCase()}`)} 
+                  variant="default"
+                  size="sm"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
               </div>
-              <Button onClick={() => copyCode(user?.referral_code || "")} variant="outline">
-                {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                {copied ? "已复制" : "复制"}
-              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                用户点击此链接后，购买时将自动享受优惠，无需手动输入优惠码
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground mt-4">
-              当前佣金比例: <span className="text-accent font-medium">{user?.commission_rate}%</span>
-            </p>
+            
+            {/* 推广码 */}
+            <div className="p-4 bg-muted/50 rounded-xl">
+              <p className="text-sm text-muted-foreground mb-2">推广码</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xl font-mono font-bold text-foreground">{user?.referral_code}</p>
+                <Button onClick={() => copyCode(user?.referral_code || "")} variant="ghost" size="sm">
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between text-sm pt-2">
+              <span className="text-muted-foreground">当前佣金比例</span>
+              <span className="text-accent font-medium">{user?.commission_rate}%</span>
+            </div>
           </CardContent>
         </Card>
 

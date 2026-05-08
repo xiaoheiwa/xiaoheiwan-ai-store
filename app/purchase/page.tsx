@@ -76,7 +76,40 @@ function PurchaseContent() {
 
   useEffect(() => {
     fetchData()
+    // 检查是否有推广链接存储的优惠信息
+    checkReferralDiscount()
   }, [])
+
+  // 检查推广链接优惠
+  const checkReferralDiscount = () => {
+    try {
+      const referralInfo = localStorage.getItem("referral_info")
+      if (referralInfo) {
+        const info = JSON.parse(referralInfo)
+        // 检查是否过期
+        if (info.expires && info.expires > Date.now()) {
+          // 自动应用推广优惠
+          const discountDesc = info.discount_type === "fixed" 
+            ? `立减 ¥${info.discount_value}` 
+            : `${info.discount_value}% 折扣`
+          setAppliedCoupon({
+            coupon_id: info.coupon_id || "",
+            code: info.coupon_code || localStorage.getItem("referral_code") || "",
+            discount_type: info.discount_type,
+            discount_value: info.discount_value,
+            discount_amount: 0, // 会在计算时更新
+            description: `推广优惠：${discountDesc}（来自 ${info.referrer_name}）`
+          })
+        } else {
+          // 已过期，清除
+          localStorage.removeItem("referral_code")
+          localStorage.removeItem("referral_info")
+        }
+      }
+    } catch {
+      // 忽略解析错误
+    }
+  }
 
   const fetchData = async () => {
     try {
@@ -132,8 +165,14 @@ function PurchaseContent() {
   const basePrice = selectedRegion?.price ?? selectedProduct?.price ?? fallbackPrice
   const unitPrice = selectedProduct ? getUnitPrice({ ...selectedProduct, price: basePrice }, quantity) : fallbackPrice
   const subtotalPrice = Number((unitPrice * quantity).toFixed(2))
-  // 应用优惠码折扣
-  const discountAmount = appliedCoupon ? appliedCoupon.discount_amount : 0
+  // 应用优惠码折扣（动态计算）
+  const discountAmount = appliedCoupon 
+    ? (appliedCoupon.discount_amount > 0 
+        ? appliedCoupon.discount_amount 
+        : (appliedCoupon.discount_type === "fixed" 
+            ? Math.min(appliedCoupon.discount_value, subtotalPrice)
+            : Number((subtotalPrice * appliedCoupon.discount_value / 100).toFixed(2))))
+    : 0
   const currentPrice = Math.max(0, Number((subtotalPrice - discountAmount).toFixed(2)))
   const currentOriginalPrice = selectedProduct?.original_price || null
   const stockCount = isManual ? 999 : (selectedProduct ? Number(selectedProduct.stock_count) : fallbackStock)
@@ -179,6 +218,9 @@ function PurchaseContent() {
   // 移除优惠码
   const removeCoupon = () => {
     setAppliedCoupon(null)
+    // 同时清除推广链接存储的信息
+    localStorage.removeItem("referral_code")
+    localStorage.removeItem("referral_info")
     setMessage(null)
   }
 
