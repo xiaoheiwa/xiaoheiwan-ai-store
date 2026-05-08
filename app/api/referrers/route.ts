@@ -147,11 +147,11 @@ export async function DELETE(request: Request) {
   }
 }
 
-// PATCH - 更新推广用户状态（仅支持状态切换，不支持信息修改）
+// PATCH - 更新推广用户（支持修改状态和佣金比例）
 export async function PATCH(request: Request) {
   try {
     const body = await request.json()
-    const { id, status } = body
+    const { id, status, commission_rate } = body
 
     if (!id) {
       return NextResponse.json({
@@ -160,26 +160,70 @@ export async function PATCH(request: Request) {
       }, { status: 400 })
     }
 
-    if (!status || !["active", "inactive"].includes(status)) {
-      return NextResponse.json({
-        success: false,
-        error: "无效的状态值"
-      }, { status: 400 })
-    }
-
     const sql = getDb()
-    await sql`
-      UPDATE referrers 
-      SET status = ${status}, updated_at = NOW() 
-      WHERE id = ${id}
-    `
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("[v0] 更新推广用户状态失败:", error)
+    
+    // 如果只修改状态
+    if (status && !commission_rate) {
+      if (!["active", "inactive"].includes(status)) {
+        return NextResponse.json({
+          success: false,
+          error: "无效的状态值"
+        }, { status: 400 })
+      }
+      
+      await sql`
+        UPDATE referrers 
+        SET status = ${status}, updated_at = NOW() 
+        WHERE id = ${id}
+      `
+      
+      return NextResponse.json({ success: true })
+    }
+    
+    // 如果修改佣金比例
+    if (commission_rate !== undefined && commission_rate !== null) {
+      const rate = parseFloat(commission_rate)
+      if (isNaN(rate) || rate < 0 || rate > 100) {
+        return NextResponse.json({
+          success: false,
+          error: "佣金比例必须在 0-100 之间"
+        }, { status: 400 })
+      }
+      
+      // 如果同时修改状态
+      if (status) {
+        if (!["active", "inactive"].includes(status)) {
+          return NextResponse.json({
+            success: false,
+            error: "无效的状态值"
+          }, { status: 400 })
+        }
+        
+        await sql`
+          UPDATE referrers 
+          SET commission_rate = ${rate}, status = ${status}, updated_at = NOW() 
+          WHERE id = ${id}
+        `
+      } else {
+        await sql`
+          UPDATE referrers 
+          SET commission_rate = ${rate}, updated_at = NOW() 
+          WHERE id = ${id}
+        `
+      }
+      
+      return NextResponse.json({ success: true })
+    }
+    
     return NextResponse.json({
       success: false,
-      error: "更新状态失败: " + (error instanceof Error ? error.message : String(error))
+      error: "没有提供要修改的字段"
+    }, { status: 400 })
+  } catch (error) {
+    console.error("[v0] 更新推广用户失败:", error)
+    return NextResponse.json({
+      success: false,
+      error: "更新失败: " + (error instanceof Error ? error.message : String(error))
     }, { status: 500 })
   }
 }
