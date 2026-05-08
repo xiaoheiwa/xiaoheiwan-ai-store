@@ -16,10 +16,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "请输入优惠码" }, { status: 400 })
     }
 
-    // 查找优惠码
+    // 查找优惠码（不区分大小写）
     const coupons = await sql`
       SELECT * FROM coupon_codes 
-      WHERE code = ${code.toUpperCase()} AND status = 'active'
+      WHERE UPPER(code) = UPPER(${code}) AND status = 'active'
     `
 
     if (coupons.length === 0) {
