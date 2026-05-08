@@ -46,11 +46,13 @@ export function ReferrerManager() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedReferrer, setSelectedReferrer] = useState<Referrer | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
+  const [editCommissionRate, setEditCommissionRate] = useState("")
 
   const [form, setForm] = useState({
     username: "",
@@ -187,6 +189,43 @@ export function ReferrerManager() {
     }
   }
 
+  // 编辑佣金比例
+  const handleEditCommission = async () => {
+    if (!selectedReferrer) return
+    
+    const rate = parseFloat(editCommissionRate)
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      setError("佣金比例需在0-100之间")
+      return
+    }
+
+    setCreating(true)
+    try {
+      const res = await fetch("/api/referrers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedReferrer.id,
+          commission_rate: rate,
+        }),
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        setEditDialogOpen(false)
+        setError("")
+        loadReferrers()
+      } else {
+        setError(data.error || "更新失败")
+      }
+    } catch (err) {
+      setError("更新失败，请重试")
+      console.error("编辑佣金失败:", err)
+    } finally {
+      setCreating(false)
+    }
+  }
+
   // 切换状态
   const toggleStatus = async (referrer: Referrer) => {
     const newStatus = referrer.status === "active" ? "inactive" : "active"
@@ -229,7 +268,7 @@ export function ReferrerManager() {
               推广用户管理
             </CardTitle>
             <CardDescription>
-              管理推广用户及其佣金设置。注意：推广用户创建后信息不可修改，如需变更请删除后重新创建。
+              管理推广用户及其佣金设置。创建后可以随时修改佣金比例。
             </CardDescription>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -458,6 +497,18 @@ export function ReferrerManager() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => {
+                          setSelectedReferrer(referrer)
+                          setEditCommissionRate(referrer.commission_rate.toString())
+                          setEditDialogOpen(true)
+                        }}
+                        title="编辑佣金比例"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => window.open("/referrer", "_blank")}
                         title="查看推广员面板"
                       >
@@ -500,6 +551,62 @@ export function ReferrerManager() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* 编辑佣金对话框 */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>编辑佣金比例</DialogTitle>
+              <DialogDescription>
+                修改 {selectedReferrer?.name} 的佣金比例
+              </DialogDescription>
+            </DialogHeader>
+
+            {error && (
+              <div className="bg-destructive/10 text-destructive text-sm px-4 py-2 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-4 py-4">
+              <div>
+                <Label className="text-muted-foreground text-sm">当前佣金比例</Label>
+                <p className="text-2xl font-bold text-accent mt-1">{selectedReferrer?.commission_rate}%</p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="new_rate">新的佣金比例 (%)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="new_rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="输入0-100之间的数值"
+                    value={editCommissionRate}
+                    onChange={(e) => setEditCommissionRate(e.target.value)}
+                  />
+                  <span className="text-muted-foreground">%</span>
+                </div>
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                用户折扣将自动调整为: {Math.max(5, Math.floor(parseFloat(editCommissionRate || "0") / 2))}%
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={handleEditCommission} disabled={creating}>
+                {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                保存修改
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   )
