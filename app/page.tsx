@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Shield, Zap, CheckCircle, ArrowRight, Sparkles, Newspaper, BookOpen, Search, Package, Link2, LayoutGrid, Send } from "lucide-react"
+import { Shield, Zap, CheckCircle, ArrowRight, Sparkles, Newspaper, BookOpen, Search, Package, Link2, LayoutGrid, Send, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
 import Logo from "@/components/logo"
 
@@ -341,6 +341,39 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* 推广员申请CTA */}
+          <div
+            className="mb-16 max-w-2xl mx-auto opacity-0 animate-fade-up delay-400"
+            style={{ animationFillMode: "forwards" }}
+          >
+            <Link
+              href="/become-promoter"
+              className="group glass-card card-shadow rounded-2xl p-6 flex items-start gap-4 hover:border-accent/50 transition-all"
+            >
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <TrendingUp className="w-7 h-7 text-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-semibold text-foreground text-lg">{"成为推广员"}</h3>
+                  <span className="px-2.5 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">{"赚取佣金"}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">{"分享推广链接，每笔订单赚取高额佣金。实时追踪数据，自动结算，快速提现。"}</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-accent" />
+                    <span>{"灵活佣金"}</span>
+                  </div>
+                  <span className="text-border">{"•"}</span>
+                  <span>{"无需投资"}</span>
+                  <span className="text-border">{"•"}</span>
+                  <span>{"快速提现"}</span>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 group-hover:text-accent transition-all shrink-0" />
+            </Link>
           </div>
 
           {/* Features */}
