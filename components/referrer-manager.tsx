@@ -36,6 +36,7 @@ export function ReferrerManager() {
   const [form, setForm] = useState({
     username: "",
     email: "",
+    password: "",
     referral_code: "",
     commission_rate: "10",
   })
@@ -68,6 +69,10 @@ export function ReferrerManager() {
       setError("请填写邮箱地址")
       return
     }
+    if (!form.password || form.password.length < 6) {
+      setError("密码至少6位")
+      return
+    }
     if (!form.referral_code.trim()) {
       setError("请填写推广码")
       return
@@ -85,6 +90,7 @@ export function ReferrerManager() {
         body: JSON.stringify({
           username: form.username.trim(),
           email: form.email.trim(),
+          password: form.password,
           referral_code: form.referral_code.trim(),
           commission_rate: parseFloat(form.commission_rate),
         }),
@@ -92,7 +98,7 @@ export function ReferrerManager() {
 
       const data = await res.json()
       if (data.success) {
-        setForm({ username: "", email: "", referral_code: "", commission_rate: "10" })
+        setForm({ username: "", email: "", password: "", referral_code: "", commission_rate: "10" })
         setDialogOpen(false)
         loadReferrers()
       } else {
@@ -154,6 +160,18 @@ export function ReferrerManager() {
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="password">登录密码</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="至少6位"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">推广用户登录后台查看佣金时使用</p>
               </div>
 
               <div className="grid gap-2">
