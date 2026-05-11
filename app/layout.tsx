@@ -188,7 +188,14 @@ export default function RootLayout({
               description: "OpenAI ChatGPT Plus会员充值激活码，支持GPT-4o等最新模型，无需信用卡，快速升级",
               brand: { "@type": "Brand", name: "OpenAI" },
               category: "AI订阅服务",
-              image: `${BASE_URL}/og-image.jpg`,
+              image: [
+                {
+                  "@type": "ImageObject",
+                  url: `${BASE_URL}/og-image.jpg`,
+                  width: 1200,
+                  height: 630,
+                },
+              ],
               offers: {
                 "@type": "Offer",
                 url: `${BASE_URL}/purchase`,
@@ -198,6 +205,39 @@ export default function RootLayout({
                 availability: "https://schema.org/InStock",
                 itemCondition: "https://schema.org/NewCondition",
                 seller: { "@id": `${BASE_URL}/#organization` },
+                hasMerchantReturnPolicy: {
+                  "@type": "MerchantReturnPolicy",
+                  applicableCountry: "CN",
+                  returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+                  merchantReturnDays: 0,
+                },
+                shippingDetails: {
+                  "@type": "OfferShippingDetails",
+                  shippingRate: {
+                    "@type": "MonetaryAmount",
+                    value: "0",
+                    currency: "CNY",
+                  },
+                  deliveryTime: {
+                    "@type": "ShippingDeliveryTime",
+                    handlingTime: {
+                      "@type": "QuantitativeValue",
+                      minValue: 0,
+                      maxValue: 0,
+                      unitCode: "MIN",
+                    },
+                    transitTime: {
+                      "@type": "QuantitativeValue",
+                      minValue: 0,
+                      maxValue: 5,
+                      unitCode: "MIN",
+                    },
+                  },
+                  shippingDestination: {
+                    "@type": "DefinedRegion",
+                    addressCountry: "CN",
+                  },
+                },
               },
               aggregateRating: {
                 "@type": "AggregateRating",
@@ -228,7 +268,14 @@ export default function RootLayout({
               description: "Anthropic Claude Pro会员订阅激活码，享受5倍用量和优先访问，自动秒开通",
               brand: { "@type": "Brand", name: "Anthropic" },
               category: "AI订阅服务",
-              image: `${BASE_URL}/og-image.jpg`,
+              image: [
+                {
+                  "@type": "ImageObject",
+                  url: `${BASE_URL}/og-image.jpg`,
+                  width: 1200,
+                  height: 630,
+                },
+              ],
               offers: {
                 "@type": "Offer",
                 url: `${BASE_URL}/purchase`,
@@ -238,6 +285,39 @@ export default function RootLayout({
                 availability: "https://schema.org/InStock",
                 itemCondition: "https://schema.org/NewCondition",
                 seller: { "@id": `${BASE_URL}/#organization` },
+                hasMerchantReturnPolicy: {
+                  "@type": "MerchantReturnPolicy",
+                  applicableCountry: "CN",
+                  returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+                  merchantReturnDays: 0,
+                },
+                shippingDetails: {
+                  "@type": "OfferShippingDetails",
+                  shippingRate: {
+                    "@type": "MonetaryAmount",
+                    value: "0",
+                    currency: "CNY",
+                  },
+                  deliveryTime: {
+                    "@type": "ShippingDeliveryTime",
+                    handlingTime: {
+                      "@type": "QuantitativeValue",
+                      minValue: 0,
+                      maxValue: 0,
+                      unitCode: "MIN",
+                    },
+                    transitTime: {
+                      "@type": "QuantitativeValue",
+                      minValue: 0,
+                      maxValue: 5,
+                      unitCode: "MIN",
+                    },
+                  },
+                  shippingDestination: {
+                    "@type": "DefinedRegion",
+                    addressCountry: "CN",
+                  },
+                },
               },
               aggregateRating: {
                 "@type": "AggregateRating",
@@ -268,7 +348,14 @@ export default function RootLayout({
               description: "ChatGPT Team团队版自动邀请兑换，无需信用卡即可加入Team工作区，享受更高用量",
               brand: { "@type": "Brand", name: "OpenAI" },
               category: "AI订阅服务",
-              image: `${BASE_URL}/og-image.jpg`,
+              image: [
+                {
+                  "@type": "ImageObject",
+                  url: `${BASE_URL}/og-image.jpg`,
+                  width: 1200,
+                  height: 630,
+                },
+              ],
               offers: {
                 "@type": "Offer",
                 url: `${BASE_URL}/purchase`,
@@ -278,6 +365,39 @@ export default function RootLayout({
                 availability: "https://schema.org/InStock",
                 itemCondition: "https://schema.org/NewCondition",
                 seller: { "@id": `${BASE_URL}/#organization` },
+                hasMerchantReturnPolicy: {
+                  "@type": "MerchantReturnPolicy",
+                  applicableCountry: "CN",
+                  returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+                  merchantReturnDays: 0,
+                },
+                shippingDetails: {
+                  "@type": "OfferShippingDetails",
+                  shippingRate: {
+                    "@type": "MonetaryAmount",
+                    value: "0",
+                    currency: "CNY",
+                  },
+                  deliveryTime: {
+                    "@type": "ShippingDeliveryTime",
+                    handlingTime: {
+                      "@type": "QuantitativeValue",
+                      minValue: 0,
+                      maxValue: 0,
+                      unitCode: "MIN",
+                    },
+                    transitTime: {
+                      "@type": "QuantitativeValue",
+                      minValue: 0,
+                      maxValue: 5,
+                      unitCode: "MIN",
+                    },
+                  },
+                  shippingDestination: {
+                    "@type": "DefinedRegion",
+                    addressCountry: "CN",
+                  },
+                },
               },
               aggregateRating: {
                 "@type": "AggregateRating",
