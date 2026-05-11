@@ -45,8 +45,17 @@ async function hmacSha1(key: Uint8Array, message: Uint8Array): Promise<Uint8Arra
 
 async function generateTOTP(secret: string, timeStep = 30, digits = 6): Promise<string> {
   try {
+    console.log("[v0] generateTOTP called with secret length:", secret.length)
     const key = base32Decode(secret)
+    console.log("[v0] base32Decode result length:", key.length)
+    
+    if (key.length === 0) {
+      console.log("[v0] Error: decoded key is empty")
+      return "------"
+    }
+    
     const time = Math.floor(Date.now() / 1000 / timeStep)
+    console.log("[v0] time counter:", time)
     
     const timeBuffer = new Uint8Array(8)
     let t = time
@@ -56,14 +65,19 @@ async function generateTOTP(secret: string, timeStep = 30, digits = 6): Promise<
     }
     
     const hmac = await hmacSha1(key, timeBuffer)
+    console.log("[v0] hmac length:", hmac.length)
+    
     const offset = hmac[hmac.length - 1] & 0x0f
     const code = ((hmac[offset] & 0x7f) << 24 |
                   (hmac[offset + 1] & 0xff) << 16 |
                   (hmac[offset + 2] & 0xff) << 8 |
                   (hmac[offset + 3] & 0xff)) % Math.pow(10, digits)
     
-    return code.toString().padStart(digits, "0")
-  } catch {
+    const result = code.toString().padStart(digits, "0")
+    console.log("[v0] generated code:", result)
+    return result
+  } catch (err) {
+    console.error("[v0] generateTOTP error:", err)
     return "------"
   }
 }
