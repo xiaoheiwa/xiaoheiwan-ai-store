@@ -14,6 +14,18 @@ export default function ReferralLinkPage() {
   const [discount, setDiscount] = useState("")
 
   useEffect(() => {
+    // 添加 noindex meta 标签（客户端）
+    const meta = document.createElement("meta")
+    meta.name = "robots"
+    meta.content = "noindex, nofollow"
+    document.head.appendChild(meta)
+    
+    return () => {
+      document.head.removeChild(meta)
+    }
+  }, [])
+
+  useEffect(() => {
     async function validateReferrer() {
       try {
         // 验证推广码是否有效

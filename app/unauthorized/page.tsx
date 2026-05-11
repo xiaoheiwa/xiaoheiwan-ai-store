@@ -1,9 +1,21 @@
 "use client"
 
+import { useEffect } from "react"
 import { AlertTriangle, MessageCircle, ShieldX } from "lucide-react"
-import Link from "next/link"
 
 export default function UnauthorizedPage() {
+  useEffect(() => {
+    // 添加 noindex meta 标签
+    const meta = document.createElement("meta")
+    meta.name = "robots"
+    meta.content = "noindex, nofollow"
+    document.head.appendChild(meta)
+    
+    return () => {
+      document.head.removeChild(meta)
+    }
+  }, [])
+  
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center space-y-8">

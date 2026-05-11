@@ -17,10 +17,21 @@ Allow: /
 # 禁止爬取管理后台和API
 Disallow: /admin
 Disallow: /api/
-Disallow: /unauthorized
 
-# 禁止爬取支付相关页面
+# 禁止爬取支付和订单相关页面
 Disallow: /pay/
+Disallow: /order/
+Disallow: /success
+Disallow: /order-lookup
+
+# 禁止爬取推广链接落地页（会自动重定向）
+Disallow: /ref/
+
+# 禁止爬取推广员面板
+Disallow: /referrer
+
+# 禁止爬取工具页面（非核心内容）
+Disallow: /tools/
 
 # 站点地图
 Sitemap: https://upgrade.xiaoheiwan.com/sitemap.xml
