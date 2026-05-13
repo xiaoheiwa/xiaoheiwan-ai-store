@@ -1,6 +1,10 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
+// 优惠码验证必须实时，防止重复使用
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 function getDb() {
   return neon(process.env.DATABASE_URL!)
 }
