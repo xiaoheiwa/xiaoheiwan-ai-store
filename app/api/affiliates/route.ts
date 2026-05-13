@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
+// 推荐链接缓存 10 分钟
+export const revalidate = 600
+
 const sql = neon(process.env.DATABASE_URL!)
 
 // GET - List all active affiliate links (public)

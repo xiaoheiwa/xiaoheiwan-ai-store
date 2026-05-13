@@ -1,6 +1,6 @@
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-export const revalidate = 0
+// 统计数据缓存 2 分钟
+export const revalidate = 120
 
 import { sql } from "@/lib/db"
 
@@ -21,7 +21,6 @@ export async function GET() {
         stock_free: s1[0].c,
         stock_used: s2[0].c,
       },
-      { headers: { "Cache-Control": "no-store" } },
     )
   } catch (e: any) {
     console.error("[stats]", e?.message, e)

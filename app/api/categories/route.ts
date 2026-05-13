@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
+// 分类数据变化不频繁，缓存 5 分钟
+export const revalidate = 300
+
 const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {

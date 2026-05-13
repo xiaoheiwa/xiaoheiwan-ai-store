@@ -2,8 +2,8 @@ import { NextResponse } from "next/server"
 import { Database } from "@/lib/database"
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-export const revalidate = 0
+// 价格缓存 60 秒
+export const revalidate = 60
 
 export async function GET() {
   try {

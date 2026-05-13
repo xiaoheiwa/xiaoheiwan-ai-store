@@ -9,5 +9,37 @@
     "app/api/upload/image/route.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/api/products",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=60, stale-while-revalidate=120" }
+      ]
+    },
+    {
+      "source": "/api/categories",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=300, stale-while-revalidate=600" }
+      ]
+    },
+    {
+      "source": "/api/blog",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=120, stale-while-revalidate=300" }
+      ]
+    },
+    {
+      "source": "/api/notifications",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=120, stale-while-revalidate=300" }
+      ]
+    },
+    {
+      "source": "/api/affiliates",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=600, stale-while-revalidate=1200" }
+      ]
+    }
+  ]
 }

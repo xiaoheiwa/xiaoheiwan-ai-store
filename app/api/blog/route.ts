@@ -2,7 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
+// 博客列表缓存 2 分钟
+export const revalidate = 120
 
 // Public: list published posts only
 export async function GET(request: NextRequest) {
