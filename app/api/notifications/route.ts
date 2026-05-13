@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
+// 通知数据缓存 2 分钟
+export const revalidate = 120
+
 const sql = neon(process.env.DATABASE_URL!)
 
 // GET - 获取当前激活的通知

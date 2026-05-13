@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { Database } from "@/lib/database"
 
 export const runtime = "nodejs"
+// 库存查询必须实时，防止超卖
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 

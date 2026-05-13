@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
+// 工具配置缓存 10 分钟
+export const revalidate = 600
+
 const sql = neon(process.env.DATABASE_URL!)
 
 // 公开 API - 获取工具配置（用于导航栏）

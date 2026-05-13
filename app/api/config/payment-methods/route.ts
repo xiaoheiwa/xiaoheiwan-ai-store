@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
+// 支付方式配置缓存 5 分钟
+export const revalidate = 300
+
 const sql = neon(process.env.DATABASE_URL!)
 
 // GET - Get enabled payment methods

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
+// 使用 ISR 缓存 60 秒，大幅减少函数调用
+export const revalidate = 60
 
 const sql = neon(process.env.DATABASE_URL!)
 
