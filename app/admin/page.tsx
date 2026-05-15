@@ -15,6 +15,7 @@ import { CouponManager } from "@/components/coupon-manager"
 import { ReferrerManager } from "@/components/referrer-manager"
 import { WithdrawalManager } from "@/components/withdrawal-manager"
 import { ApplicationManager } from "@/components/application-manager"
+import { RiskControlPanel } from "@/components/risk-control-panel"
 import { FinancePanel } from "@/components/finance-panel"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
@@ -3710,6 +3711,8 @@ case "coupons":
   return <WithdrawalManager />
   case "affiliates":
   return <AffiliateManager adminToken={adminToken} />
+  case "risk":
+  return <RiskControlPanel />
       case "settings":
         return renderSettings()
       default:
@@ -3881,6 +3884,7 @@ case "coupons":
   {activeTab === "applications" && "推广员申请"}
   {activeTab === "withdrawals" && "提现管理"}
   {activeTab === "affiliates" && "推广链接管理"}
+  {activeTab === "risk" && "风控管理"}
                 {activeTab === "settings" && "系统设置"}
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -3892,6 +3896,7 @@ case "coupons":
                   {activeTab === "finance" && "进销存与利润分析"}
                 {activeTab === "blog" && "创建和管理博客文章"}
                 {activeTab === "affiliates" && "管理推广链接和合作伙伴"}
+                {activeTab === "risk" && "管理黑名单和风控规则"}
                 {activeTab === "settings" && "系统配置和设置"}
                 </p>
               </div>
