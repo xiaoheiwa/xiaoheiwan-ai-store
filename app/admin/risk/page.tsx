@@ -1,0 +1,393 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AlertTriangle, Shield, ShieldAlert, ShieldCheck, Plus, Trash2, RefreshCw } from "lucide-react"
+
+interface BlacklistItem {
+  id: number
+  type: string
+  value: string
+  reason: string
+  blocked_orders: number
+  created_by: string
+  created_at: string
+  expires_at: string | null
+}
+
+interface RiskLog {
+  id: number
+  order_no: string
+  email: string
+  client_ip: string
+  fingerprint: string
+  risk_type: string
+  risk_reason: string
+  risk_score: number
+  created_at: string
+}
+
+interface RiskConfig {
+  config_key: string
+  config_value: string
+  description: string
+}
+
+export default function RiskControlPage() {
+  const [blacklist, setBlacklist] = useState<BlacklistItem[]>([])
+  const [logs, setLogs] = useState<RiskLog[]>([])
+  const [configs, setConfigs] = useState<RiskConfig[]>([])
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("blacklist")
+  
+  // 新增黑名单表单
+  const [newType, setNewType] = useState<string>("email")
+  const [newValue, setNewValue] = useState("")
+  const [newReason, setNewReason] = useState("")
+  const [adding, setAdding] = useState(false)
+
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      const [blacklistRes, logsRes, configsRes] = await Promise.all([
+        fetch("/api/admin/risk/blacklist"),
+        fetch("/api/admin/risk/logs"),
+        fetch("/api/admin/risk/config")
+      ])
+      
+      if (blacklistRes.ok) {
+        const data = await blacklistRes.json()
+        setBlacklist(data.data || [])
+      }
+      if (logsRes.ok) {
+        const data = await logsRes.json()
+        setLogs(data.data || [])
+      }
+      if (configsRes.ok) {
+        const data = await configsRes.json()
+        setConfigs(data.data || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch risk data:", error)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const handleAddBlacklist = async () => {
+    if (!newValue.trim() || !newReason.trim()) return
+    setAdding(true)
+    try {
+      const res = await fetch("/api/admin/risk/blacklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: newType, value: newValue, reason: newReason })
+      })
+      if (res.ok) {
+        setNewValue("")
+        setNewReason("")
+        fetchData()
+      }
+    } catch (error) {
+      console.error("Failed to add to blacklist:", error)
+    }
+    setAdding(false)
+  }
+
+  const handleRemoveBlacklist = async (type: string, value: string) => {
+    if (!confirm(`确定要移除 ${value} 吗？`)) return
+    try {
+      await fetch("/api/admin/risk/blacklist", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, value })
+      })
+      fetchData()
+    } catch (error) {
+      console.error("Failed to remove from blacklist:", error)
+    }
+  }
+
+  const handleUpdateConfig = async (key: string, value: string) => {
+    try {
+      await fetch("/api/admin/risk/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value })
+      })
+      fetchData()
+    } catch (error) {
+      console.error("Failed to update config:", error)
+    }
+  }
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      email: "邮箱",
+      ip: "IP地址",
+      fingerprint: "设备指纹",
+      email_domain: "邮箱域名"
+    }
+    return labels[type] || type
+  }
+
+  const getRiskTypeBadge = (type: string) => {
+    switch (type) {
+      case "blocked":
+        return <Badge variant="destructive">已拦截</Badge>
+      case "suspicious":
+        return <Badge className="bg-orange-500">可疑</Badge>
+      case "warning":
+        return <Badge variant="secondary">警告</Badge>
+      default:
+        return <Badge>{type}</Badge>
+    }
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Shield className="w-6 h-6" />
+            风控管理
+          </h1>
+          <p className="text-muted-foreground">管理黑名单、查看风控日志、配置风控规则</p>
+        </div>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          刷新
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-red-500" />
+              黑名单数量
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{blacklist.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-orange-500" />
+              今日拦截
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {logs.filter(l => l.risk_type === "blocked" && new Date(l.created_at).toDateString() === new Date().toDateString()).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-500" />
+              今日警告
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {logs.filter(l => l.risk_type !== "blocked" && new Date(l.created_at).toDateString() === new Date().toDateString()).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-green-500" />
+              风控状态
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {configs.find(c => c.config_key === "risk_control_enabled")?.config_value === "true" ? "已启用" : "已禁用"}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="blacklist">黑名单管理</TabsTrigger>
+          <TabsTrigger value="logs">风控日志</TabsTrigger>
+          <TabsTrigger value="config">风控配置</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="blacklist" className="space-y-4">
+          {/* 添加黑名单 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">添加黑名单</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4">
+                <Select value={newType} onValueChange={setNewType}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="email">邮箱</SelectItem>
+                    <SelectItem value="ip">IP地址</SelectItem>
+                    <SelectItem value="email_domain">邮箱域名</SelectItem>
+                    <SelectItem value="fingerprint">设备指纹</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder={newType === "email" ? "example@gmail.com" : newType === "ip" ? "192.168.1.1" : newType === "email_domain" ? "tempmail.com" : "设备指纹"}
+                  value={newValue}
+                  onChange={e => setNewValue(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="拉黑原因"
+                  value={newReason}
+                  onChange={e => setNewReason(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddBlacklist} disabled={adding || !newValue || !newReason}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  添加
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 黑名单列表 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">黑名单列表</CardTitle>
+              <CardDescription>共 {blacklist.length} 条记录</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">加载中...</div>
+              ) : blacklist.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">暂无黑名单记录</div>
+              ) : (
+                <div className="space-y-2">
+                  {blacklist.map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <Badge variant="outline">{getTypeLabel(item.type)}</Badge>
+                        <span className="font-mono text-sm">{item.value}</span>
+                        <span className="text-sm text-muted-foreground">{item.reason}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-xs text-muted-foreground">拦截 {item.blocked_orders} 次</span>
+                        <span className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleRemoveBlacklist(item.type, item.value)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="logs">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">风控日志</CardTitle>
+              <CardDescription>最近 100 条记录</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">加载中...</div>
+              ) : logs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">暂无风控日志</div>
+              ) : (
+                <div className="space-y-2">
+                  {logs.map(log => (
+                    <div key={log.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-4">
+                        {getRiskTypeBadge(log.risk_type)}
+                        <span className="text-sm">{log.email}</span>
+                        {log.client_ip && <span className="text-xs text-muted-foreground font-mono">{log.client_ip}</span>}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-muted-foreground max-w-md truncate">{log.risk_reason}</span>
+                        <Badge variant="outline">风险分 {log.risk_score}</Badge>
+                        <span className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="config">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">风控配置</CardTitle>
+              <CardDescription>调整风控规则参数</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">加载中...</div>
+              ) : (
+                <div className="space-y-4">
+                  {configs.map(config => (
+                    <div key={config.config_key} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{config.description}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{config.config_key}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {config.config_value === "true" || config.config_value === "false" ? (
+                          <Select
+                            value={config.config_value}
+                            onValueChange={value => handleUpdateConfig(config.config_key, value)}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">开启</SelectItem>
+                              <SelectItem value="false">关闭</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            type="number"
+                            value={config.config_value}
+                            onChange={e => handleUpdateConfig(config.config_key, e.target.value)}
+                            className="w-24 text-center"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}

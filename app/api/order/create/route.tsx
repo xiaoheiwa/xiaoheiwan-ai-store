@@ -8,6 +8,7 @@ import { Database } from "@/lib/database"
 import { getEnv } from "@/lib/env"
 import { ZPayz } from "@/lib/zpayz-client"
 import { neon } from "@neondatabase/serverless"
+import { checkRisk } from "@/lib/risk-control"
 
 interface PriceTier {
   min_qty: number
@@ -45,6 +46,24 @@ export async function POST(req: Request) {
 
     if (!email || !paymentMethod || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
+    }
+
+    // 风控检查
+    const clientIp = clientip || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || undefined
+    const riskResult = await checkRisk({
+      email,
+      clientIp,
+      amount: Number(amount),
+      productId
+    })
+    
+    if (!riskResult.allowed) {
+      console.error("[v0] RISK CONTROL BLOCKED:", { email, clientIp, reason: riskResult.reason, riskScore: riskResult.riskScore })
+      return NextResponse.json({ error: riskResult.reason || "订单创建失败，请稍后再试" }, { status: 403 })
+    }
+    
+    if (riskResult.warnings.length > 0) {
+      console.warn("[v0] RISK WARNING:", { email, clientIp, warnings: riskResult.warnings, riskScore: riskResult.riskScore })
     }
 
     if (!queryPassword || queryPassword.length < 4 || queryPassword.length > 20) {
