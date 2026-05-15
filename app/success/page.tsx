@@ -313,14 +313,32 @@ function SuccessContent() {
             </div>
           )}
 
-          {/* Waiting for manual fulfillment */}
+          {/* Waiting for manual fulfillment - 人工服务订单提示 */}
           {isPaid && !order?.activationCode && !order?.fulfilled_at && (
             <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 border border-amber-200 dark:border-amber-800 mb-6">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-amber-600 animate-pulse" />
-                <div>
-                  <h2 className="font-semibold text-foreground text-sm">{"等待发货"}</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{"支付成功，客服正在为您处理订单，请留意邮箱通知"}</p>
+              <div className="flex items-start gap-3">
+                <Clock className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <h2 className="font-semibold text-foreground text-sm">{"人工服务订单"}</h2>
+                  <p className="text-xs text-muted-foreground mt-1">{"支付成功！请添加客服微信完成后续服务"}</p>
+                  
+                  {/* 客服微信号 */}
+                  <div className="mt-4 bg-white dark:bg-background/50 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                    <p className="text-xs text-muted-foreground mb-1">{"客服微信号"}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-lg font-bold text-green-600 dark:text-green-400 font-mono tracking-wider">xbbdkj-com</span>
+                      <button
+                        onClick={() => copyToClipboard("xbbdkj-com")}
+                        className="px-3 py-1.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                      >
+                        {"复制微信号"}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-3">
+                    {"添加时请备注订单号："}<span className="font-mono">{order?.orderNo || recoveredOrderNo}</span>
+                  </p>
                 </div>
               </div>
             </div>

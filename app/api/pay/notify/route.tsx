@@ -114,17 +114,29 @@ async function handle(params: Record<string, string>) {
         gateway_resp: JSON.stringify(params),
       })
 
-      // Send payment confirmation email (no codes yet)
+      // Send payment confirmation email with WeChat contact info for manual service
       try {
         let productName: string | undefined
         if (order.product_id) {
           const product = await Database.getProduct(order.product_id)
           productName = product?.name
         }
+        
+        // 人工服务专用邮件内容
+        const manualServiceMessage = `您的订单已支付成功！
+
+这是一个人工服务订单，请添加客服微信完成后续服务：
+
+客服微信号：xbbdkj-com
+
+添加时请备注您的订单号：${orderNo}
+
+客服会在工作时间内尽快处理您的订单，感谢您的耐心等待。`
+
         await sendCodeMail({
           to: order.email,
-          subject: productName ? `${productName} - 订单已支付` : "订单已支付",
-          activationCode: "您的订单已支付成功，我们将尽快为您处理并发货，届时会通过邮件通知您。",
+          subject: productName ? `${productName} - 请添加客服微信完成服务` : "订单已支付 - 请添加客服微信完成服务",
+          activationCode: manualServiceMessage,
           orderNo,
           productName,
         })
