@@ -198,6 +198,17 @@ export async function checkRisk(params: RiskCheckParams): Promise<RiskCheckResul
       return { allowed: true, riskScore: 0, warnings: [] }
     }
     
+    // 0. 检查白名单 - 白名单用户跳过所有风控
+    const whitelist = await sql`
+      SELECT reason FROM risk_whitelist 
+      WHERE type = 'email' AND LOWER(value) = LOWER(${email})
+      AND (expires_at IS NULL OR expires_at > NOW())
+    `
+    if (whitelist.length > 0) {
+      console.log("[RiskControl] Email in whitelist, skipping all checks:", email)
+      return { allowed: true, riskScore: 0, warnings: [] }
+    }
+    
     // 1. 检查邮箱黑名单
     const emailBlacklist = await checkBlacklist('email', email)
     if (emailBlacklist.blocked) {
@@ -393,6 +404,17 @@ export async function checkOrderHighRisk(email: string, amount: number): Promise
   let isHighRisk = false
 
   try {
+    // 先检查白名单 - 白名单用户跳过所有风控
+    const whitelist = await sql`
+      SELECT reason FROM risk_whitelist 
+      WHERE type = 'email' AND LOWER(value) = LOWER(${email})
+      AND (expires_at IS NULL OR expires_at > NOW())
+    `
+    if (whitelist.length > 0) {
+      console.log("[RiskControl] Email in whitelist, skipping risk check:", email)
+      return { isHighRisk: false, reasons: [], reviewEnabled: true }
+    }
+
     // 读取配置
     const reviewEnabled = (await getConfigValue('high_risk_review_enabled', 'true')) === 'true'
     const nightStart = parseInt(await getConfigValue('high_risk_night_start', '1'), 10)
