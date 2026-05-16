@@ -527,80 +527,22 @@ export class Database {
     const entries = Object.entries(updates).filter(([_, value]) => value !== undefined)
     if (entries.length === 0) return null
     try {
-      const s = getSql()
-      // 根据不同的更新字段组合使用不同的查询
-      // 支持常见的更新场景
       if (entries.length === 1) {
         const [key, value] = entries[0]
-        let result
-        switch (key) {
-          case 'status':
-            result = await s`UPDATE orders SET status = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'payment_url':
-            result = await s`UPDATE orders SET payment_url = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'qrcode':
-            result = await s`UPDATE orders SET qrcode = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'code':
-            result = await s`UPDATE orders SET code = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'codes':
-            result = await s`UPDATE orders SET codes = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'paid_at':
-            result = await s`UPDATE orders SET paid_at = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'gateway_resp':
-            result = await s`UPDATE orders SET gateway_resp = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'is_high_risk':
-            result = await s`UPDATE orders SET is_high_risk = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'risk_reason':
-            result = await s`UPDATE orders SET risk_reason = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          case 'review_status':
-            result = await s`UPDATE orders SET review_status = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-            break
-          default:
-            console.log("[v0] updateOrder: unsupported single field:", key)
-            return null
-        }
+        const result = await getSql()`
+          UPDATE orders SET ${getSql()(key)} = ${value}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *
+        `
         return result?.[0] || null
       }
-      
-      // 多字段更新 - 常见组合
-      const keys = entries.map(([k]) => k).sort().join(',')
-      
-      if (keys === 'payment_url,qrcode') {
-        const result = await s`UPDATE orders SET qrcode = ${updates.qrcode}, payment_url = ${updates.payment_url}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-        return result?.[0] || null
+      let query = "UPDATE orders SET "
+      const setClauses: string[] = []
+      for (let i = 0; i < entries.length; i++) {
+        setClauses.push(`${entries[i][0]} = $${i + 2}`)
       }
-      
-      if (keys === 'gateway_resp,is_high_risk,paid_at,review_status,risk_reason,status') {
-        const result = await s`UPDATE orders SET status = ${updates.status}, paid_at = ${updates.paid_at}, gateway_resp = ${updates.gateway_resp}, is_high_risk = ${updates.is_high_risk}, risk_reason = ${updates.risk_reason}, review_status = ${updates.review_status}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-        return result?.[0] || null
-      }
-      
-      if (keys === 'code,codes,paid_at,status') {
-        const result = await s`UPDATE orders SET status = ${updates.status}, paid_at = ${updates.paid_at}, code = ${updates.code}, codes = ${updates.codes}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-        return result?.[0] || null
-      }
-      
-      if (keys === 'gateway_resp,paid_at,status') {
-        const result = await s`UPDATE orders SET status = ${updates.status}, paid_at = ${updates.paid_at}, gateway_resp = ${updates.gateway_resp}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-        return result?.[0] || null
-      }
-      
-      if (keys === 'code,codes,gateway_resp,paid_at,status') {
-        const result = await s`UPDATE orders SET status = ${updates.status}, paid_at = ${updates.paid_at}, gateway_resp = ${updates.gateway_resp}, code = ${updates.code}, codes = ${updates.codes}, updated_at = NOW() WHERE out_trade_no = ${orderNo} RETURNING *`
-        return result?.[0] || null
-      }
-      
-      console.log("[v0] updateOrder: unsupported field combination:", keys)
-      return null
+      query += setClauses.join(", ") + ", updated_at = NOW() WHERE out_trade_no = $1 RETURNING *"
+      const values = [orderNo, ...entries.map(([_, value]) => value)]
+      const result = await getSql().query(query, values)
+      return result?.rows?.[0] || null
     } catch (error) {
       console.log("[v0] Error in updateOrder:", error)
       return null
