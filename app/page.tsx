@@ -278,29 +278,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Telegram Premium 专区入口 */}
-          <div
-            className="mb-8 max-w-2xl mx-auto opacity-0 animate-fade-up delay-300"
-            style={{ animationFillMode: "forwards" }}
-          >
-            <Link
-              href="/telegram-premium"
-              className="group glass-card card-shadow rounded-2xl p-5 flex items-center gap-4 hover:border-[#0088cc]/30 transition-all"
-            >
-              <div className="w-14 h-14 rounded-xl bg-[#0088cc] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <Send className="w-7 h-7 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-foreground">{"Telegram Premium 会员"}</h3>
-                  <span className="px-2 py-0.5 rounded-full bg-[#0088cc]/10 text-[#0088cc] text-xs font-medium">{"专区"}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{"官方赠送方式开通，无需手机号，安全可靠"}</p>
-              </div>
-              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 group-hover:text-[#0088cc] transition-all shrink-0" />
-            </Link>
-          </div>
-
           {/* Activation Quick Links */}
           <div
             className="mb-16 max-w-2xl mx-auto opacity-0 animate-fade-up delay-300"
