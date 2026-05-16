@@ -6,7 +6,8 @@ import crypto from "crypto"
 import { sendCodeMail } from "@/lib/resend"
 import { getEnv } from "@/lib/env"
 import { ZPayz } from "@/lib/zpayz-client"
-import { notifyOrderSuccess, notifyLowStock } from "@/lib/telegram"
+import { notifyOrderSuccess, notifyLowStock, notifyHighRiskOrder } from "@/lib/telegram"
+import { checkOrderHighRisk } from "@/lib/risk-control"
 
 async function handle(params: Record<string, string>) {
   console.log("[v0] ============ PAYMENT NOTIFICATION START ============")
@@ -170,43 +171,52 @@ async function handle(params: Record<string, string>) {
     }
 
     // ====== AUTO DELIVERY: lock and sell codes ======
-    // 检查是否为高风险订单需要延迟发货
-    if (order.is_high_risk && order.risk_delay_until) {
-      const delayUntil = new Date(order.risk_delay_until)
-      if (delayUntil > new Date()) {
-        console.log("[v0] HIGH RISK ORDER - Delaying delivery until:", delayUntil)
-        // 标记为已支付但暂不发货
-        await Database.updateOrder(orderNo, {
-          status: "paid",
-          paid_at: new Date(),
-          gateway_resp: JSON.stringify(params),
-        })
-        
-        // 发送Telegram通知管理员
-        try {
-          let productName: string | undefined
-          if (order.product_id) {
-            const product = await Database.getProduct(order.product_id)
-            productName = product?.name
-          }
-          await notifyOrderSuccess({
-            orderNo,
-            email: order.email,
-            amount: Number(order.amount),
-            productName: `[高风险-延迟发货] ${productName || "商品"}`,
-            quantity: orderQuantity,
-            paymentMethod: "alipay",
-            regionName: order.region_name || undefined,
-          })
-        } catch (tgError) {
-          console.error("[v0] Telegram notification failed:", tgError)
+    // 先检查是否为高风险订单
+    const riskCheck = await checkOrderHighRisk(order.email, Number(order.amount))
+    
+    // 只有当 reviewEnabled=true 且 isHighRisk=true 时才暂停发货
+    if (riskCheck.isHighRisk && riskCheck.reviewEnabled) {
+      console.log("[v0] HIGH RISK ORDER DETECTED:", orderNo, "Reasons:", riskCheck.reasons)
+      
+      // 标记为已支付但需要人工审核，不自动发货
+      await Database.updateOrder(orderNo, {
+        status: "paid",
+        paid_at: new Date(),
+        gateway_resp: JSON.stringify(params),
+        is_high_risk: true,
+        risk_reason: riskCheck.reasons.join("; "),
+        review_status: "pending_review",
+      })
+      
+      // 发送 Telegram 告警
+      try {
+        let productName: string | undefined
+        if (order.product_id) {
+          const product = await Database.getProduct(order.product_id)
+          productName = product?.name
         }
-        
-        return "success"
+        await notifyHighRiskOrder({
+          orderNo,
+          email: order.email,
+          amount: Number(order.amount),
+          productName,
+          quantity: orderQuantity,
+          riskReasons: riskCheck.reasons,
+        })
+      } catch (tgError) {
+        console.error("[v0] Telegram high risk notification failed:", tgError)
       }
+      
+      console.log("[v0] High risk order marked for review:", orderNo)
+      return "success"
     }
     
-    // Lock multiple codes for multi-quantity orders
+    // 如果是高风险但审核已关闭，记录但继续发货
+    if (riskCheck.isHighRisk && !riskCheck.reviewEnabled) {
+      console.log("[v0] High risk order but review disabled, proceeding with auto delivery:", orderNo, "Reasons:", riskCheck.reasons)
+    }
+    
+    // 正常订单 - Lock multiple codes for multi-quantity orders
     let lockedCodes: any[] = []
     if (order.product_id) {
       lockedCodes = await Database.lockMultipleCodesByProduct(orderNo, order.product_id, orderQuantity)

@@ -65,16 +65,6 @@ export async function POST(req: Request) {
     if (riskResult.warnings.length > 0) {
       console.warn("[v0] RISK WARNING:", { email, clientIp, warnings: riskResult.warnings, riskScore: riskResult.riskScore })
     }
-    
-    // 生成6位支付验证码（防代付诈骗）
-    const payVerifyCode = Math.random().toString().slice(2, 8)
-    
-    // 判断是否为高风险订单（凌晨1-5点 或 风险分数>=50）
-    const currentHour = new Date().getHours()
-    const isNightOrder = currentHour >= 1 && currentHour < 5
-    const isHighRisk = isNightOrder || riskResult.riskScore >= 50
-    // 高风险订单延迟30分钟发货
-    const riskDelayUntil = isHighRisk ? new Date(Date.now() + 30 * 60 * 1000) : null
 
     if (!queryPassword || queryPassword.length < 4 || queryPassword.length > 20) {
       return NextResponse.json({ error: "请设置4-20位查询密码" }, { status: 400 })
@@ -214,11 +204,8 @@ export async function POST(req: Request) {
       delivery_type: deliveryType,
       selected_region: selectedRegion || null,
       region_name: regionName || null,
-      pay_verify_code: payVerifyCode,
-      is_high_risk: isHighRisk,
-      risk_delay_until: riskDelayUntil,
     })
-    console.log("[v0] Order created:", order.out_trade_no, "payVerifyCode:", payVerifyCode, "isHighRisk:", isHighRisk)
+    console.log("[v0] Order created:", order.out_trade_no)
 
     // 记录优惠码使用（包含推广佣金）
     if (couponId && verifiedDiscount > 0) {
@@ -324,8 +311,6 @@ export async function POST(req: Request) {
           paymentUrl,
           redirectUrl: paymentUrl,
           qrcode: apiResult.qrcode,
-          payVerifyCode,
-          orderEmail: email,
         })
       } else {
         console.error("[v0] 微信支付 API 失败:", apiResult)
@@ -336,8 +321,6 @@ export async function POST(req: Request) {
           orderNo,
           paymentUrl,
           redirectUrl: paymentUrl,
-          payVerifyCode,
-          orderEmail: email,
         })
       }
     }
@@ -351,8 +334,6 @@ export async function POST(req: Request) {
       orderNo,
       paymentUrl,
       redirectUrl: paymentUrl,
-      payVerifyCode,
-      orderEmail: email,
     })
   } catch (error: any) {
     console.error("[v0] ORDER CREATION FAILED:", error?.message)

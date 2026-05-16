@@ -372,3 +372,99 @@ export async function updateRiskConfig(key: string, value: string) {
 export async function getAllRiskConfig() {
   return sql`SELECT * FROM risk_config ORDER BY config_key`
 }
+
+// 获取单个配置值
+async function getConfigValue(key: string, defaultValue: string): Promise<string> {
+  try {
+    const result = await sql`SELECT config_value FROM risk_config WHERE config_key = ${key} LIMIT 1`
+    return result[0]?.config_value || defaultValue
+  } catch {
+    return defaultValue
+  }
+}
+
+/**
+ * 检查订单是否为高风险（用于支付后发货前的二次检查）
+ * 高风险订单需要人工审核后才能发货
+ * 所有阈值从数据库配置中读取，可在后台调整
+ */
+export async function checkOrderHighRisk(email: string, amount: number): Promise<{ isHighRisk: boolean; reasons: string[]; reviewEnabled: boolean }> {
+  const reasons: string[] = []
+  let isHighRisk = false
+
+  try {
+    // 读取配置
+    const reviewEnabled = (await getConfigValue('high_risk_review_enabled', 'true')) === 'true'
+    const nightStart = parseInt(await getConfigValue('high_risk_night_start', '1'), 10)
+    const nightEnd = parseInt(await getConfigValue('high_risk_night_end', '6'), 10)
+    const dailyLimit = parseInt(await getConfigValue('high_risk_daily_paid_limit', '2'), 10)
+    const hourlyLimit = parseInt(await getConfigValue('high_risk_hourly_paid_limit', '2'), 10)
+    const sameAmountDays = parseInt(await getConfigValue('high_risk_same_amount_days', '7'), 10)
+    const sameAmountLimit = parseInt(await getConfigValue('high_risk_same_amount_limit', '3'), 10)
+
+    const now = new Date()
+    const currentHour = now.getHours()
+
+    // 1. 高风险时段下单
+    if (currentHour >= nightStart && currentHour < nightEnd) {
+      reasons.push(`高风险时段（${nightStart}-${nightEnd}点）下单，当前${currentHour}点`)
+      isHighRisk = true
+    }
+
+    // 2. 同一邮箱24小时内已支付订单数
+    const todayPaidOrders = await sql`
+      SELECT COUNT(*)::int as count FROM orders 
+      WHERE email = ${email} 
+      AND paid_at > NOW() - INTERVAL '24 hours'
+      AND status = 'paid'
+    `
+    const todayCount = todayPaidOrders[0]?.count || 0
+    if (todayCount >= dailyLimit) {
+      reasons.push(`24小时内已支付${todayCount}单（阈值${dailyLimit}）`)
+      isHighRisk = true
+    }
+
+    // 3. 同一邮箱1小时内支付次数
+    const hourPaidOrders = await sql`
+      SELECT COUNT(*)::int as count FROM orders 
+      WHERE email = ${email} 
+      AND paid_at > NOW() - INTERVAL '1 hour'
+      AND status = 'paid'
+    `
+    const hourCount = hourPaidOrders[0]?.count || 0
+    if (hourCount >= hourlyLimit) {
+      reasons.push(`1小时内已支付${hourCount}单（阈值${hourlyLimit}）`)
+      isHighRisk = true
+    }
+
+    // 4. 检查邮箱是否在黑名单观察列表
+    const watchlist = await sql`
+      SELECT reason FROM risk_blacklist 
+      WHERE type = 'email' AND LOWER(value) = LOWER(${email})
+      AND (expires_at IS NULL OR expires_at > NOW())
+    `
+    if (watchlist.length > 0) {
+      reasons.push(`邮箱在观察名单: ${watchlist[0].reason}`)
+      isHighRisk = true
+    }
+
+    // 5. N天内相同金额支付M次以上
+    const sameAmountOrders = await sql`
+      SELECT COUNT(*)::int as count FROM orders 
+      WHERE email = ${email} 
+      AND amount = ${amount}
+      AND status = 'paid'
+      AND paid_at > NOW() - INTERVAL '1 day' * ${sameAmountDays}
+    `
+    if ((sameAmountOrders[0]?.count || 0) >= sameAmountLimit) {
+      reasons.push(`${sameAmountDays}天内相同金额支付${sameAmountOrders[0].count}次（阈值${sameAmountLimit}）`)
+      isHighRisk = true
+    }
+
+    return { isHighRisk, reasons, reviewEnabled }
+
+  } catch (error) {
+    console.error("[RiskControl] Error checking high risk:", error)
+    return { isHighRisk: false, reasons: [], reviewEnabled: true }
+  }
+}
