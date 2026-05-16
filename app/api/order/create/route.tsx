@@ -304,18 +304,36 @@ export async function POST(req: Request) {
       console.log("[v0] 微信支付 API 返回:", JSON.stringify(apiResult))
 
       if (apiResult.code === 1 || apiResult.code === "1") {
-        const paymentUrl = apiResult.payurl || apiResult.qrcode || apiResult.urlscheme
+        const zpayUrl = apiResult.payurl || apiResult.qrcode || apiResult.urlscheme
+        const qrcodeContent = apiResult.qrcode || zpayUrl
+        
+        // 保存二维码和支付链接到订单
+        await Database.updateOrder(orderNo, {
+          qrcode: qrcodeContent,
+          payment_url: zpayUrl,
+        })
+        
+        // 返回自定义支付页面 URL（内嵌二维码+反诈骗警示）
+        const customPayUrl = `/pay/${orderNo}`
+        
         return NextResponse.json({
           success: true,
           orderNo,
-          paymentUrl,
-          redirectUrl: paymentUrl,
-          qrcode: apiResult.qrcode,
+          paymentUrl: customPayUrl,
+          redirectUrl: customPayUrl,
+          qrcode: qrcodeContent,
+          useCustomPayPage: true,
         })
       } else {
         console.error("[v0] 微信支付 API 失败:", apiResult)
         // 失败时回退到页面跳转方式
         const paymentUrl = ZPayz.createPagePayment(paymentParams)
+        
+        // 保存支付链接
+        await Database.updateOrder(orderNo, {
+          payment_url: paymentUrl,
+        })
+        
         return NextResponse.json({
           success: true,
           orderNo,
@@ -327,6 +345,11 @@ export async function POST(req: Request) {
 
     // 支付宝使用页面跳转方式
     const paymentUrl = ZPayz.createPagePayment(paymentParams)
+    
+    // 保存支付链接
+    await Database.updateOrder(orderNo, {
+      payment_url: paymentUrl,
+    })
 
     console.log("[v0] Payment URL generated")
     return NextResponse.json({
