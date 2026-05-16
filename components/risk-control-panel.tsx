@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertTriangle, Shield, ShieldAlert, ShieldCheck, Plus, Trash2, RefreshCw } from "lucide-react"
+import { AlertTriangle, Shield, ShieldAlert, ShieldCheck, Plus, Trash2, RefreshCw, UserCheck } from "lucide-react"
 
 interface BlacklistItem {
   id: number
@@ -15,6 +15,16 @@ interface BlacklistItem {
   value: string
   reason: string
   blocked_orders: number
+  created_by: string
+  created_at: string
+  expires_at: string | null
+}
+
+interface WhitelistItem {
+  id: number
+  type: string
+  value: string
+  reason: string
   created_by: string
   created_at: string
   expires_at: string | null
@@ -40,6 +50,7 @@ interface RiskConfig {
 
 export function RiskControlPanel() {
   const [blacklist, setBlacklist] = useState<BlacklistItem[]>([])
+  const [whitelist, setWhitelist] = useState<WhitelistItem[]>([])
   const [logs, setLogs] = useState<RiskLog[]>([])
   const [configs, setConfigs] = useState<RiskConfig[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,12 +60,18 @@ export function RiskControlPanel() {
   const [newValue, setNewValue] = useState("")
   const [newReason, setNewReason] = useState("")
   const [adding, setAdding] = useState(false)
+  
+  // 白名单表单
+  const [newWhitelistValue, setNewWhitelistValue] = useState("")
+  const [newWhitelistReason, setNewWhitelistReason] = useState("")
+  const [addingWhitelist, setAddingWhitelist] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [blacklistRes, logsRes, configsRes] = await Promise.all([
+      const [blacklistRes, whitelistRes, logsRes, configsRes] = await Promise.all([
         fetch("/api/admin/risk/blacklist"),
+        fetch("/api/admin/risk/whitelist"),
         fetch("/api/admin/risk/logs"),
         fetch("/api/admin/risk/config")
       ])
@@ -62,6 +79,10 @@ export function RiskControlPanel() {
       if (blacklistRes.ok) {
         const data = await blacklistRes.json()
         setBlacklist(data.data || [])
+      }
+      if (whitelistRes.ok) {
+        const data = await whitelistRes.json()
+        setWhitelist(data.data || [])
       }
       if (logsRes.ok) {
         const data = await logsRes.json()
@@ -114,6 +135,41 @@ export function RiskControlPanel() {
       console.error("Failed to remove from blacklist:", error)
     }
   }
+  
+  // 白名单操作
+  const handleAddWhitelist = async () => {
+    if (!newWhitelistValue.trim()) return
+    setAddingWhitelist(true)
+    try {
+      const res = await fetch("/api/admin/risk/whitelist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "email", value: newWhitelistValue, reason: newWhitelistReason || "管理员手动添加" })
+      })
+      if (res.ok) {
+        setNewWhitelistValue("")
+        setNewWhitelistReason("")
+        fetchData()
+      }
+    } catch (error) {
+      console.error("Failed to add to whitelist:", error)
+    }
+    setAddingWhitelist(false)
+  }
+
+  const handleRemoveWhitelist = async (value: string) => {
+    if (!confirm(`确定要移除 ${value} 的白名单吗？`)) return
+    try {
+      await fetch("/api/admin/risk/whitelist", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "email", value })
+      })
+      fetchData()
+    } catch (error) {
+      console.error("Failed to remove from whitelist:", error)
+    }
+  }
 
   const handleUpdateConfig = async (key: string, value: string) => {
     try {
@@ -164,7 +220,7 @@ export function RiskControlPanel() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -174,6 +230,17 @@ export function RiskControlPanel() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{blacklist.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-green-500" />
+              白名单
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{whitelist.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -220,6 +287,7 @@ export function RiskControlPanel() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="blacklist">黑名单</TabsTrigger>
+          <TabsTrigger value="whitelist">白名单</TabsTrigger>
           <TabsTrigger value="logs">风控日志</TabsTrigger>
           <TabsTrigger value="config">配置</TabsTrigger>
         </TabsList>
@@ -292,6 +360,76 @@ export function RiskControlPanel() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="whitelist" className="space-y-4">
+          <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-green-500" />
+                添加白名单
+              </CardTitle>
+              <CardDescription>白名单用户将跳过所有风控检查，用于解除被误风控的用户</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  placeholder="用户邮箱"
+                  value={newWhitelistValue}
+                  onChange={e => setNewWhitelistValue(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="原因（可选）"
+                  value={newWhitelistReason}
+                  onChange={e => setNewWhitelistReason(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddWhitelist} disabled={addingWhitelist || !newWhitelistValue.trim()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  添加
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">白名单列表</CardTitle>
+              <CardDescription>这些用户将跳过所有风控检查</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">加载中...</div>
+              ) : whitelist.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">暂无白名单</div>
+              ) : (
+                <div className="space-y-2">
+                  {whitelist.map(item => (
+                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-green-200 bg-green-50 dark:bg-green-950/30 rounded-lg gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-500">邮箱</Badge>
+                          <span className="font-mono text-sm">{item.value}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {item.reason} | 添加于 {new Date(item.created_at).toLocaleString("zh-CN")}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveWhitelist(item.value)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
