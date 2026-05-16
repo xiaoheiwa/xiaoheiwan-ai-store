@@ -222,7 +222,7 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        {/* 二维码区域 或 嵌入支付页面 */}
+        {/* 二维码区域 或 支付按钮 */}
         <div className="bg-white rounded-2xl p-6">
           <div className="text-center mb-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500 text-white rounded-full text-sm font-medium">
@@ -241,41 +241,32 @@ export default function PaymentPage() {
               />
             </div>
           ) : order.paymentUrl ? (
-            // 支付宝：嵌入ZPay页面或显示跳转按钮
+            // 支付宝/其他：显示跳转按钮
             <div className="space-y-4">
-              {/* 尝试iframe嵌入 */}
-              <div className="relative w-full h-[400px] border rounded-lg overflow-hidden bg-gray-100">
-                <iframe
-                  src={order.paymentUrl}
-                  className="w-full h-full border-0"
-                  title="支付页面"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                />
-                {/* 覆盖层防止iframe内点击跳出 */}
-                <div className="absolute inset-0 pointer-events-none" />
-              </div>
-              
-              {/* 备用：跳转按钮 */}
               <div className="text-center">
-                <p className="text-gray-500 text-xs mb-2">如果上方无法显示，请点击按钮</p>
+                <p className="text-gray-600 text-sm mb-4">点击下方按钮前往支付页面</p>
                 <a 
                   href={order.paymentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition"
+                  className="inline-block w-full max-w-xs px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-bold text-lg shadow-lg hover:from-blue-600 hover:to-blue-700 transition"
                 >
-                  打开支付页面
+                  立即支付 ¥{order.amount}
                 </a>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+                <p className="text-red-600 text-xs text-center font-medium">
+                  支付前请再次确认：商品将发送到上方显示的邮箱
+                </p>
               </div>
             </div>
           ) : (
-            <div className="text-center text-gray-500">
-              支付信息加载失败
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">支付信息加载失败</p>
+              <p className="text-gray-400 text-sm">请返回重新下单</p>
             </div>
           )}
           
           <p className="text-center text-gray-500 text-sm mt-4">
-            {qrCodeDataUrl ? "请使用微信扫码支付" : "请在上方页面完成支付"}
+            {qrCodeDataUrl ? "请使用微信扫码支付" : order.paymentUrl ? "支付完成后请返回此页面" : ""}
           </p>
         </div>
 
