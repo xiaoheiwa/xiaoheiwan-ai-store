@@ -344,12 +344,36 @@ export function RiskControlPanel() {
                 <div className="text-center py-8 text-muted-foreground">加载中...</div>
               ) : (
                 <div className="space-y-6">
+                  {/* 总开关 */}
+                  <div className="p-4 border-2 border-blue-500/50 bg-blue-500/5 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-blue-600">风控系统总开关</div>
+                        <div className="text-xs text-muted-foreground">关闭后所有风控规则失效</div>
+                      </div>
+                      {configs.find(c => c.config_key === "risk_control_enabled") && (
+                        <Select
+                          value={configs.find(c => c.config_key === "risk_control_enabled")?.config_value || "true"}
+                          onValueChange={value => handleUpdateConfig("risk_control_enabled", value)}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">开启</SelectItem>
+                            <SelectItem value="false">关闭</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  </div>
+
                   {/* 高风险审核开关 */}
                   <div className="p-4 border-2 border-amber-500/50 bg-amber-500/5 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-bold text-amber-600">高风险订单人工审核</div>
-                        <div className="text-xs text-muted-foreground">开启后，高风险订单需人工审核才能发货</div>
+                        <div className="font-bold text-amber-600">高风险订单人工审核（防代付诈骗）</div>
+                        <div className="text-xs text-muted-foreground">开启后，高风险订单支付成功但需人工审核才发货</div>
                       </div>
                       {configs.find(c => c.config_key === "high_risk_review_enabled") && (
                         <Select
@@ -368,15 +392,57 @@ export function RiskControlPanel() {
                     </div>
                   </div>
 
-                  {/* 高风险规则配置 */}
+                  {/* 下单拦截规则 */}
                   <div className="space-y-3">
-                    <div className="text-sm font-medium text-muted-foreground">高风险判定规则</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">下单拦截规则</span>
+                      <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">触发后直接拒绝下单</span>
+                    </div>
                     {configs
-                      .filter(c => c.config_key.startsWith("high_risk_") && c.config_key !== "high_risk_review_enabled")
+                      .filter(c => ["max_orders_per_email_per_day", "max_orders_per_ip_per_hour", "max_pending_orders_per_email", "block_disposable_emails"].includes(c.config_key))
                       .map(config => (
-                        <div key={config.config_key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/30 rounded-lg gap-2">
+                        <div key={config.config_key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 rounded-lg gap-2">
                           <div>
-                            <div className="text-sm">{config.description}</div>
+                            <div className="text-sm">{config.description?.replace(/【.*】/, "") || config.config_key}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{config.config_key}</div>
+                          </div>
+                          {config.config_value === "true" || config.config_value === "false" ? (
+                            <Select
+                              value={config.config_value}
+                              onValueChange={value => handleUpdateConfig(config.config_key, value)}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="true">开启</SelectItem>
+                                <SelectItem value="false">关闭</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              type="number"
+                              value={config.config_value}
+                              onChange={e => handleUpdateConfig(config.config_key, e.target.value)}
+                              className="w-20 text-center"
+                            />
+                          )}
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* 高风险判定规则（支付后审核） */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">高风险判定规则</span>
+                      <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-600 rounded">触发后需人工审核发货</span>
+                    </div>
+                    {configs
+                      .filter(c => c.config_key.startsWith("high_risk_") && !["high_risk_review_enabled"].includes(c.config_key))
+                      .map(config => (
+                        <div key={config.config_key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg gap-2">
+                          <div>
+                            <div className="text-sm">{config.description?.replace(/【.*】/, "") || config.config_key}</div>
                             <div className="text-xs text-muted-foreground font-mono">{config.config_key}</div>
                           </div>
                           <Input
@@ -385,44 +451,6 @@ export function RiskControlPanel() {
                             onChange={e => handleUpdateConfig(config.config_key, e.target.value)}
                             className="w-20 text-center"
                           />
-                        </div>
-                      ))}
-                  </div>
-
-                  {/* 其他配置 */}
-                  <div className="space-y-3">
-                    <div className="text-sm font-medium text-muted-foreground">其他配置</div>
-                    {configs
-                      .filter(c => !c.config_key.startsWith("high_risk_"))
-                      .map(config => (
-                        <div key={config.config_key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/30 rounded-lg gap-2">
-                          <div>
-                            <div className="text-sm">{config.description}</div>
-                            <div className="text-xs text-muted-foreground font-mono">{config.config_key}</div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {config.config_value === "true" || config.config_value === "false" ? (
-                              <Select
-                                value={config.config_value}
-                                onValueChange={value => handleUpdateConfig(config.config_key, value)}
-                              >
-                                <SelectTrigger className="w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="true">开启</SelectItem>
-                                  <SelectItem value="false">关闭</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Input
-                                type="number"
-                                value={config.config_value}
-                                onChange={e => handleUpdateConfig(config.config_key, e.target.value)}
-                                className="w-20 text-center"
-                              />
-                            )}
-                          </div>
                         </div>
                       ))}
                   </div>
