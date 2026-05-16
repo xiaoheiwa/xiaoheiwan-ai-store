@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Shield, Zap, CheckCircle, ArrowRight, Sparkles, Newspaper, BookOpen, Search, Package, Link2, LayoutGrid, Send, TrendingUp, Users } from "lucide-react"
+import { Shield, Zap, CheckCircle, ArrowRight, Sparkles, Newspaper, BookOpen, Search, Package, Link2, LayoutGrid, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
 import Logo from "@/components/logo"
 
@@ -320,7 +320,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* 推广员申请CTA */}
+          {/* 推广��申请CTA */}
           <div
             className="mb-16 max-w-2xl mx-auto opacity-0 animate-fade-up delay-400"
             style={{ animationFillMode: "forwards" }}
