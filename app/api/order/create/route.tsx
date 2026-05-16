@@ -170,14 +170,7 @@ export async function POST(req: Request) {
       console.error("[v0] SECURITY: Price tampering detected!", { claimed: amount, expected: expectedAmount, productId, unitPrice, quantity, priceTiers: product.price_tiers, discount: verifiedDiscount })
       return NextResponse.json({ error: "价格验证失败" }, { status: 400 })
     }
-    
-    // 防代付诈骗：金额随机化
-    // 在实际金额基础上加上 0.01-0.99 元的随机金额
-    // 这样每个订单金额都是唯一的，诈骗者截图的收款码无法被其他人使用
-    const randomCents = Math.floor(Math.random() * 99) + 1 // 1-99 分
-    const antiScamAmount = Number((expectedAmount + randomCents / 100).toFixed(2))
-    const verifiedAmount = antiScamAmount
-    console.log("[v0] Anti-scam: original amount:", expectedAmount, "randomized amount:", verifiedAmount)
+    const verifiedAmount = expectedAmount
     
     // SECURITY: Use product name from database, not from client
     const verifiedProductName = product.name
@@ -247,7 +240,7 @@ export async function POST(req: Request) {
           referrerId = couponInfo[0].referrer_id
           // 使用优惠码专属佣金比例，如果没有则使用推广用户默认比例
           const commissionRate = couponInfo[0].commission_rate || couponInfo[0].default_rate || 0
-          // 佣金基于实���金额（扣除优惠后的金额）
+          // 佣金基于实付金额（扣除优惠后的金额）
           commissionAmount = Number((verifiedAmount * (commissionRate / 100)).toFixed(2))
         }
         
@@ -333,7 +326,6 @@ export async function POST(req: Request) {
           qrcode: apiResult.qrcode,
           payVerifyCode,
           orderEmail: email,
-          actualAmount: verifiedAmount, // 实际支付金额（含随机分）
         })
       } else {
         console.error("[v0] 微信支付 API 失败:", apiResult)
@@ -346,7 +338,6 @@ export async function POST(req: Request) {
           redirectUrl: paymentUrl,
           payVerifyCode,
           orderEmail: email,
-          actualAmount: verifiedAmount,
         })
       }
     }
@@ -362,7 +353,6 @@ export async function POST(req: Request) {
       redirectUrl: paymentUrl,
       payVerifyCode,
       orderEmail: email,
-      actualAmount: verifiedAmount,
     })
   } catch (error: any) {
     console.error("[v0] ORDER CREATION FAILED:", error?.message)

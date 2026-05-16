@@ -84,7 +84,6 @@ const [appliedCoupon, setAppliedCoupon] = useState<{
     orderEmail: string
     payVerifyCode: string
     orderNo: string
-    actualAmount?: number
   } | null>(null)
   const [antiScamConfirmed, setAntiScamConfirmed] = useState(false)
 
@@ -363,7 +362,6 @@ body: JSON.stringify({
             orderEmail: data.orderEmail || email,
             payVerifyCode: data.payVerifyCode || "",
             orderNo: data.orderNo,
-            actualAmount: data.actualAmount || currentPrice,
           })
           setShowAntiScamModal(true)
           setLoading(false)
@@ -929,14 +927,6 @@ body: JSON.stringify({
               <div className="bg-white dark:bg-black rounded-lg p-3 border-2 border-red-500">
                 <p className="text-lg font-bold text-red-600 dark:text-red-400 break-all text-center">{pendingPayment.orderEmail}</p>
               </div>
-              {/* 显示实际支付金额 */}
-              {pendingPayment.actualAmount && (
-                <div className="mt-3 pt-3 border-t border-red-500/30">
-                  <p className="text-xs text-muted-foreground text-center mb-1">{"实际支付金额"}</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 text-center">{"¥"}{pendingPayment.actualAmount.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground text-center mt-1">{"（含随机尾数，每笔订单金额唯一）"}</p>
-                </div>
-              )}
             </div>
             
             {/* 诈骗警告 */}
