@@ -76,6 +76,9 @@ export interface Order {
   gateway_resp?: string
   notify_raw?: string
   updated_at: Date
+  pay_verify_code?: string
+  is_high_risk?: boolean
+  risk_delay_until?: Date
   [key: string]: any
 }
 
@@ -506,7 +509,9 @@ export class Database {
         INSERT INTO orders (
           out_trade_no, email, amount, subject, status, pay_channel, product_id, code,
           quantity, delivery_type, selected_region, region_name,
-          paid_at, fulfilled_at, gateway_resp, notify_raw, query_password_hash, created_at, updated_at
+          paid_at, fulfilled_at, gateway_resp, notify_raw, query_password_hash,
+          pay_verify_code, is_high_risk, risk_delay_until,
+          created_at, updated_at
         ) VALUES (
           ${order.out_trade_no}, ${order.email}, ${order.amount}, ${order.subject},
           ${order.status}, ${order.pay_channel}, ${order.product_id || null}, ${order.code || null},
@@ -515,6 +520,7 @@ export class Database {
           ${order.paid_at || null}, ${order.fulfilled_at || null},
           ${order.gateway_resp || null}, ${order.notify_raw || null},
           ${order.query_password_hash || null},
+          ${order.pay_verify_code || null}, ${order.is_high_risk || false}, ${order.risk_delay_until || null},
           NOW(), NOW()
         )
         RETURNING *

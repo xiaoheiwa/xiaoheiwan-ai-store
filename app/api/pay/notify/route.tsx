@@ -170,6 +170,42 @@ async function handle(params: Record<string, string>) {
     }
 
     // ====== AUTO DELIVERY: lock and sell codes ======
+    // 检查是否为高风险订单需要延迟发货
+    if (order.is_high_risk && order.risk_delay_until) {
+      const delayUntil = new Date(order.risk_delay_until)
+      if (delayUntil > new Date()) {
+        console.log("[v0] HIGH RISK ORDER - Delaying delivery until:", delayUntil)
+        // 标记为已支付但暂不发货
+        await Database.updateOrder(orderNo, {
+          status: "paid",
+          paid_at: new Date(),
+          gateway_resp: JSON.stringify(params),
+        })
+        
+        // 发送Telegram通知管理员
+        try {
+          let productName: string | undefined
+          if (order.product_id) {
+            const product = await Database.getProduct(order.product_id)
+            productName = product?.name
+          }
+          await notifyOrderSuccess({
+            orderNo,
+            email: order.email,
+            amount: Number(order.amount),
+            productName: `[高风险-延迟发货] ${productName || "商品"}`,
+            quantity: orderQuantity,
+            paymentMethod: "alipay",
+            regionName: order.region_name || undefined,
+          })
+        } catch (tgError) {
+          console.error("[v0] Telegram notification failed:", tgError)
+        }
+        
+        return "success"
+      }
+    }
+    
     // Lock multiple codes for multi-quantity orders
     let lockedCodes: any[] = []
     if (order.product_id) {

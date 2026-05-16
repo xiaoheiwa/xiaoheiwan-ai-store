@@ -76,6 +76,17 @@ const [appliedCoupon, setAppliedCoupon] = useState<{
   // Backwards compat: fallback price/stock for when no products exist
   const [fallbackPrice, setFallbackPrice] = useState(99)
   const [fallbackStock, setFallbackStock] = useState(0)
+  
+  // 防诈骗确认弹窗状态
+  const [showAntiScamModal, setShowAntiScamModal] = useState(false)
+  const [pendingPayment, setPendingPayment] = useState<{
+    paymentUrl: string
+    orderEmail: string
+    payVerifyCode: string
+    orderNo: string
+  } | null>(null)
+  const [verifyCodeInput, setVerifyCodeInput] = useState("")
+  const [verifyError, setVerifyError] = useState("")
 
   useEffect(() => {
     fetchData()
@@ -346,10 +357,15 @@ body: JSON.stringify({
         }
 
         if (data.paymentUrl || data.redirectUrl) {
-          setMessage({ text: "订单创建成功！正在跳转到支付页面...", type: "success" })
-          setTimeout(() => {
-            window.location.href = data.paymentUrl || data.redirectUrl
-          }, 1000)
+          // 显示防诈骗确认弹窗，而不是直接跳转
+          setPendingPayment({
+            paymentUrl: data.paymentUrl || data.redirectUrl,
+            orderEmail: data.orderEmail || email,
+            payVerifyCode: data.payVerifyCode || "",
+            orderNo: data.orderNo,
+          })
+          setShowAntiScamModal(true)
+          setLoading(false)
           return
         } else if (data.paymentForm) {
           const tempDiv = document.createElement("div")
@@ -371,6 +387,32 @@ body: JSON.stringify({
     } finally {
       setLoading(false)
     }
+  }
+  
+  // 确认支付（验证验证码后跳转）
+  const handleConfirmPayment = () => {
+    if (!pendingPayment) return
+    
+    // 验证验证码
+    if (pendingPayment.payVerifyCode && verifyCodeInput !== pendingPayment.payVerifyCode) {
+      setVerifyError("验证码错误，请重新输入")
+      return
+    }
+    
+    setMessage({ text: "正在跳转到支付页面...", type: "success" })
+    setShowAntiScamModal(false)
+    setTimeout(() => {
+      window.location.href = pendingPayment.paymentUrl
+    }, 500)
+  }
+  
+  // 取消支付
+  const handleCancelPayment = () => {
+    setShowAntiScamModal(false)
+    setPendingPayment(null)
+    setVerifyCodeInput("")
+    setVerifyError("")
+    setMessage({ text: "已取消支付，如需购买请重新下单", type: "error" })
   }
 
   const getStockStatus = () => {
@@ -865,6 +907,82 @@ body: JSON.stringify({
 
         </div>
       </div>
+      
+      {/* 防诈骗确认弹窗 */}
+      {showAntiScamModal && pendingPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-up">
+            {/* 警告图标 */}
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+            
+            {/* 标题 */}
+            <h3 className="text-xl font-bold text-center text-foreground mb-2">{"支付安全确认"}</h3>
+            
+            {/* 警告信息 */}
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+              <p className="text-amber-500 text-sm font-medium mb-2">{"请仔细核实以下信息："}</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>{"• 如果这不是您本人下的订单，请勿支付"}</li>
+                <li>{"• 谨防"刷单返利""代付优惠"等诈骗"}</li>
+                <li>{"• 支付后商品将发送到下方邮箱"}</li>
+              </ul>
+            </div>
+            
+            {/* 收货邮箱显示 */}
+            <div className="bg-muted/50 rounded-xl p-4 mb-4">
+              <p className="text-xs text-muted-foreground mb-1">{"商品将发送到："}</p>
+              <p className="text-lg font-bold text-accent break-all">{pendingPayment.orderEmail}</p>
+            </div>
+            
+            {/* 验证码输入 */}
+            {pendingPayment.payVerifyCode && (
+              <div className="mb-4">
+                <p className="text-xs text-muted-foreground mb-2">{"请输入验证码确认支付（验证码："}<span className="font-mono font-bold text-accent">{pendingPayment.payVerifyCode}</span>{"）"}</p>
+                <input
+                  type="text"
+                  value={verifyCodeInput}
+                  onChange={(e) => {
+                    setVerifyCodeInput(e.target.value)
+                    setVerifyError("")
+                  }}
+                  placeholder="请输入6位验证码"
+                  className="w-full px-4 py-3 bg-background border border-border rounded-xl text-center text-lg font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-accent"
+                  maxLength={6}
+                />
+                {verifyError && <p className="text-xs text-destructive mt-1">{verifyError}</p>}
+              </div>
+            )}
+            
+            {/* 确认声明 */}
+            <p className="text-xs text-center text-muted-foreground mb-4">
+              {"点击"确认支付"即表示您确认这是您本人的订单"}
+            </p>
+            
+            {/* 按钮 */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelPayment}
+                className="flex-1 px-4 py-3 bg-muted text-muted-foreground rounded-xl font-medium hover:bg-muted/80 transition-colors"
+              >
+                {"取消"}
+              </button>
+              <button
+                onClick={handleConfirmPayment}
+                disabled={pendingPayment.payVerifyCode && verifyCodeInput.length !== 6}
+                className="flex-1 px-4 py-3 bg-accent text-accent-foreground rounded-xl font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {"确认支付"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
