@@ -174,7 +174,8 @@ async function handle(params: Record<string, string>) {
     // 先检查是否为高风险订单
     const riskCheck = await checkOrderHighRisk(order.email, Number(order.amount))
     
-    if (riskCheck.isHighRisk) {
+    // 只有当 reviewEnabled=true 且 isHighRisk=true 时才暂停发货
+    if (riskCheck.isHighRisk && riskCheck.reviewEnabled) {
       console.log("[v0] HIGH RISK ORDER DETECTED:", orderNo, "Reasons:", riskCheck.reasons)
       
       // 标记为已支付但需要人工审核，不自动发货
@@ -208,6 +209,11 @@ async function handle(params: Record<string, string>) {
       
       console.log("[v0] High risk order marked for review:", orderNo)
       return "success"
+    }
+    
+    // 如果是高风险但审核已关闭，记录但继续发货
+    if (riskCheck.isHighRisk && !riskCheck.reviewEnabled) {
+      console.log("[v0] High risk order but review disabled, proceeding with auto delivery:", orderNo, "Reasons:", riskCheck.reasons)
     }
     
     // 正常订单 - Lock multiple codes for multi-quantity orders

@@ -337,44 +337,95 @@ export function RiskControlPanel() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">风控配置</CardTitle>
-              <CardDescription>调整风控参数</CardDescription>
+              <CardDescription>调整风控参数，修改后立即生效</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">加载中...</div>
               ) : (
-                <div className="space-y-4">
-                  {configs.map(config => (
-                    <div key={config.config_key} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-2">
+                <div className="space-y-6">
+                  {/* 高风险审核开关 */}
+                  <div className="p-4 border-2 border-amber-500/50 bg-amber-500/5 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
                       <div>
-                        <div className="font-medium text-sm">{config.description}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{config.config_key}</div>
+                        <div className="font-bold text-amber-600">高风险订单人工审核</div>
+                        <div className="text-xs text-muted-foreground">开启后，高风险订单需人工审核才能发货</div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {config.config_value === "true" || config.config_value === "false" ? (
-                          <Select
-                            value={config.config_value}
-                            onValueChange={value => handleUpdateConfig(config.config_key, value)}
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="true">开启</SelectItem>
-                              <SelectItem value="false">关闭</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
+                      {configs.find(c => c.config_key === "high_risk_review_enabled") && (
+                        <Select
+                          value={configs.find(c => c.config_key === "high_risk_review_enabled")?.config_value || "true"}
+                          onValueChange={value => handleUpdateConfig("high_risk_review_enabled", value)}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">开启</SelectItem>
+                            <SelectItem value="false">关闭</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 高风险规则配置 */}
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium text-muted-foreground">高风险判定规则</div>
+                    {configs
+                      .filter(c => c.config_key.startsWith("high_risk_") && c.config_key !== "high_risk_review_enabled")
+                      .map(config => (
+                        <div key={config.config_key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/30 rounded-lg gap-2">
+                          <div>
+                            <div className="text-sm">{config.description}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{config.config_key}</div>
+                          </div>
                           <Input
                             type="number"
                             value={config.config_value}
                             onChange={e => handleUpdateConfig(config.config_key, e.target.value)}
-                            className="w-24 text-center"
+                            className="w-20 text-center"
                           />
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* 其他配置 */}
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium text-muted-foreground">其他配置</div>
+                    {configs
+                      .filter(c => !c.config_key.startsWith("high_risk_"))
+                      .map(config => (
+                        <div key={config.config_key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/30 rounded-lg gap-2">
+                          <div>
+                            <div className="text-sm">{config.description}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{config.config_key}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {config.config_value === "true" || config.config_value === "false" ? (
+                              <Select
+                                value={config.config_value}
+                                onValueChange={value => handleUpdateConfig(config.config_key, value)}
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="true">开启</SelectItem>
+                                  <SelectItem value="false">关闭</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                type="number"
+                                value={config.config_value}
+                                onChange={e => handleUpdateConfig(config.config_key, e.target.value)}
+                                className="w-20 text-center"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               )}
             </CardContent>
