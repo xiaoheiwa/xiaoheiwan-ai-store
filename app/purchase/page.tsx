@@ -76,16 +76,6 @@ const [appliedCoupon, setAppliedCoupon] = useState<{
   // Backwards compat: fallback price/stock for when no products exist
   const [fallbackPrice, setFallbackPrice] = useState(99)
   const [fallbackStock, setFallbackStock] = useState(0)
-  
-  // 防诈骗确认弹窗状态
-  const [showAntiScamModal, setShowAntiScamModal] = useState(false)
-  const [pendingPayment, setPendingPayment] = useState<{
-    paymentUrl: string
-    orderEmail: string
-    payVerifyCode: string
-    orderNo: string
-  } | null>(null)
-  const [antiScamConfirmed, setAntiScamConfirmed] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -356,15 +346,10 @@ body: JSON.stringify({
         }
 
         if (data.paymentUrl || data.redirectUrl) {
-          // 显示防诈骗确认弹窗，而不是直接跳转
-          setPendingPayment({
-            paymentUrl: data.paymentUrl || data.redirectUrl,
-            orderEmail: data.orderEmail || email,
-            payVerifyCode: data.payVerifyCode || "",
-            orderNo: data.orderNo,
-          })
-          setShowAntiScamModal(true)
-          setLoading(false)
+          setMessage({ text: "订单创建成功！正在跳转到支付页面...", type: "success" })
+          setTimeout(() => {
+            window.location.href = data.paymentUrl || data.redirectUrl
+          }, 1000)
           return
         } else if (data.paymentForm) {
           const tempDiv = document.createElement("div")
@@ -386,30 +371,6 @@ body: JSON.stringify({
     } finally {
       setLoading(false)
     }
-  }
-  
-  // 确认支付（用户勾选确认后跳转）
-  const handleConfirmPayment = () => {
-    if (!pendingPayment) return
-    
-    // 验证用户已勾选确认
-    if (!antiScamConfirmed) {
-      return
-    }
-    
-    setMessage({ text: "正在跳转到支付页面...", type: "success" })
-    setShowAntiScamModal(false)
-    setTimeout(() => {
-      window.location.href = pendingPayment.paymentUrl
-    }, 500)
-  }
-  
-  // 取消支付（用户认为这不是自己的订单）
-  const handleCancelPayment = () => {
-    setShowAntiScamModal(false)
-    setPendingPayment(null)
-    setAntiScamConfirmed(false)
-    setMessage({ text: "感谢您的警觉！如遇诈骗请拨打96110报警", type: "success" })
   }
 
   const getStockStatus = () => {
@@ -904,92 +865,6 @@ body: JSON.stringify({
 
         </div>
       </div>
-      
-      {/* 防诈骗确认弹窗 - 强制用户确认收货邮箱 */}
-      {showAntiScamModal && pendingPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-up">
-            {/* 警告图标 */}
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
-                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-            </div>
-            
-            {/* 标题 */}
-            <h3 className="text-xl font-bold text-center text-red-500 mb-2">{"防诈骗安全提醒"}</h3>
-            
-            {/* 核心警告 - 红色醒目 */}
-            <div className="bg-red-500/10 border-2 border-red-500/50 rounded-xl p-4 mb-4">
-              <p className="text-red-500 text-sm font-bold text-center mb-3">{"请注意！支付后商品将发送至："}</p>
-              <div className="bg-white dark:bg-black rounded-lg p-3 border-2 border-red-500">
-                <p className="text-lg font-bold text-red-600 dark:text-red-400 break-all text-center">{pendingPayment.orderEmail}</p>
-              </div>
-            </div>
-            
-            {/* 诈骗警告 */}
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
-              <p className="text-amber-600 dark:text-amber-400 text-sm font-bold mb-2">{"如果您是被他人要求扫码付款："}</p>
-              <ul className="text-sm text-foreground space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold">{"!"}</span>
-                  <span>{"这很可能是诈骗！商品不会发给您"}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold">{"!"}</span>
-                  <span>{"刷单返利、帮忙付款都是骗局"}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold">{"!"}</span>
-                  <span>{"请立即停止并报警"}</span>
-                </li>
-              </ul>
-            </div>
-            
-            {/* 确认checkbox */}
-            <label className="flex items-start gap-3 mb-4 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={antiScamConfirmed}
-                onChange={(e) => setAntiScamConfirmed(e.target.checked)}
-                className="w-5 h-5 mt-0.5 rounded border-2 border-red-500 text-red-500 focus:ring-red-500"
-              />
-              <span className="text-sm text-foreground">
-                {"我确认这是"}
-                <span className="font-bold text-red-500">{" 我本人 "}</span>
-                {"的订单，上方邮箱"}
-                <span className="font-bold text-red-500">{" 属于我 "}</span>
-                {"，不是被他人要求付款"}
-              </span>
-            </label>
-            
-            {/* 按钮 */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancelPayment}
-                className="flex-1 px-4 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors"
-              >
-                {"这不是我的订单"}
-              </button>
-              <button
-                onClick={handleConfirmPayment}
-                disabled={!antiScamConfirmed}
-                className="flex-1 px-4 py-3 bg-muted text-muted-foreground rounded-xl font-medium hover:bg-muted/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {"确认支付"}
-              </button>
-            </div>
-            
-            {/* 举报入口 */}
-            <p className="text-xs text-center text-muted-foreground mt-4">
-              {"如遇诈骗请拨打反诈热线："}
-              <span className="font-bold text-red-500">{"96110"}</span>
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
