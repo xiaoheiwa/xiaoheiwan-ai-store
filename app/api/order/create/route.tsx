@@ -344,19 +344,23 @@ export async function POST(req: Request) {
     }
 
     // 支付宝使用页面跳转方式
-    const paymentUrl = ZPayz.createPagePayment(paymentParams)
+    const zpayPageUrl = ZPayz.createPagePayment(paymentParams)
     
     // 保存支付链接
     await Database.updateOrder(orderNo, {
-      payment_url: paymentUrl,
+      payment_url: zpayPageUrl,
     })
+    
+    // 返回自定义支付页面 URL（内嵌ZPay页面+反诈骗警示）
+    const customPayUrl = `/pay/${orderNo}`
 
-    console.log("[v0] Payment URL generated")
+    console.log("[v0] Payment URL generated, redirecting to custom pay page")
     return NextResponse.json({
       success: true,
       orderNo,
-      paymentUrl,
-      redirectUrl: paymentUrl,
+      paymentUrl: customPayUrl,
+      redirectUrl: customPayUrl,
+      useCustomPayPage: true,
     })
   } catch (error: any) {
     console.error("[v0] ORDER CREATION FAILED:", error?.message)
