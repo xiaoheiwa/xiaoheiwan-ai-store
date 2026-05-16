@@ -17,6 +17,7 @@ import { WithdrawalManager } from "@/components/withdrawal-manager"
 import { ApplicationManager } from "@/components/application-manager"
 import { RiskControlPanel } from "@/components/risk-control-panel"
 import { FinancePanel } from "@/components/finance-panel"
+import { PendingReviewOrders } from "@/components/pending-review-orders"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
 import {
@@ -1270,6 +1271,13 @@ setAdminToken(data.token)
 
   const renderOrders = () => (
     <div className="space-y-6">
+      {/* 待审核订单 - 防诈骗风控 */}
+      <Card className="border-amber-500/50 bg-amber-500/5">
+        <CardContent className="p-4">
+          <PendingReviewOrders adminToken={adminToken} />
+        </CardContent>
+      </Card>
+      
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="cursor-pointer hover:ring-2 hover:ring-emerald-500/50 transition-all" onClick={() => handleOrdersFilterChange("status", ordersStatusFilter === "paid" ? "" : "paid")}>
@@ -1578,7 +1586,7 @@ setAdminToken(data.token)
                                   <div className="flex items-center gap-2 mt-2">
                                     <input
                                       type="text"
-                                      placeholder="手动输入激活码"
+                                      placeholder="手动输入��活码"
                                       value={manualCodeInputs[order.out_trade_no] || ""}
                                       onChange={(e) =>
                                         setManualCodeInputs((prev) => ({
@@ -2260,7 +2268,7 @@ const renderSettings = () => (
     <Bell className="w-5 h-5" />
     <span>通知管理</span>
   </CardTitle>
-  <CardDescription>管理网站紧急通知，开启后将在左上角显示通知弹窗</CardDescription>
+  <CardDescription>管理网站紧急通知，开启后将在左上角显示��知弹窗</CardDescription>
   </CardHeader>
   <CardContent className="space-y-4">
   <div className="grid gap-4">

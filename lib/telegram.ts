@@ -161,3 +161,39 @@ export async function notifyCryptoPending(data: {
 
   return sendTelegramMessage(message)
 }
+
+/**
+ * 高风险订单告警 - 需要人工审核
+ */
+export async function notifyHighRiskOrder(data: {
+  orderNo: string
+  email: string
+  amount: number
+  productName?: string
+  quantity: number
+  riskReasons: string[]
+}): Promise<boolean> {
+  const reasonsList = data.riskReasons.map(r => `• ${r}`).join('\n')
+  
+  const message = `
+<b>🚨 高风险订单 - 需人工审核</b>
+
+<b>订单号:</b> <code>${data.orderNo}</code>
+<b>邮箱:</b> ${data.email}
+<b>产品:</b> ${data.productName || "激活码"}
+<b>数量:</b> ${data.quantity}
+<b>金额:</b> ¥${data.amount}
+
+<b>⚠️ 风险原因:</b>
+${reasonsList}
+
+<b>⏸️ 状态: 暂停发货，等待审核</b>
+
+请前往后台【待审核订单】处理：
+✅ 确认发货 / ❌ 退款拒绝
+
+<i>⏰ ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}</i>
+`.trim()
+
+  return sendTelegramMessage(message)
+}

@@ -372,3 +372,78 @@ export async function updateRiskConfig(key: string, value: string) {
 export async function getAllRiskConfig() {
   return sql`SELECT * FROM risk_config ORDER BY config_key`
 }
+
+/**
+ * 检查订单是否为高风险（用于支付后发货前的二次检查）
+ * 高风险订单需要人工审核后才能发货
+ */
+export async function checkOrderHighRisk(email: string, amount: number): Promise<{ isHighRisk: boolean; reasons: string[] }> {
+  const reasons: string[] = []
+  let isHighRisk = false
+
+  try {
+    const now = new Date()
+    const currentHour = now.getHours()
+
+    // 1. 凌晨1-6点下单 - 高风险
+    if (currentHour >= 1 && currentHour < 6) {
+      reasons.push(`凌晨${currentHour}点下单`)
+      isHighRisk = true
+    }
+
+    // 2. 同一邮箱当天已支付订单数 >= 2
+    const todayPaidOrders = await sql`
+      SELECT COUNT(*)::int as count FROM orders 
+      WHERE email = ${email} 
+      AND paid_at > NOW() - INTERVAL '24 hours'
+      AND status = 'paid'
+    `
+    const todayCount = todayPaidOrders[0]?.count || 0
+    if (todayCount >= 2) {
+      reasons.push(`今日已支付${todayCount}单`)
+      isHighRisk = true
+    }
+
+    // 3. 同一邮箱1小时内支付次数 >= 2
+    const hourPaidOrders = await sql`
+      SELECT COUNT(*)::int as count FROM orders 
+      WHERE email = ${email} 
+      AND paid_at > NOW() - INTERVAL '1 hour'
+      AND status = 'paid'
+    `
+    const hourCount = hourPaidOrders[0]?.count || 0
+    if (hourCount >= 2) {
+      reasons.push(`1小时内已支付${hourCount}单`)
+      isHighRisk = true
+    }
+
+    // 4. 检查邮箱是否在黑名单观察列表
+    const watchlist = await sql`
+      SELECT reason FROM risk_blacklist 
+      WHERE type = 'email' AND LOWER(value) = LOWER(${email})
+      AND (expires_at IS NULL OR expires_at > NOW())
+    `
+    if (watchlist.length > 0) {
+      reasons.push(`邮箱在观察名单: ${watchlist[0].reason}`)
+      isHighRisk = true
+    }
+
+    // 5. 7天内相同金额支付3次以上
+    const sameAmountOrders = await sql`
+      SELECT COUNT(*)::int as count FROM orders 
+      WHERE email = ${email} 
+      AND amount = ${amount}
+      AND status = 'paid'
+      AND paid_at > NOW() - INTERVAL '7 days'
+    `
+    if ((sameAmountOrders[0]?.count || 0) >= 3) {
+      reasons.push(`7天内相同金额支付${sameAmountOrders[0].count}次`)
+      isHighRisk = true
+    }
+
+  } catch (error) {
+    console.error("[RiskControl] Error checking high risk:", error)
+  }
+
+  return { isHighRisk, reasons }
+}

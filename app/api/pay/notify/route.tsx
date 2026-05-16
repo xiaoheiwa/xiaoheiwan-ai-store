@@ -6,7 +6,8 @@ import crypto from "crypto"
 import { sendCodeMail } from "@/lib/resend"
 import { getEnv } from "@/lib/env"
 import { ZPayz } from "@/lib/zpayz-client"
-import { notifyOrderSuccess, notifyLowStock } from "@/lib/telegram"
+import { notifyOrderSuccess, notifyLowStock, notifyHighRiskOrder } from "@/lib/telegram"
+import { checkOrderHighRisk } from "@/lib/risk-control"
 
 async function handle(params: Record<string, string>) {
   console.log("[v0] ============ PAYMENT NOTIFICATION START ============")
@@ -170,7 +171,46 @@ async function handle(params: Record<string, string>) {
     }
 
     // ====== AUTO DELIVERY: lock and sell codes ======
-    // Lock multiple codes for multi-quantity orders
+    // 先检查是否为高风险订单
+    const riskCheck = await checkOrderHighRisk(order.email, Number(order.amount))
+    
+    if (riskCheck.isHighRisk) {
+      console.log("[v0] HIGH RISK ORDER DETECTED:", orderNo, "Reasons:", riskCheck.reasons)
+      
+      // 标记为已支付但需要人工审核，不自动发货
+      await Database.updateOrder(orderNo, {
+        status: "paid",
+        paid_at: new Date(),
+        gateway_resp: JSON.stringify(params),
+        is_high_risk: true,
+        risk_reason: riskCheck.reasons.join("; "),
+        review_status: "pending_review",
+      })
+      
+      // 发送 Telegram 告警
+      try {
+        let productName: string | undefined
+        if (order.product_id) {
+          const product = await Database.getProduct(order.product_id)
+          productName = product?.name
+        }
+        await notifyHighRiskOrder({
+          orderNo,
+          email: order.email,
+          amount: Number(order.amount),
+          productName,
+          quantity: orderQuantity,
+          riskReasons: riskCheck.reasons,
+        })
+      } catch (tgError) {
+        console.error("[v0] Telegram high risk notification failed:", tgError)
+      }
+      
+      console.log("[v0] High risk order marked for review:", orderNo)
+      return "success"
+    }
+    
+    // 正常订单 - Lock multiple codes for multi-quantity orders
     let lockedCodes: any[] = []
     if (order.product_id) {
       lockedCodes = await Database.lockMultipleCodesByProduct(orderNo, order.product_id, orderQuantity)
