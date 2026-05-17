@@ -424,12 +424,14 @@ export async function checkOrderHighRisk(email: string, amount: number): Promise
     const sameAmountDays = parseInt(await getConfigValue('high_risk_same_amount_days', '7'), 10)
     const sameAmountLimit = parseInt(await getConfigValue('high_risk_same_amount_limit', '3'), 10)
 
+    // 使用北京时间 (UTC+8)
     const now = new Date()
-    const currentHour = now.getHours()
+    const beijingTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }))
+    const currentHour = beijingTime.getHours()
 
-    // 1. 高风险时段下单
+    // 1. 高风险时段下单（北京时间）
     if (currentHour >= nightStart && currentHour < nightEnd) {
-      reasons.push(`高风险时段（${nightStart}-${nightEnd}点）下单，当前${currentHour}点`)
+      reasons.push(`高风险时段（北京时间${nightStart}-${nightEnd}点）下单，当前北京时间${currentHour}点`)
       isHighRisk = true
     }
 
