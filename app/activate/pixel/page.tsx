@@ -54,7 +54,15 @@ export default function PixelActivatePage() {
 
   const [message, setMessage] = useState<{ text: string; type: MessageType } | null>(null)
 
-  const PIXEL_API_BASE = "https://pixel.yh-mo.xyz"
+  // 通过代理 API 调用，隐藏实际地址
+  async function pixelApi(endpoint: string, payload: Record<string, unknown>) {
+    const res = await fetch("/api/pixel/proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint, ...payload })
+    })
+    return res.json()
+  }
 
   // 验证卡密
   async function handleVerifyCard() {
@@ -65,12 +73,7 @@ export default function PixelActivatePage() {
     setVerifying(true)
     setMessage(null)
     try {
-      const res = await fetch(`${PIXEL_API_BASE}/api/verify-card`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ card_key: cardKey.trim() })
-      })
-      const data = await res.json()
+      const data = await pixelApi("/api/verify-card", { card_key: cardKey.trim() })
       if (data.valid) {
         setCardInfo(data)
         setMessage({ text: `卡密验证成功！剩余额度: ${data.remaining_quota_units} 个账号`, type: "success" })
@@ -104,15 +107,10 @@ export default function PixelActivatePage() {
     setSubmitting(true)
     setMessage(null)
     try {
-      const res = await fetch(`${PIXEL_API_BASE}/api/submit-task`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          card_key: cardKey.trim(),
-          accounts: accounts 
-        })
+      const data = await pixelApi("/api/submit-task", { 
+        card_key: cardKey.trim(),
+        accounts: accounts 
       })
-      const data = await res.json()
       if (data.task_id) {
         setTaskId(data.task_id)
         setMessage({ text: "任务提交成功，正在处理中...", type: "success" })
@@ -133,15 +131,10 @@ export default function PixelActivatePage() {
     setPolling(true)
     const poll = async () => {
       try {
-        const res = await fetch(`${PIXEL_API_BASE}/api/query-task`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            card_key: cardKey.trim(),
-            task_id: tid 
-          })
+        const data = await pixelApi("/api/query-task", { 
+          card_key: cardKey.trim(),
+          task_id: tid 
         })
-        const data = await res.json()
         if (data.task_id) {
           setTaskResult(data)
           // 如果还在处理中，继续轮询
@@ -164,12 +157,7 @@ export default function PixelActivatePage() {
   // 刷新卡密信息
   async function refreshCardInfo() {
     try {
-      const res = await fetch(`${PIXEL_API_BASE}/api/verify-card`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ card_key: cardKey.trim() })
-      })
-      const data = await res.json()
+      const data = await pixelApi("/api/verify-card", { card_key: cardKey.trim() })
       if (data.valid) {
         setCardInfo(data)
       }
@@ -181,16 +169,11 @@ export default function PixelActivatePage() {
   // 取消账号
   async function handleCancelAccount(account: string) {
     try {
-      const res = await fetch(`${PIXEL_API_BASE}/api/cancel-account`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          card_key: cardKey.trim(),
-          task_id: taskId,
-          account 
-        })
+      const data = await pixelApi("/api/cancel-account", { 
+        card_key: cardKey.trim(),
+        task_id: taskId,
+        account 
       })
-      const data = await res.json()
       if (data.success) {
         setMessage({ text: "已取消该账号，额度已回补", type: "success" })
         // 刷新任务状态
