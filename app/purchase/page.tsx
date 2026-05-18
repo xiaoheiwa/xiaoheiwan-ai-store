@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation"
 import { AlertMessage } from "@/components/alert-message"
 import { CreditCard, Mail, ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, Sparkles, Box, Zap, Ticket, X } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 
 interface PriceTier {
   min_qty: number
@@ -31,7 +30,6 @@ interface Product {
   price_tiers: PriceTier[] | null
   region_options?: RegionOption[] | null
   require_region_selection?: boolean
-  image_url?: string
 }
 
 function getUnitPrice(product: Product, qty: number): number {
@@ -460,48 +458,34 @@ body: JSON.stringify({
                           : "border-border hover:border-muted-foreground/50"
                       }`}
                     >
-                      <div className="flex items-center gap-4">
-                        {/* 产品图片 */}
-                        {product.image_url && (
-                          <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-muted/30">
-                            <Image
-                              src={product.image_url}
-                              alt={product.name}
-                              fill
-                              className="object-cover"
-                              sizes="64px"
-                            />
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between flex-1 min-w-0">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-foreground truncate">{product.name}</span>
-                              {pStock <= 0 && product.delivery_type !== "manual" && (
-                                <span className="text-xs px-2 py-0.5 bg-destructive/10 text-destructive rounded-full">{"缺货"}</span>
-                              )}
-                              {product.delivery_type === "manual" && (
-                                <span className="text-xs px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-full">{"人工发货"}</span>
-                              )}
-                            </div>
-                            {product.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-foreground truncate">{product.name}</span>
+                            {pStock <= 0 && product.delivery_type !== "manual" && (
+                              <span className="text-xs px-2 py-0.5 bg-destructive/10 text-destructive rounded-full">{"缺货"}</span>
+                            )}
+                            {product.delivery_type === "manual" && (
+                              <span className="text-xs px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-full">{"人工发货"}</span>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 shrink-0 ml-4">
-                            <div className="text-right">
-                              <span className="text-lg font-bold text-foreground">¥{product.price}</span>
-                              {product.original_price && (
-                                <span className="text-xs text-muted-foreground/60 line-through ml-1">¥{product.original_price}</span>
-                              )}
-                            </div>
-                            <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                isSelected ? "border-accent bg-accent scale-110" : "border-muted-foreground/50"
-                              }`}
-                            >
-                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-white" />}
-                            </div>
+                          {product.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 ml-4">
+                          <div className="text-right">
+                            <span className="text-lg font-bold text-foreground">¥{product.price}</span>
+                            {product.original_price && (
+                              <span className="text-xs text-muted-foreground/60 line-through ml-1">¥{product.original_price}</span>
+                            )}
+                          </div>
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              isSelected ? "border-accent bg-accent scale-110" : "border-muted-foreground/50"
+                            }`}
+                          >
+                            {isSelected && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                           </div>
                         </div>
                       </div>
