@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2, CheckCircle, XCircle, Clock, Link2, AlertTriangle, Ticket, Copy, Check, RefreshCw, Trash2, HelpCircle, ChevronDown, ChevronUp, ExternalLink } from "lucide-react"
+import { Loader2, CheckCircle, XCircle, Clock, Link2, AlertTriangle, Ticket, Copy, Check, RefreshCw, Trash2, HelpCircle, ChevronDown, ChevronUp, ExternalLink, Gift, Smartphone, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -50,6 +50,7 @@ export default function PixelActivatePage() {
   const [polling, setPolling] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [showGuide, setShowGuide] = useState(false)
+  const [showOffers, setShowOffers] = useState(false)
 
   const [message, setMessage] = useState<{ text: string; type: MessageType } | null>(null)
 
@@ -392,6 +393,151 @@ export default function PixelActivatePage() {
               >
                 <ExternalLink className="w-4 h-4" />
                 <span>查看完整图文教程（飞书文档）</span>
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Pixel 优惠详情折叠区域 */}
+      <div className="mb-6">
+        <button
+          onClick={() => setShowOffers(!showOffers)}
+          className="w-full flex items-center justify-between p-4 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/15 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Gift className="w-5 h-5 text-green-500" />
+            <span className="font-medium text-foreground">Pixel 专属优惠详情</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-500">官方福利</span>
+          </div>
+          {showOffers ? (
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          )}
+        </button>
+        
+        {showOffers && (
+          <div className="mt-3 p-5 rounded-xl bg-card border border-border space-y-5 text-sm">
+            {/* 优惠说明 */}
+            <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20">
+              <p className="text-muted-foreground">
+                购买 Pixel 手机后，可获得 <span className="text-green-500 font-semibold">Google One</span> 或 <span className="text-blue-500 font-semibold">Google AI Pro</span> 专属优惠。
+                本系统可自动提取这些优惠链接，让您无需拥有 Pixel 手机也能享受福利。
+              </p>
+            </div>
+
+            {/* Pixel 10 Pro 系列 */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-foreground flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-blue-500" />
+                Pixel 10 Pro / Pro XL / Pro Fold
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-500">热门</span>
+              </h4>
+              <div className="ml-7 space-y-2">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+                  <Star className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-foreground font-medium">Google AI Pro 方案 - 12个月免费</p>
+                    <ul className="text-muted-foreground text-xs mt-1 space-y-0.5">
+                      <li>• 2TB 云端存储空间 (Google 相册/云端硬盘/Gmail)</li>
+                      <li>• Gemini Advanced (最强版 Gemini)</li>
+                      <li>• NotebookLM Plus</li>
+                      <li>• Gmail、Google 文档等产品中的 Gemini 功能</li>
+                    </ul>
+                    <p className="text-green-500 text-xs mt-1">价值约 ¥1,680/年</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pixel 10 */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-foreground flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-violet-500" />
+                Pixel 10
+              </h4>
+              <div className="ml-7 space-y-2">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+                  <Star className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-foreground font-medium">Google AI Pro 方案 - 6个月免费</p>
+                    <ul className="text-muted-foreground text-xs mt-1 space-y-0.5">
+                      <li>• 2TB 云端存储空间</li>
+                      <li>• Gemini Advanced</li>
+                      <li>• NotebookLM Plus</li>
+                    </ul>
+                    <p className="text-green-500 text-xs mt-1">价值约 ¥840/半年</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pixel 9 Pro 系列 */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-foreground flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-orange-500" />
+                Pixel 9 Pro / Pro XL / Pro Fold
+              </h4>
+              <div className="ml-7 space-y-2">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+                  <Star className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-foreground font-medium">Google AI Pro 方案 - 12个月免费</p>
+                    <ul className="text-muted-foreground text-xs mt-1 space-y-0.5">
+                      <li>• 2TB 云端存储空间</li>
+                      <li>• Gemini Advanced</li>
+                      <li>• Gmail、文档中的 Gemini 功能</li>
+                    </ul>
+                    <p className="text-green-500 text-xs mt-1">价值约 ¥1,680/年</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pixel 9 / 9a / 10a */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-foreground flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-gray-500" />
+                Pixel 9 / 9a / 10a
+              </h4>
+              <div className="ml-7 space-y-2">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+                  <Star className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-foreground font-medium">Google One 高级版/基本版 - 3-6个月免费</p>
+                    <ul className="text-muted-foreground text-xs mt-1 space-y-0.5">
+                      <li>• Pixel 9: 2TB 高级版 6个月</li>
+                      <li>• Pixel 9a/10a: 100GB 基本版 3个月</li>
+                      <li>• Google 相册、云端硬盘、Gmail 共享存储</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 适用地区 */}
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-amber-500 text-xs flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  <strong>适用地区：</strong>美国、英国、德国、法国、日本、新加坡、台湾、澳大利亚等30+国家/地区。
+                  <br />
+                  <strong>资格要求：</strong>仅限 Google One 新会员或未订阅 AI Pro 的现有会员。
+                </span>
+              </p>
+            </div>
+
+            {/* 外部链接 */}
+            <div className="pt-3 border-t border-border">
+              <a
+                href="https://support.google.com/pixelphone/answer/13529884?hl=zh-Hans"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-green-500 hover:text-green-400 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>查看 Google 官方优惠页面</span>
               </a>
             </div>
           </div>
