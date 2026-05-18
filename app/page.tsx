@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Shield, Zap, CheckCircle, ArrowRight, Sparkles, Newspaper, BookOpen, Search, Package, Link2, LayoutGrid, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 import Logo from "@/components/logo"
 
 interface Category {
@@ -24,7 +23,6 @@ interface Product {
   delivery_type?: string
   category_id?: string
   category_name?: string
-  image_url?: string
 }
 
 export default function HomePage() {
@@ -176,60 +174,44 @@ export default function HomePage() {
                   <Link
                     key={product.id}
                     href={`/product/${product.id}`}
-                    className={`group glass-card card-shadow rounded-2xl overflow-hidden hover-lift block opacity-0 animate-fade-up`}
+                    className={`group glass-card card-shadow rounded-2xl p-6 hover-lift block opacity-0 animate-fade-up`}
                     style={{ animationFillMode: "forwards", animationDelay: `${200 + index * 80}ms` }}
                   >
-                    {/* 产品图片 */}
-                    {product.image_url && (
-                      <div className="relative w-full h-32 bg-muted/30">
-                        <Image
-                          src={product.image_url}
-                          alt={product.name}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                      </div>
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-semibold text-foreground text-base group-hover:text-accent transition-colors leading-snug">
+                        {product.name}
+                      </h3>
+                      {(product.delivery_type === "manual" || Number(product.stock_count) > 0) ? (
+                        <span className="shrink-0 ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent border border-accent/20">
+                          {"\u73b0\u8d27"}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/10 text-destructive border border-destructive/20">
+                          {"缺货"}
+                        </span>
+                      )}
+                    </div>
+
+                    {product.description && (
+                      <p className="text-xs text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
+                        {product.description}
+                      </p>
                     )}
-                    
-                    <div className="p-5">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-foreground text-base group-hover:text-accent transition-colors leading-snug line-clamp-2">
-                          {product.name}
-                        </h3>
-                        {(product.delivery_type === "manual" || Number(product.stock_count) > 0) ? (
-                          <span className="shrink-0 ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent border border-accent/20">
-                            {"\u73b0\u8d27"}
-                          </span>
-                        ) : (
-                          <span className="shrink-0 ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/10 text-destructive border border-destructive/20">
-                            {"缺货"}
+
+                    <div className="flex items-end justify-between mt-auto">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold text-foreground">
+                          {"\u00a5"}{product.price}
+                        </span>
+                        {product.original_price && (
+                          <span className="text-xs text-muted-foreground/50 line-through">
+                            {"\u00a5"}{product.original_price}
                           </span>
                         )}
                       </div>
-
-                      {product.description && (
-                        <p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed">
-                          {product.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-end justify-between mt-auto">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-xl font-bold text-foreground">
-                            {"\u00a5"}{product.price}
-                          </span>
-                          {product.original_price && (
-                            <span className="text-xs text-muted-foreground/50 line-through">
-                              {"\u00a5"}{product.original_price}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-accent opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span>{"查看详情"}</span>
-                          <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                        </div>
+                      <div className="flex items-center gap-1 text-xs text-accent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>{"查看详情"}</span>
+                        <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
                   </Link>
