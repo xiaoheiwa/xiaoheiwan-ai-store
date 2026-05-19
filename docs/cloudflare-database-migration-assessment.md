@@ -92,3 +92,39 @@ Only do this after a staging D1 database works end to end.
 ## Cutover warning
 
 Do not point `upgrade.xiaoheiwan.com` to Cloudflare D1-backed code until order creation, payment callbacks, and activation-code stock locking pass tests against D1.
+
+## 2026-05-19 D1 export progress
+
+Generated a D1-compatible export from Neon with:
+
+```bash
+node scripts/export-neon-to-d1.mjs --env-file .env.local --out-dir /private/tmp/xiaoheiwan-d1
+```
+
+Outputs:
+
+- `/private/tmp/xiaoheiwan-d1/schema.sql`
+- `/private/tmp/xiaoheiwan-d1/data.sql`
+
+The data file contains production orders and activation codes. Do not commit it.
+
+Local SQLite import passed:
+
+- 29 tables created.
+- `products` row count: 22.
+- `activation_codes` row count: 911.
+- `orders` row count: 844.
+- `blog_posts` row count: 23.
+- A product + stock-count query completed successfully.
+
+Remote D1 creation is currently blocked because the Cloudflare account has reached its D1 database limit.
+
+Once one D1 slot is available, run:
+
+```bash
+wrangler d1 create xiaoheiwan-ai-store-db
+wrangler d1 execute xiaoheiwan-ai-store-db --remote --file /private/tmp/xiaoheiwan-d1/schema.sql --yes
+wrangler d1 execute xiaoheiwan-ai-store-db --remote --file /private/tmp/xiaoheiwan-d1/data.sql --yes
+```
+
+Then add the returned D1 binding to `wrangler.jsonc` before switching application code to D1.
