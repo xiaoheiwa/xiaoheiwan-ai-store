@@ -95,14 +95,17 @@ export async function POST(request: NextRequest) {
       // Send email notification if email exists
       if (order.email && process.env.RESEND_API_KEY) {
         try {
-          const { Resend } = await import("resend")
-          const resend = new Resend(process.env.RESEND_API_KEY)
-          
-          await resend.emails.send({
-            from: process.env.EMAIL_FROM || "onboarding@resend.dev",
-            to: order.email,
-            subject: `您的订单 ${orderNo} 已完成`,
-            html: `
+          const emailResponse = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+              to: [order.email],
+              subject: `您的订单 ${orderNo} 已完成`,
+              html: `
               <h2>感谢您的购买！</h2>
               <p>您的USDT支付已确认，订单已完成。</p>
               <p><strong>订单号：</strong>${orderNo}</p>
@@ -111,7 +114,12 @@ export async function POST(request: NextRequest) {
               <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">${codeStr}</pre>
               <p>如有任何问题，请联系客服。</p>
             `,
+            }),
           })
+
+          if (!emailResponse.ok) {
+            throw new Error(await emailResponse.text())
+          }
         } catch (emailError) {
           console.error("Failed to send email:", emailError)
         }
