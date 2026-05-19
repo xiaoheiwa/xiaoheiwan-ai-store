@@ -2,9 +2,9 @@
 
 > XiaoHeiWan AI Store - 一站式 AI 服务激活码销售平台
 
-支持 Claude Pro、ChatGPT Plus、Grok Premium 等 AI 服务的激活码自动发货，开箱即用的开源商城系统。
+支持 Claude Pro、ChatGPT Plus、Grok Premium 等 AI 服务的激活码自动发货，开箱即用的**开源**商城系统。
 
-![License](https://img.shields.io/badge/license-Commercial-red.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-v4-38B2AC)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791)
@@ -13,14 +13,6 @@
 ## 演示站点
 
 **在线演示**: [upgrade.xiaoheiwan.com](https://upgrade.xiaoheiwan.com)
-
-**购买授权**: Telegram [@jialiao2025](https://t.me/jialiao2025)
-
-## 截图预览
-
-| 首页 | 商品详情 | 后台管理 |
-|:---:|:---:|:---:|
-| 产品展示、分类导航 | 支付方式、区域选择 | 订单、库存、统计 |
 
 ## 功能特性
 
@@ -39,6 +31,7 @@
 - GitHub Copilot 激活 - 套壳代理激活平台
 - GPT Team 兑换 - 邀请链接自动兑换
 - Telegram Premium - 代开会员服务
+- Pixel 优惠提取 - Google Pixel 专属优惠链接提取
 
 ### 后台管理
 - 商品管理 - CRUD、库存、阶梯定价、区域选项
@@ -47,6 +40,7 @@
 - 支付配置 - 多支付通道配置
 - 财务统计 - 销售数据、收入图表
 - 博客系统 - 内置博客，支持 AI 辅助写作
+- 风控系统 - 订单风险评估、白名单管理
 
 ### 通知系统
 - Telegram Bot - 订单通知、库存预警、每日报告
@@ -59,7 +53,6 @@
 - 图片分割 - 外链 AI 拼贴图分割工具
 
 ### 其他特性
-- 域名授权 - 内置授权验证，保护源代码
 - 在线客服 - 实时聊天客服系统
 - SEO 优化 - 完整的 SEO 配置
 - 响应式设计 - 移动端 + 桌面端
@@ -79,35 +72,13 @@
 | 支付 | 虎皮椒 / ZPayz / EPay / USDT / 微信支付 |
 | 部署 | Vercel |
 
-## 授权说明
-
-本项目采用**商业授权**，需要购买授权后方可部署使用。
-
-### 获取授权
-
-联系开发者购买：**Telegram [@jialiao2025](https://t.me/jialiao2025)**
-
-### 授权方式
-
-购买后获得授权码，在 Vercel 环境变量中设置：
-
-```env
-LICENSE_KEY=您的授权码
-```
-
-### 免授权环境（开发测试）
-
-- `localhost` 本地开发
-- `*.vercel.app` Vercel 预览
-- `*.v0.build` / `*.v0.dev` v0 预览
-
 ## 快速开始
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/xiaoheiwa/upgrade-xiaoheiwan-com.git
-cd upgrade-xiaoheiwan-com
+git clone https://github.com/xiaoheiwa/xiaoheiwan-ai-store.git
+cd xiaoheiwan-ai-store
 ```
 
 ### 2. 安装依赖
@@ -140,12 +111,6 @@ pnpm dev
 
 <details>
 <summary><strong>点击展开完整配置</strong></summary>
-
-### 授权（必需）
-
-```env
-LICENSE_KEY=your_license_key
-```
 
 ### 数据库（必需）
 
@@ -214,17 +179,14 @@ CRON_SECRET=your_cron_secret
 │   ├── api/                # API 路由
 │   ├── activate/           # 激活页面
 │   ├── blog/               # 博客
-│   ├── purchase/           # 购买页面
-│   └── unauthorized/       # 授权提示
+│   └── purchase/           # 购买页面
 ├── components/
 │   └── ui/                 # shadcn/ui 组件
 ├── lib/
 │   ├── database.ts         # 数据库操作
-│   ├── license.ts          # 授权验证
+│   ├── risk-control.ts     # 风控系统
 │   └── telegram.tsx        # Telegram 通知
-├── middleware.ts           # 授权中间件
 └── scripts/
-    ├── generate-license.js # 授权码生成
     └── *.sql               # 数据库迁移
 ```
 
@@ -232,7 +194,7 @@ CRON_SECRET=your_cron_secret
 
 访问 `/admin`，使用 `ADMIN_PASSWORD` 登录。
 
-**功能模块**：仪表盘 / 商品管理 / 订单管理 / 分类管理 / 支付配置 / Telegram 通知 / 博客管理
+**功能模块**：仪表盘 / 商品管理 / 订单管理 / 分类管理 / 支付配置 / Telegram 通知 / 博客管理 / 风控管理
 
 ## 部署
 
@@ -248,42 +210,14 @@ CRON_SECRET=your_cron_secret
 
 推荐 [Neon](https://neon.tech) 免费 PostgreSQL。
 
-## 更新日志
-
-| 版本 | 日期 | 更新内容 |
-|------|------|----------|
-| v1.5.0 | 2026-04-24 | GitHub Copilot 激活、微信支付渠道、订单密码重置 |
-| v1.4.0 | 2026-04 | GPT Plus 新源站、Team 存活率健康度、2FA 工具 |
-| v1.3.0 | 2026-03-16 | 域名授权系统、代码安全优化 |
-| v1.2.0 | 2026-03 | 区域选择功能、区域定价 |
-| v1.1.0 | 2026-02 | 博客系统、财务统计、分类导航 |
-| v1.0.0 | 2026-01 | 初始版本 |
-
 ## 联系方式
 
-- **购买授权** / **技术支持**: Telegram [@jialiao2025](https://t.me/jialiao2025)
-- **问题反馈**: [GitHub Issues](https://github.com/xiaoheiwa/upgrade-xiaoheiwan-com/issues)
-
-## 二次开发说明
-
-如果你购买源码进行二次开发/销售，请修改以下内容：
-
-1. **授权密钥** - 修改 `INTERNAL_SECRET` 为你自己的私密字符串
-   - `lib/license.ts`
-   - `middleware.ts`
-   - `scripts/generate-license.js`
-
-2. **开发者域名** - 修改 `DEVELOPER_DOMAINS` 为你的域名
-   - `middleware.ts`
-
-3. **联系方式** - 修改 Telegram、GitHub 链接
-   - `app/unauthorized/page.tsx`
-   - `components/footer.tsx`
-   - `README.md`
+- **技术支持**: Telegram [@jialiao2025](https://t.me/jialiao2025)
+- **问题反馈**: [GitHub Issues](https://github.com/xiaoheiwa/xiaoheiwan-ai-store/issues)
 
 ## License
 
-本项目为商业授权软件，未经授权不得用于商业用途。详情请联系开发者。
+本项目采用 [MIT License](LICENSE) 开源协议，可自由使用、修改和分发。
 
 ---
 
