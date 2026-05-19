@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ENV_FILE="${1:-.env.cloudflare}"
+WRANGLER_SECRET_COMMAND="${WRANGLER_SECRET_COMMAND:-wrangler versions secret put}"
+read -r -a secret_command <<< "$WRANGLER_SECRET_COMMAND"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Env file not found: $ENV_FILE"
@@ -39,5 +41,5 @@ while IFS= read -r line || [ -n "$line" ]; do
   fi
 
   echo "Setting Cloudflare secret: $key"
-  printf '%s' "$value" | wrangler secret put "$key"
+  printf '%s' "$value" | "${secret_command[@]}" "$key"
 done < "$ENV_FILE"
