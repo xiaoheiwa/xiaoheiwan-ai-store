@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob'
+import { saveUploadedFile } from '@/lib/object-storage'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -26,19 +26,8 @@ export async function POST(request: NextRequest) {
     const ext = file.name.split('.').pop() || 'jpg'
     const filename = `product-details/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`
 
-    // Try private access first (most common for v0 blob stores)
-    try {
-      const blob = await put(filename, file, {
-        access: 'private',
-      })
-      return NextResponse.json({ url: `/api/file?pathname=${encodeURIComponent(blob.pathname)}` })
-    } catch {
-      // Try public access as fallback
-      const blob = await put(filename, file, {
-        access: 'public',
-      })
-      return NextResponse.json({ url: blob.url })
-    }
+    const storedFile = await saveUploadedFile(filename, file, { access: 'private' })
+    return NextResponse.json({ url: storedFile.url })
   } catch (error: any) {
     console.error('Upload error:', error?.message || error)
     return NextResponse.json({ error: `上传失败: ${error?.message || '未知错误'}` }, { status: 500 })

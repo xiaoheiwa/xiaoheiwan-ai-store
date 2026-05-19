@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob'
+import { saveUploadedFile } from '@/lib/object-storage'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -28,11 +28,9 @@ export async function POST(request: NextRequest) {
     const ext = file.name.split('.').pop() || 'jpg'
     const filename = `product-images/${timestamp}-${randomStr}.${ext}`
 
-    const blob = await put(filename, file, {
-      access: 'public',
-    })
+    const storedFile = await saveUploadedFile(filename, file, { access: 'public' })
 
-    return NextResponse.json({ url: blob.url })
+    return NextResponse.json({ url: storedFile.url })
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json({ error: '上传失败，请重试' }, { status: 500 })

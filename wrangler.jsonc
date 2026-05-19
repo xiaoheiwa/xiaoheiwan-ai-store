@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "xiaoheiwan-ai-store",
+  "main": "worker.ts",
+  "compatibility_date": "2026-05-19",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    "crons": [
+      "0 16 * * *"
+    ]
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "xiaoheiwan-ai-store"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "XHW_UPLOADS",
+      "bucket_name": "xiaoheiwan-ai-store-uploads"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "xiaoheiwan-ai-store-cache"
+    }
+  ],
+  "vars": {
+    "NEXTJS_ENV": "production"
+  }
+}
