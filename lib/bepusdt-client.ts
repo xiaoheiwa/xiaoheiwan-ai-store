@@ -1,6 +1,9 @@
 import crypto from "crypto"
 
 type BepusdtPayload = Record<string, string | number | boolean | null | undefined>
+export type BepusdtTradeType = "usdt.trc20" | "usdt.bep20"
+
+export const DEFAULT_BEPUSDT_TRADE_TYPE: BepusdtTradeType = "usdt.trc20"
 
 export interface BepusdtTransactionData {
   fiat?: string
@@ -25,6 +28,13 @@ function normalizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, "")
 }
 
+export function normalizeBepusdtTradeType(value: unknown): BepusdtTradeType | null {
+  const normalized = String(value || "").trim().toLowerCase()
+  if (normalized === "usdt.trc20" || normalized === "trc20") return "usdt.trc20"
+  if (normalized === "usdt.bep20" || normalized === "bep20" || normalized === "bsc") return "usdt.bep20"
+  return null
+}
+
 export function getBepusdtConfig() {
   const baseUrl = process.env.BEPUSDT_BASE_URL || process.env.EPUSDT_API || ""
   const apiToken = process.env.BEPUSDT_API_TOKEN || process.env.EPUSDT_KEY || ""
@@ -33,7 +43,7 @@ export function getBepusdtConfig() {
     baseUrl: baseUrl ? normalizeBaseUrl(baseUrl) : "",
     apiToken,
     fiat: process.env.BEPUSDT_FIAT || "CNY",
-    tradeType: process.env.BEPUSDT_TRADE_TYPE || "usdt.trc20",
+    tradeType: normalizeBepusdtTradeType(process.env.BEPUSDT_TRADE_TYPE) || DEFAULT_BEPUSDT_TRADE_TYPE,
     timeout: Number(process.env.BEPUSDT_TIMEOUT || 1200),
     enabled: Boolean(baseUrl && apiToken),
   }
@@ -93,6 +103,7 @@ export async function createBepusdtTransaction(params: {
   name: string
   notifyUrl: string
   redirectUrl: string
+  tradeType?: BepusdtTradeType
 }) {
   const config = getBepusdtConfig()
 
@@ -100,7 +111,7 @@ export async function createBepusdtTransaction(params: {
     order_id: params.orderId,
     amount: Number(params.amount.toFixed(2)),
     fiat: config.fiat,
-    trade_type: config.tradeType,
+    trade_type: params.tradeType || config.tradeType,
     name: params.name,
     notify_url: params.notifyUrl,
     redirect_url: params.redirectUrl,

@@ -32,6 +32,28 @@ interface Product {
   require_region_selection?: boolean
 }
 
+type CryptoNetwork = "usdt.trc20" | "usdt.bep20"
+
+const cryptoNetworks: Array<{
+  value: CryptoNetwork
+  label: string
+  description: string
+  badge: string
+}> = [
+  {
+    value: "usdt.trc20",
+    label: "TRC20",
+    description: "波场网络，常用低手续费",
+    badge: "TRON",
+  },
+  {
+    value: "usdt.bep20",
+    label: "BEP20",
+    description: "币安智能链，转账前请确认网络",
+    badge: "BSC",
+  },
+]
+
 function getUnitPrice(product: Product, qty: number): number {
   if (!product.price_tiers || product.price_tiers.length === 0) return product.price
   const sorted = [...product.price_tiers].sort((a, b) => b.min_qty - a.min_qty)
@@ -50,6 +72,7 @@ function PurchaseContent() {
   const [email, setEmail] = useState("")
   const [queryPassword, setQueryPassword] = useState("")
   const [paymentMethod, setPaymentMethod] = useState("alipay")
+  const [cryptoNetwork, setCryptoNetwork] = useState<CryptoNetwork>("usdt.trc20")
   const [loading, setLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [products, setProducts] = useState<Product[]>([])
@@ -292,6 +315,7 @@ body: JSON.stringify({
   couponCode: appliedCoupon?.code || null,
   discountAmount: discountAmount,
   referralCode: localStorage.getItem("referral_code") || null,
+  cryptoNetwork,
   }),
       })
 
@@ -785,8 +809,8 @@ body: JSON.stringify({
                           </svg>
                         </div>
                         <div className="text-left">
-                          <div className="font-semibold text-foreground">{"USDT (TRC20)"}</div>
-                          <div className="text-xs text-muted-foreground">{"加密货币支付"}</div>
+                          <div className="font-semibold text-foreground">{"USDT"}</div>
+                          <div className="text-xs text-muted-foreground">{"支持 TRC20 / BEP20"}</div>
                         </div>
                       </div>
                       <div
@@ -798,6 +822,37 @@ body: JSON.stringify({
                       </div>
                     </div>
                   </button>
+                )}
+
+                {paymentConfig.usdt && paymentMethod === "usdt" && (
+                  <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-muted/30 p-3 opacity-0 animate-fade-up">
+                    {cryptoNetworks.map((network) => (
+                      <button
+                        key={network.value}
+                        type="button"
+                        onClick={() => setCryptoNetwork(network.value)}
+                        className={`rounded-xl border p-4 text-left transition-all duration-200 ${
+                          cryptoNetwork === network.value
+                            ? "border-accent bg-background shadow-md shadow-accent/10"
+                            : "border-border bg-background/70 hover:border-muted-foreground/50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-foreground">{network.label}</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              cryptoNetwork === network.value
+                                ? "bg-accent text-accent-foreground"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {network.badge}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-xs leading-relaxed text-muted-foreground">{network.description}</div>
+                      </button>
+                    ))}
+                  </div>
                 )}
 
                 {!paymentConfig.alipay && !paymentConfig.usdt && (

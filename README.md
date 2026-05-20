@@ -18,7 +18,7 @@
 
 ### 商品销售
 - 多产品支持 - Claude、ChatGPT、Grok、GitHub Copilot、Apple ID 等
-- 多支付方式 - 支付宝、微信支付、USDT (TRC20)
+- 多支付方式 - 支付宝、微信支付、USDT (TRC20 / BEP20)
 - 自动发货 - 支付成功后自动发送激活码
 - 人工发货 - 支持需要人工处理的商品
 - 区域选择 - 多区域商品支持（如不同国家的 Apple ID）
@@ -162,9 +162,10 @@ USDT_WALLET_ADDRESS=TRC20_wallet_address
 TRON_API_KEY=your_trongrid_api_key
 USDT_TO_CNY_RATE=7.2
 
-# BEpusdt（可选，配置后 USDT 会跳转 BEpusdt 收银台）
+# BEpusdt（可选，配置后 USDT 会跳转 BEpusdt 收银台，支持 TRC20 / BEP20）
 BEPUSDT_BASE_URL=https://your-bepusdt-domain.com
 BEPUSDT_API_TOKEN=your_bepusdt_api_token
+# 默认网络：usdt.trc20 或 usdt.bep20；购买页会按用户选择覆盖
 BEPUSDT_TRADE_TYPE=usdt.trc20
 BEPUSDT_FIAT=CNY
 BEPUSDT_TIMEOUT=1200

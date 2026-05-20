@@ -5,7 +5,7 @@ import crypto from "crypto"
 import { NextResponse } from "next/server"
 import { Database } from "@/lib/database"
 import { neon } from "@/lib/db-client"
-import { createBepusdtTransaction, getBepusdtConfig } from "@/lib/bepusdt-client"
+import { createBepusdtTransaction, getBepusdtConfig, normalizeBepusdtTradeType } from "@/lib/bepusdt-client"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -41,7 +41,7 @@ async function getUsdtRate(): Promise<number> {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
-    const { email, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, couponId, couponCode, discountAmount = 0, referralCode } = body
+    const { email, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, couponId, couponCode, discountAmount = 0, referralCode, cryptoNetwork, tradeType } = body
 
     if (!email || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
@@ -140,6 +140,16 @@ export async function POST(req: Request) {
     
     // SECURITY: Use product name from database, not from client
     const verifiedProductName = product.name
+    const requestedTradeTypeRaw = cryptoNetwork || tradeType
+    const requestedTradeType = requestedTradeTypeRaw ? normalizeBepusdtTradeType(requestedTradeTypeRaw) : null
+    if (requestedTradeTypeRaw && !requestedTradeType) {
+      return NextResponse.json({ error: "不支持的 USDT 网络" }, { status: 400 })
+    }
+    const bepusdtConfig = getBepusdtConfig()
+    const selectedTradeType = requestedTradeType || bepusdtConfig.tradeType
+    if (!bepusdtConfig.enabled && selectedTradeType !== "usdt.trc20") {
+      return NextResponse.json({ error: "当前手动 USDT 支付暂不支持该网络" }, { status: 400 })
+    }
 
     // Hash the query password
     const queryPasswordHash = crypto.createHash("sha256").update(queryPassword).digest("hex")
@@ -184,7 +194,6 @@ export async function POST(req: Request) {
       region_name: regionName || null,
     })
 
-    const bepusdtConfig = getBepusdtConfig()
     if (bepusdtConfig.enabled) {
       const origin = new URL(req.url).origin
       const bepusdtOrder = await createBepusdtTransaction({
@@ -193,12 +202,14 @@ export async function POST(req: Request) {
         name: subject,
         notifyUrl: `${origin}/api/pay/bepusdt/notify`,
         redirectUrl: `${origin}/order/${orderNo}`,
+        tradeType: selectedTradeType,
       })
 
       await Database.updateOrder(orderNo, {
         crypto_status: "bepusdt_pending",
         gateway_resp: JSON.stringify({
           provider: "bepusdt",
+          tradeType: selectedTradeType,
           create: bepusdtOrder,
         }),
       })
@@ -211,6 +222,7 @@ export async function POST(req: Request) {
         paymentUrl: bepusdtOrder.data?.payment_url,
         redirectUrl: bepusdtOrder.data?.payment_url,
         provider: "bepusdt",
+        cryptoNetwork: selectedTradeType,
       })
     }
 
