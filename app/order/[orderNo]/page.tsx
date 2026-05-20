@@ -6,6 +6,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { RefreshCw, CheckCircle, Clock, AlertCircle, Home, Copy, ArrowRight, Sparkles } from "lucide-react"
 import { getActivationRoute, getAllActivationRoutes } from "@/lib/activation-routes"
+import { formatBeijingDateTime } from "@/lib/beijing-time"
 
 interface Order {
   orderNo: string
@@ -234,9 +235,9 @@ export default function OrderPage() {
               { label: "金额", value: `\u00a5${order.amount}`, bold: true },
               { label: "支付方式", value: "支付宝" },
               { label: "状态", badge: true },
-              { label: "创建时间", value: new Date(order.createdAt).toLocaleString("zh-CN"), full: true },
+              { label: "创建时间", value: formatBeijingDateTime(order.createdAt), full: true },
               ...(order.productName ? [{ label: "产品", value: order.productName }] : []),
-              ...(order.paid_at ? [{ label: "支付时间", value: new Date(order.paid_at).toLocaleString("zh-CN") }] : []),
+              ...(order.paid_at ? [{ label: "支付时间", value: formatBeijingDateTime(order.paid_at) }] : []),
             ].map((item, i) => (
               <div key={i} className={item.full ? "col-span-2" : ""}>
                 <span className="text-muted-foreground text-xs">{item.label}</span>

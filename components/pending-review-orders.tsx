@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { AlertTriangle, CheckCircle, XCircle, RefreshCw, Clock, Mail, Package, DollarSign } from "lucide-react"
+import { formatBeijingDateTime } from "@/lib/beijing-time"
 
 interface PendingOrder {
   out_trade_no: string
@@ -166,7 +167,7 @@ export function PendingReviewOrders({ adminToken }: Props) {
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                <span>支付于 {new Date(order.paid_at).toLocaleString("zh-CN")}</span>
+                <span>支付于 {formatBeijingDateTime(order.paid_at)}</span>
               </div>
             </div>
 

@@ -21,6 +21,7 @@ import { TaxReportPanel } from "@/components/tax-report-panel"
 import { PendingReviewOrders } from "@/components/pending-review-orders"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
+import { formatBeijingDate, formatBeijingDateTime } from "@/lib/beijing-time"
 import {
   AlertCircle,
   BarChart3,
@@ -1214,7 +1215,7 @@ setAdminToken(data.token)
                   <div className="space-y-1 min-w-0 flex-1">
                     <p className="text-xs sm:text-sm font-medium truncate">{order.email}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(order.created_at).toLocaleDateString("zh-CN")}
+                      {formatBeijingDate(order.created_at)}
                     </p>
                   </div>
                   <div className="text-right shrink-0 ml-2">
@@ -1472,7 +1473,7 @@ setAdminToken(data.token)
                           )}
                         </td>
                         <td className="p-3 text-xs text-muted-foreground whitespace-nowrap hidden lg:table-cell">
-                          {new Date(order.created_at).toLocaleString()}
+                          {formatBeijingDateTime(order.created_at)}
                         </td>
                         <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
@@ -1586,9 +1587,9 @@ setAdminToken(data.token)
                               <div className="space-y-2">
                                 <p className="text-xs font-medium text-muted-foreground uppercase">时间线</p>
                                 <div className="space-y-1">
-                                  <p><span className="text-muted-foreground">创建:</span> {new Date(order.created_at).toLocaleString()}</p>
-                                  <p><span className="text-muted-foreground">支付:</span> {order.paid_at ? new Date(order.paid_at).toLocaleString() : "-"}</p>
-                                  <p><span className="text-muted-foreground">发货:</span> {order.fulfilled_at ? new Date(order.fulfilled_at).toLocaleString() : "-"}</p>
+                                  <p><span className="text-muted-foreground">创建:</span> {formatBeijingDateTime(order.created_at)}</p>
+                                  <p><span className="text-muted-foreground">支付:</span> {formatBeijingDateTime(order.paid_at)}</p>
+                                  <p><span className="text-muted-foreground">发货:</span> {formatBeijingDateTime(order.fulfilled_at)}</p>
                                 </div>
                               </div>
                               <div className="space-y-2">
