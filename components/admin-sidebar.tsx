@@ -56,6 +56,12 @@ export function AdminSidebar({ activeTab, onTabChange, onLogout, stats }: AdminS
       badge: null,
     },
     {
+      id: "tax",
+      label: "报税整理",
+      icon: ClipboardList,
+      badge: null,
+    },
+    {
       id: "blog",
       label: "博客管理",
       icon: FileText,

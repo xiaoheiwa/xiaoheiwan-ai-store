@@ -17,6 +17,7 @@ import { WithdrawalManager } from "@/components/withdrawal-manager"
 import { ApplicationManager } from "@/components/application-manager"
 import { RiskControlPanel } from "@/components/risk-control-panel"
 import { FinancePanel } from "@/components/finance-panel"
+import { TaxReportPanel } from "@/components/tax-report-panel"
 import { PendingReviewOrders } from "@/components/pending-review-orders"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { TiptapEditor, parseDetailsToHtml } from "@/components/tiptap-editor"
@@ -137,7 +138,23 @@ export default function AdminPage() {
   // Sync tab from URL query param (e.g. /admin?tab=orders when navigating back from /admin/blog)
   useEffect(() => {
     const tab = searchParams.get("tab")
-    if (tab && ["dashboard", "orders", "products", "codes", "blog", "settings"].includes(tab)) {
+    if (tab && [
+      "dashboard",
+      "orders",
+      "products",
+      "categories",
+      "codes",
+      "finance",
+      "tax",
+      "blog",
+      "coupons",
+      "referrers",
+      "applications",
+      "withdrawals",
+      "affiliates",
+      "risk",
+      "settings",
+    ].includes(tab)) {
       setActiveTab(tab)
     }
   }, [searchParams])
@@ -3707,6 +3724,8 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
         return renderCodes()
       case "finance":
         return <FinancePanel adminToken={adminToken} />
+      case "tax":
+        return <TaxReportPanel adminToken={adminToken} />
 case "blog":
 return <BlogManager adminToken={adminToken} />
 case "coupons":
@@ -3886,6 +3905,7 @@ case "coupons":
                   {activeTab === "categories" && "分类管理"}
                   {activeTab === "codes" && "激活码管理"}
                   {activeTab === "finance" && "财务管理"}
+                  {activeTab === "tax" && "报税整理"}
 {activeTab === "blog" && "博客管理"}
   {activeTab === "coupons" && "优惠码管理"}
   {activeTab === "referrers" && "推广用户管理"}
@@ -3902,6 +3922,7 @@ case "coupons":
                   {activeTab === "categories" && "管理产品分类"}
                   {activeTab === "codes" && "管理激活码库存"}
                   {activeTab === "finance" && "进销存与利润分析"}
+                  {activeTab === "tax" && "整理收入、成本和报税导出资料"}
                 {activeTab === "blog" && "创建和管理博客文章"}
                 {activeTab === "affiliates" && "管理推广链接和合作伙伴"}
                 {activeTab === "risk" && "管理黑名单和风控规则"}
