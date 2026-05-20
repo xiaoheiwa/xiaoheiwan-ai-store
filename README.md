@@ -161,6 +161,13 @@ EPAY_KEY=your_key
 USDT_WALLET_ADDRESS=TRC20_wallet_address
 TRON_API_KEY=your_trongrid_api_key
 USDT_TO_CNY_RATE=7.2
+
+# BEpusdt（可选，配置后 USDT 会跳转 BEpusdt 收银台）
+BEPUSDT_BASE_URL=https://your-bepusdt-domain.com
+BEPUSDT_API_TOKEN=your_bepusdt_api_token
+BEPUSDT_TRADE_TYPE=usdt.trc20
+BEPUSDT_FIAT=CNY
+BEPUSDT_TIMEOUT=1200
 ```
 
 ### 定时任务

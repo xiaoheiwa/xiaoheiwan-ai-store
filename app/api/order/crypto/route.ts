@@ -5,6 +5,7 @@ import crypto from "crypto"
 import { NextResponse } from "next/server"
 import { Database } from "@/lib/database"
 import { neon } from "@/lib/db-client"
+import { createBepusdtTransaction, getBepusdtConfig } from "@/lib/bepusdt-client"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -168,7 +169,7 @@ export async function POST(req: Request) {
     // SECURITY: Always use verified product name from database
     const subject = `${verifiedProductName}${qtyLabel}购买`
 
-    const order = await Database.createOrder({
+    await Database.createOrder({
       out_trade_no: orderNo,
       email,
       amount: verifiedAmount,
@@ -182,6 +183,36 @@ export async function POST(req: Request) {
       selected_region: selectedRegion || null,
       region_name: regionName || null,
     })
+
+    const bepusdtConfig = getBepusdtConfig()
+    if (bepusdtConfig.enabled) {
+      const origin = new URL(req.url).origin
+      const bepusdtOrder = await createBepusdtTransaction({
+        orderId: orderNo,
+        amount: verifiedAmount,
+        name: subject,
+        notifyUrl: `${origin}/api/pay/bepusdt/notify`,
+        redirectUrl: `${origin}/order/${orderNo}`,
+      })
+
+      await Database.updateOrder(orderNo, {
+        crypto_status: "bepusdt_pending",
+        gateway_resp: JSON.stringify({
+          provider: "bepusdt",
+          create: bepusdtOrder,
+        }),
+      })
+
+      return NextResponse.json({
+        success: true,
+        orderNo,
+        amount: verifiedAmount,
+        usdtAmount: bepusdtOrder.data?.actual_amount || usdtAmount,
+        paymentUrl: bepusdtOrder.data?.payment_url,
+        redirectUrl: bepusdtOrder.data?.payment_url,
+        provider: "bepusdt",
+      })
+    }
 
     return NextResponse.json({
       success: true,
