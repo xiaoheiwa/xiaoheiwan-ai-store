@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth"
 import type { NextRequest } from "next/server"
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
+const TELEGRAM_WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL
 
 export async function POST(request: NextRequest) {
   const authError = await requireAdmin(request)
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     if (action === "set") {
       // Get the site URL from request
       const url = new URL(request.url)
-      const webhookUrl = `${url.protocol}//${url.host}/api/telegram/webhook`
+      const webhookUrl = TELEGRAM_WEBHOOK_URL || `${url.protocol}//${url.host}/api/telegram/webhook`
 
       const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`, {
         method: "POST",
