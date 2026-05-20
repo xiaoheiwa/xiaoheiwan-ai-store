@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from "node:fs"
+import crypto from "node:crypto"
 import path from "node:path"
 import { neon } from "@neondatabase/serverless"
 
@@ -44,6 +45,8 @@ function parseArgs(argv) {
     outDir: "/private/tmp/xiaoheiwan-d1",
     schemaFile: "schema.sql",
     dataFile: "data.sql",
+    assetDir: "r2-assets",
+    assetPrefix: "blog-assets",
   }
 
   for (let i = 0; i < argv.length; i++) {
@@ -52,6 +55,8 @@ function parseArgs(argv) {
     else if (arg === "--out-dir") args.outDir = argv[++i]
     else if (arg === "--schema-file") args.schemaFile = argv[++i]
     else if (arg === "--data-file") args.dataFile = argv[++i]
+    else if (arg === "--asset-dir") args.assetDir = argv[++i]
+    else if (arg === "--asset-prefix") args.assetPrefix = argv[++i]
     else if (arg === "--help" || arg === "-h") {
       console.log(`Usage: node scripts/export-neon-to-d1.mjs [options]
 
@@ -59,7 +64,9 @@ Options:
   --env-file <path>     Env file containing DATABASE_URL. Default: .env.local
   --out-dir <path>      Output directory. Default: /private/tmp/xiaoheiwan-d1
   --schema-file <name>  Schema filename. Default: schema.sql
-  --data-file <name>    Data filename. Default: data.sql`)
+  --data-file <name>    Data filename. Default: data.sql
+  --asset-dir <name>    Extracted asset directory. Default: r2-assets
+  --asset-prefix <key>  R2 key prefix for extracted data images. Default: blog-assets`)
       process.exit(0)
     }
   }
@@ -138,6 +145,46 @@ function sqlValue(value) {
   return stringLiteral(value)
 }
 
+function extensionFromMime(mime) {
+  if (mime === "image/jpeg") return "jpg"
+  if (mime === "image/svg+xml") return "svg"
+  const part = mime.split("/")[1] || "bin"
+  return part.replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin"
+}
+
+function stableRowId(table, row, index) {
+  return String(row.slug || row.id || row.out_trade_no || `${table}-${index + 1}`)
+    .normalize("NFKD")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || `${table}-${index + 1}`
+}
+
+function extractDataImages(value, context) {
+  if (typeof value !== "string" || !value.includes("data:image/")) return value
+
+  const dataUrlPattern = /data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/g
+
+  return value.replace(dataUrlPattern, (match, mime, base64) => {
+    const hash = crypto.createHash("sha256").update(base64).digest("hex").slice(0, 16)
+    const ext = extensionFromMime(mime)
+    const filename = `${stableRowId(context.table, context.row, context.rowIndex)}-${context.assets.length + 1}-${hash}.${ext}`
+    const key = `${context.assetPrefix}/${filename}`
+    const filePath = path.join(context.assetPath, filename)
+
+    fs.writeFileSync(filePath, Buffer.from(base64, "base64"))
+    context.assets.push({
+      key,
+      file: filePath,
+      contentType: mime,
+      table: context.table,
+      column: context.column,
+    })
+
+    return `/api/file?pathname=${encodeURIComponent(key)}`
+  })
+}
+
 function orderTables(tables) {
   const known = new Set(DEFAULT_TABLE_ORDER)
   const ordered = DEFAULT_TABLE_ORDER.filter((table) => tables.includes(table))
@@ -161,6 +208,9 @@ async function main() {
   }
 
   fs.mkdirSync(args.outDir, { recursive: true })
+  const assetPath = path.join(args.outDir, args.assetDir)
+  fs.rmSync(assetPath, { recursive: true, force: true })
+  fs.mkdirSync(assetPath, { recursive: true })
 
   const sql = neon(databaseUrl)
   const tableRows = await sql.query(`
@@ -215,12 +265,13 @@ async function main() {
   const dataLines = [
     "-- Generated data export from Neon PostgreSQL for Cloudflare D1.",
     "-- Contains production data. Do not commit this file.",
+    "-- Large embedded data images are extracted to R2 assets when possible.",
     "PRAGMA foreign_keys = OFF;",
-    "BEGIN TRANSACTION;",
     "",
   ]
 
   const summary = []
+  const assets = []
 
   for (const table of tables) {
     const columns = await sql.query(`
@@ -259,11 +310,22 @@ async function main() {
     const rows = await sql.query(`SELECT * FROM ${qid(table)}`)
     summary.push({ table, rows: rows.length })
 
-    for (const row of rows) {
+    rows.forEach((row, rowIndex) => {
       const names = columns.map((column) => column.column_name)
-      const values = names.map((name) => sqlValue(row[name]))
+      const values = names.map((name) => {
+        const extracted = extractDataImages(row[name], {
+          table,
+          column: name,
+          row,
+          rowIndex,
+          assetPrefix: args.assetPrefix,
+          assetPath,
+          assets,
+        })
+        return sqlValue(extracted)
+      })
       dataLines.push(`INSERT INTO ${qid(table)} (${names.map(qid).join(", ")}) VALUES (${values.join(", ")});`)
-    }
+    })
     dataLines.push("")
   }
 
@@ -276,16 +338,17 @@ async function main() {
   }
 
   schemaLines.push("")
-  dataLines.push("COMMIT;")
-  dataLines.push("")
-
   const schemaPath = path.join(args.outDir, args.schemaFile)
   const dataPath = path.join(args.outDir, args.dataFile)
+  const assetManifestPath = path.join(args.outDir, "r2-assets.json")
   fs.writeFileSync(schemaPath, `${schemaLines.join("\n")}\n`)
   fs.writeFileSync(dataPath, `${dataLines.join("\n")}\n`)
+  fs.writeFileSync(assetManifestPath, `${JSON.stringify(assets, null, 2)}\n`)
 
   console.log(`Wrote ${schemaPath}`)
   console.log(`Wrote ${dataPath}`)
+  console.log(`Wrote ${assetManifestPath}`)
+  console.log(`Extracted ${assets.length} data image assets`)
   console.table(summary)
 }
 

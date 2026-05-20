@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 
 export const runtime = "nodejs"
 // 使用 ISR 缓存 60 秒，大幅减少函数调用

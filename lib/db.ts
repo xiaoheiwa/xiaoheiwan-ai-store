@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||

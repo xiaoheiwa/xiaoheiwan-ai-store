@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 
 // 推荐链接缓存 10 分钟
 export const revalidate = 600

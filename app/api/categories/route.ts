@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 
 // 分类数据变化不频繁，缓存 5 分钟
 export const revalidate = 300

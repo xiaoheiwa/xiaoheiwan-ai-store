@@ -1,22 +1,30 @@
 # Cloudflare Database Migration Assessment
 
-Date: 2026-05-19
+Date: 2026-05-20
 
 ## Current production status
 
 - The app is running on Cloudflare Workers at `https://xiaoheiwan-ai-store.ileeken.workers.dev`.
-- The active Cloudflare Worker version after the real production-env rebuild is `34710e12-371f-495c-b667-9260e8668d8c`.
+- The active Cloudflare Worker version after the D1-backed deploy is `ae73e385-4c65-477e-995a-0194e34ffdfd`.
 - Uploads are configured to use Cloudflare R2.
-- The database is still Neon PostgreSQL. This is intentional for the first safe cutover.
+- The Cloudflare test Worker is now configured to use Cloudflare D1.
+- The public domain `upgrade.xiaoheiwan.com` is still on Vercel. This is intentional until final cutover.
 - Verified checks:
   - Homepage returns 200.
-  - Admin page returns 200.
-  - `/api/products` returns 200 and reads 19 active products from the production database.
+  - `/api/products` returns 200 and reads 19 active products from D1.
+  - `/api/products/[id]` returns 200 and preserves product JSON fields such as `price_tiers`.
+  - `/api/categories` returns 200 and reads 5 categories from D1.
+  - `/api/blog` returns 200 and preserves blog tags as arrays.
+  - `/api/blog?tag=...` returns 200 against D1 tag data.
+  - `/api/price`, `/api/stock`, `/api/config/payment`, and `/api/tools-config` return 200.
+  - A test order was created and read successfully on D1, then deleted.
+  - The D1 order count returned to 846 after cleanup.
+  - `/api/admin/stats` returns 401 without login.
   - `/api/cron/daily-report` returns 401 without the cron secret.
 
 ## Production database inventory
 
-Read-only inspection found 29 public tables and about 2,468 rows total.
+The latest D1 import contains 29 public tables. Important table counts:
 
 | Table | Rows |
 | --- | ---: |
@@ -31,7 +39,7 @@ Read-only inspection found 29 public tables and about 2,468 rows total.
 | email_templates | 1 |
 | ip_whitelist | 0 |
 | notifications | 3 |
-| orders | 844 |
+| orders | 846 |
 | price_config | 1 |
 | product_categories | 5 |
 | products | 22 |
@@ -69,62 +77,61 @@ Move the web app runtime to Cloudflare while keeping Neon as the production data
 
 This is now working and verified.
 
-### Phase 2: Optional quick database-layer improvement
+### Phase 2: Completed
 
-Use Cloudflare Hyperdrive in front of Neon.
+Create a D1 database, convert and import Neon data, and run the Cloudflare test Worker against D1.
 
-This keeps PostgreSQL and avoids a rewrite, while moving database connectivity into Cloudflare's network. It is the fastest safe next step if the goal is better Cloudflare integration without risking orders and inventory.
+This is now working for public read flows and basic order creation.
 
-### Phase 3: True D1 migration
+### Phase 3: Remaining before final domain cutover
 
-Only do this after a staging D1 database works end to end.
-
-1. Create a D1 staging database.
-2. Convert the PostgreSQL schema to SQLite-compatible D1 schema.
-3. Add a database adapter layer so code can target Neon or D1 without rewriting every route at once.
-4. Convert and import data table by table.
-5. Test safe read flows first: products, categories, blog, config.
-6. Test write flows second: order creation, coupon usage, stock lock, payment callback, auto-fulfillment, email send.
-7. Freeze writes briefly on Neon for final sync.
-8. Switch production to D1.
-9. Keep Neon unchanged for rollback until D1 has proven stable.
+1. Re-sync Neon to D1 immediately before cutover so no late orders are missed.
+2. Test payment callbacks and fulfillment against D1.
+3. Test admin workflows used in daily operations: orders, codes, products, batches, finance, and blog editing.
+4. Freeze writes briefly on Neon for final sync.
+5. Switch `upgrade.xiaoheiwan.com` to Cloudflare.
+6. Keep Neon unchanged for rollback until D1 has proven stable.
 
 ## Cutover warning
 
 Do not point `upgrade.xiaoheiwan.com` to Cloudflare D1-backed code until order creation, payment callbacks, and activation-code stock locking pass tests against D1.
 
-## 2026-05-19 D1 export progress
+## 2026-05-20 D1 migration progress
 
 Generated a D1-compatible export from Neon with:
 
 ```bash
-node scripts/export-neon-to-d1.mjs --env-file .env.local --out-dir /private/tmp/xiaoheiwan-d1
+rtk env PATH=/Users/lijian/.nvm/versions/node/v22.22.2/bin:$PATH node scripts/export-neon-to-d1.mjs --env-file .env.local --out-dir /private/tmp/xiaoheiwan-d1
 ```
 
 Outputs:
 
 - `/private/tmp/xiaoheiwan-d1/schema.sql`
 - `/private/tmp/xiaoheiwan-d1/data.sql`
+- `/private/tmp/xiaoheiwan-d1/r2-assets.json`
 
 The data file contains production orders and activation codes. Do not commit it.
 
-Local SQLite import passed:
+Created the remote D1 database:
 
-- 29 tables created.
-- `products` row count: 22.
-- `activation_codes` row count: 911.
-- `orders` row count: 844.
-- `blog_posts` row count: 23.
-- A product + stock-count query completed successfully.
+- Name: `xiaoheiwan-ai-store-db`
+- ID: `2a270288-2bb8-4be3-a577-20cd96ab849e`
+- Region: WNAM
 
-Remote D1 creation is currently blocked because the Cloudflare account has reached its D1 database limit.
+Imported schema and data into remote D1:
 
-Once one D1 slot is available, run:
+- `products`: 22 rows
+- `activation_codes`: 911 rows
+- `orders`: 846 rows
+- `blog_posts`: 23 rows
+- `chat_messages`: 422 rows
+
+Five large inline blog images were extracted from database rows and uploaded to R2 under `blog-assets/`. The public file API returned 200 for an extracted image.
+
+The Cloudflare Worker now includes this D1 binding:
 
 ```bash
-wrangler d1 create xiaoheiwan-ai-store-db
-wrangler d1 execute xiaoheiwan-ai-store-db --remote --file /private/tmp/xiaoheiwan-d1/schema.sql --yes
-wrangler d1 execute xiaoheiwan-ai-store-db --remote --file /private/tmp/xiaoheiwan-d1/data.sql --yes
+env.DB -> xiaoheiwan-ai-store-db
 ```
 
-Then add the returned D1 binding to `wrangler.jsonc` before switching application code to D1.
+The formal domain has not been cut over yet.

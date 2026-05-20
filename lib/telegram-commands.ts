@@ -5,7 +5,7 @@
  * 处理 /start, /products, /order, /help 等命令
  */
 
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 import {
   sendMessage,
   editMessage,

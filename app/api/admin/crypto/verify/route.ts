@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 import { verifyAdminRequest } from "@/lib/admin-auth"
 import { notifyOrderSuccess, notifyLowStock } from "@/lib/telegram"
 

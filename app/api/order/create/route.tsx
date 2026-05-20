@@ -7,7 +7,7 @@ import { NextResponse } from "next/server"
 import { Database } from "@/lib/database"
 import { getEnv } from "@/lib/env"
 import { ZPayz } from "@/lib/zpayz-client"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 import { checkRisk } from "@/lib/risk-control"
 
 interface PriceTier {

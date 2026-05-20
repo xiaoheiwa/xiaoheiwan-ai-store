@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 import bcrypt from "bcryptjs"
 import { SignJWT } from "jose"
 

@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic"
 import crypto from "crypto"
 import { NextResponse } from "next/server"
 import { Database } from "@/lib/database"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 
 const sql = neon(process.env.DATABASE_URL!)
 

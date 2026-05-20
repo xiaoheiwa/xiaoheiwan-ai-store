@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { verifyAdminRequest } from "@/lib/admin-auth"
 import { notifyOrderSuccess, notifyLowStock, notifyCryptoPending, sendTelegramMessage } from "@/lib/telegram"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 
 export async function POST(request: NextRequest) {
   if (!(await verifyAdminRequest(request))) {

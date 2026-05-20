@@ -35,7 +35,15 @@
       "bucket_name": "xiaoheiwan-ai-store-cache"
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "xiaoheiwan-ai-store-db",
+      "database_id": "2a270288-2bb8-4be3-a577-20cd96ab849e"
+    }
+  ],
   "vars": {
-    "NEXTJS_ENV": "production"
+    "NEXTJS_ENV": "production",
+    "DATABASE_PROVIDER": "d1"
   }
 }

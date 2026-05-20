@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 import crypto from "crypto"
 
 const sql = neon(process.env.DATABASE_URL!)

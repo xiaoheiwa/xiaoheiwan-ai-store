@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://upgrade.xiaoheiwan.com"

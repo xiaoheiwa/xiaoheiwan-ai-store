@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 
 let sql: any = null
 let connectionInitialized = false

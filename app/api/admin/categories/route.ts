@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 import { requireAdmin } from "@/lib/admin-auth"
 
 const sql = neon(process.env.DATABASE_URL!)

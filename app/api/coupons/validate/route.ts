@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless"
+import { neon } from "@/lib/db-client"
 import { NextResponse } from "next/server"
 
 // 优惠码验证必须实时，防止重复使用
