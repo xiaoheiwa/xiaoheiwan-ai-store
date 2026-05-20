@@ -5,7 +5,7 @@ Date: 2026-05-20
 ## Current production status
 
 - The app is running on Cloudflare Workers at `https://xiaoheiwan-ai-store.ileeken.workers.dev`.
-- The active Cloudflare Worker version after the D1-backed deploy is `ae73e385-4c65-477e-995a-0194e34ffdfd`.
+- The active Cloudflare Worker version after the D1-backed deploy is `76776db8-6b3d-4743-9c47-302a6e410654`.
 - Uploads are configured to use Cloudflare R2.
 - The Cloudflare test Worker is now configured to use Cloudflare D1.
 - The public domain `upgrade.xiaoheiwan.com` is still on Vercel. This is intentional until final cutover.
@@ -18,7 +18,10 @@ Date: 2026-05-20
   - `/api/blog?tag=...` returns 200 against D1 tag data.
   - `/api/price`, `/api/stock`, `/api/config/payment`, and `/api/tools-config` return 200.
   - A test order was created and read successfully on D1, then deleted.
+  - A test payment callback successfully changed a test order to paid, fulfilled it with an activation code, and was then cleaned up.
   - The D1 order count returned to 846 after cleanup.
+  - Admin login works on the Cloudflare test Worker.
+  - Admin orders, codes, products, finance, blog, and stats endpoints return 200 against D1.
   - `/api/admin/stats` returns 401 without login.
   - `/api/cron/daily-report` returns 401 without the cron secret.
 
@@ -81,16 +84,15 @@ This is now working and verified.
 
 Create a D1 database, convert and import Neon data, and run the Cloudflare test Worker against D1.
 
-This is now working for public read flows and basic order creation.
+This is now working for public read flows, basic order creation, payment callback fulfillment, and key admin read flows.
 
 ### Phase 3: Remaining before final domain cutover
 
 1. Re-sync Neon to D1 immediately before cutover so no late orders are missed.
-2. Test payment callbacks and fulfillment against D1.
-3. Test admin workflows used in daily operations: orders, codes, products, batches, finance, and blog editing.
-4. Freeze writes briefly on Neon for final sync.
-5. Switch `upgrade.xiaoheiwan.com` to Cloudflare.
-6. Keep Neon unchanged for rollback until D1 has proven stable.
+2. Test manual fulfillment and any admin write workflows that will be used immediately after cutover.
+3. Freeze writes briefly on Neon for final sync.
+4. Switch `upgrade.xiaoheiwan.com` to Cloudflare.
+5. Keep Neon unchanged for rollback until D1 has proven stable.
 
 ## Cutover warning
 
@@ -133,5 +135,14 @@ The Cloudflare Worker now includes this D1 binding:
 ```bash
 env.DB -> xiaoheiwan-ai-store-db
 ```
+
+Latest verification on 2026-05-20:
+
+- Re-exported Neon data; order count remained 846.
+- Re-imported the latest schema and data into D1.
+- Verified automatic payment callback flow on D1.
+- Fixed D1 handling for numbered SQL parameters used by multi-field order updates.
+- Fixed the finance endpoint to avoid database-specific month generation.
+- Verified major admin read endpoints against D1.
 
 The formal domain has not been cut over yet.

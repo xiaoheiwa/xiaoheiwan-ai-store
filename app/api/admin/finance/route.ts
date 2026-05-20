@@ -93,40 +93,46 @@ export async function GET(request: NextRequest) {
       profit: Number.parseFloat(p.revenue) - Number.parseFloat(p.total_cost),
     }))
 
-    // 3. Monthly trend (last 6 months)
-    const monthlyTrend = await sql`
-      SELECT 
-        months.month,
-        COALESCE(cost_agg.cost, 0) as cost,
-        COALESCE(rev_agg.revenue, 0) as revenue
-      FROM (
-        SELECT TO_CHAR(generate_series(
-          DATE_TRUNC('month', NOW()) - INTERVAL '5 months',
-          DATE_TRUNC('month', NOW()),
-          '1 month'
-        ), 'YYYY-MM') as month
-      ) months
-      LEFT JOIN (
+    // 3. Monthly trend (last 6 months). Build the month list in JS so the query works on D1 and Postgres.
+    const monthKeys: string[] = []
+    const now = new Date()
+    for (let i = 5; i >= 0; i--) {
+      const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
+      monthKeys.push(month.toISOString().slice(0, 7))
+    }
+    const startMonth = `${monthKeys[0]}-01T00:00:00.000Z`
+
+    const [monthlyCosts, monthlyRevenue] = await Promise.all([
+      sql`
         SELECT TO_CHAR(created_at, 'YYYY-MM') as month, SUM(total_cost) as cost
         FROM purchase_batches
-        WHERE created_at >= DATE_TRUNC('month', NOW()) - INTERVAL '5 months'
+        WHERE created_at >= ${startMonth}
         GROUP BY TO_CHAR(created_at, 'YYYY-MM')
-      ) cost_agg ON cost_agg.month = months.month
-      LEFT JOIN (
+      `,
+      sql`
         SELECT TO_CHAR(created_at, 'YYYY-MM') as month, SUM(amount) as revenue
         FROM orders
-        WHERE status = 'paid' AND created_at >= DATE_TRUNC('month', NOW()) - INTERVAL '5 months'
+        WHERE status = 'paid' AND created_at >= ${startMonth}
         GROUP BY TO_CHAR(created_at, 'YYYY-MM')
-      ) rev_agg ON rev_agg.month = months.month
-      ORDER BY months.month
-    `
+      `,
+    ])
 
-    const trend = monthlyTrend.map((m: any) => ({
-      month: m.month,
-      cost: Number.parseFloat(m.cost),
-      revenue: Number.parseFloat(m.revenue),
-      profit: Number.parseFloat(m.revenue) - Number.parseFloat(m.cost),
-    }))
+    const costsByMonth = new Map<string, number>(
+      monthlyCosts.map((m: any) => [String(m.month), Number.parseFloat(m.cost || 0)]),
+    )
+    const revenueByMonth = new Map<string, number>(
+      monthlyRevenue.map((m: any) => [String(m.month), Number.parseFloat(m.revenue || 0)]),
+    )
+    const trend = monthKeys.map((month) => {
+      const cost = costsByMonth.get(month) || 0
+      const revenue = revenueByMonth.get(month) || 0
+      return {
+        month,
+        cost,
+        revenue,
+        profit: revenue - cost,
+      }
+    })
 
     // 4. Purchase batches
     const batches = await Database.getPurchaseBatches(50, 0)

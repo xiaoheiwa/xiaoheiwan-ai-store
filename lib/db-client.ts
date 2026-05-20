@@ -222,8 +222,12 @@ function createHybridSql(databaseUrl?: string) {
 
 async function runD1Query(query: string, values: unknown[] = []) {
   const db = await getD1Database()
-  const normalizedQuery = normalizeSql(query).replace(/\$(\d+)/g, "?")
-  const normalizedValues = values.map(normalizeParam)
+  const orderedValues: unknown[] = []
+  const normalizedQuery = normalizeSql(query).replace(/\$(\d+)/g, (_, index) => {
+    orderedValues.push(values[Number(index) - 1])
+    return "?"
+  })
+  const normalizedValues = (orderedValues.length > 0 ? orderedValues : values).map(normalizeParam)
   const statement = db.prepare(normalizedQuery)
   const result = normalizedValues.length ? await statement.bind(...normalizedValues).all() : await statement.all()
   return rowsResult(result.results || [])
