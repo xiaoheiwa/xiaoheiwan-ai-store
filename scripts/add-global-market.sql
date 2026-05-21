@@ -86,6 +86,7 @@ ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'unpaid';
 ALTER TABLE orders ADD COLUMN delivery_status TEXT DEFAULT 'not_delivered';
 ALTER TABLE orders ADD COLUMN risk_status TEXT DEFAULT 'normal';
 ALTER TABLE orders ADD COLUMN manual_review_reason TEXT;
+ALTER TABLE orders ADD COLUMN customer_ip TEXT;
 ALTER TABLE orders ADD COLUMN customer_country TEXT;
 ALTER TABLE orders ADD COLUMN user_agent TEXT;
 ALTER TABLE orders ADD COLUMN wallet_address TEXT;
