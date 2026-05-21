@@ -16,6 +16,21 @@ interface OrderNotification {
   regionName?: string
 }
 
+interface GlobalOrderNotification {
+  orderNo: string
+  email: string
+  amount: number
+  productName?: string
+  quantity?: number
+  paymentNetwork?: string | null
+  expectedAmount?: number | null
+  receivedAmount?: number | null
+  txHash?: string | null
+  deliveryStatus?: string | null
+  reviewReason?: string | null
+  deliveredCount?: number
+}
+
 interface StockNotification {
   productId?: string
   productName?: string
@@ -23,9 +38,11 @@ interface StockNotification {
   threshold?: number
 }
 
-function escapeMarkdown(text: string): string {
-  // Escape special characters for Telegram MarkdownV2
-  return text.replace(/[_*\[\]()~`>#+=|{}.!-]/g, '\\$&')
+function escapeHtml(text: string | number | null | undefined): string {
+  return String(text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
 }
 
 export async function sendTelegramMessage(message: string): Promise<boolean> {
@@ -110,6 +127,32 @@ export async function notifyOrderSuccess(data: OrderNotification): Promise<boole
 <b>数量:</b> ${data.quantity}
 <b>金额:</b> ¥${data.amount}
 <b>支付方式:</b> ${paymentLabel}${codesPreview}
+
+<i>⏰ ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}</i>
+`.trim()
+
+  return sendTelegramMessage(message)
+}
+
+export async function notifyGlobalOrderSuccess(data: GlobalOrderNotification): Promise<boolean> {
+  const network = data.paymentNetwork || "USDT"
+  const expectedAmount = Number(data.expectedAmount ?? data.amount)
+  const receivedAmount = data.receivedAmount == null ? expectedAmount : Number(data.receivedAmount)
+  const txLine = data.txHash ? `\n<b>Tx:</b> <code>${escapeHtml(data.txHash)}</code>` : ""
+  const deliveryLine = data.deliveryStatus ? `\n<b>发货状态:</b> ${escapeHtml(data.deliveryStatus)}` : ""
+  const reviewLine = data.reviewReason ? `\n<b>处理提示:</b> ${escapeHtml(data.reviewReason)}` : ""
+  const deliveredLine = data.deliveredCount ? `\n<b>交付数量:</b> ${data.deliveredCount}` : ""
+
+  const message = `
+<b>🌍 全球站订单成功</b>
+
+<b>订单号:</b> <code>${escapeHtml(data.orderNo)}</code>
+<b>邮箱:</b> ${escapeHtml(data.email)}
+<b>产品:</b> ${escapeHtml(data.productName || "Global digital product")}
+<b>数量:</b> ${data.quantity || 1}
+<b>应付:</b> <code>${expectedAmount.toFixed(2)} USDT</code>
+<b>实收:</b> <code>${receivedAmount.toFixed(2)} USDT</code>
+<b>网络:</b> <code>${escapeHtml(network)}</code>${txLine}${deliveryLine}${deliveredLine}${reviewLine}
 
 <i>⏰ ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}</i>
 `.trim()

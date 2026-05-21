@@ -8,7 +8,7 @@ import {
 import { normalizeInventoryMode, normalizePaymentNetwork } from "@/lib/market"
 import { sendCodeMail, sendGlobalDeliveryMail } from "@/lib/resend"
 import { checkOrderHighRisk } from "@/lib/risk-control"
-import { notifyHighRiskOrder, notifyLowStock, notifyOrderSuccess } from "@/lib/telegram"
+import { notifyGlobalOrderSuccess, notifyHighRiskOrder, notifyLowStock, notifyOrderSuccess } from "@/lib/telegram"
 
 interface CompletePaidOrderOptions {
   orderNo: string
@@ -31,6 +31,13 @@ function readGatewayNotify(gatewayResp: unknown) {
 }
 
 async function completeGlobalPaidOrder(options: CompletePaidOrderOptions, order: any) {
+  if (order.status === "paid" && (order.fulfilled_at || order.delivery_status === "delivered")) {
+    return { ok: true, reason: "global_already_fulfilled" }
+  }
+  if (order.status === "paid" && order.delivery_status === "manual_review") {
+    return { ok: true, reason: "global_already_manual_review" }
+  }
+
   const notify = readGatewayNotify(options.gatewayResp)
   const paymentNetwork = normalizePaymentNetwork(order.payment_network)
   const txHash = String(notify.block_transaction_id || notify.tx_hash || order.tx_hash || order.crypto_tx_hash || "")
@@ -54,19 +61,47 @@ async function completeGlobalPaidOrder(options: CompletePaidOrderOptions, order:
   }
 
   if ((order.delivery_type || "auto") === "manual") {
+    const reviewReason = "Manual service order. Payment confirmed, waiting for support handling."
     await updateGlobalOrder(options.orderNo, {
       ...paidUpdates,
       delivery_status: "manual_review",
-      manual_review_reason: "Manual service order. Payment confirmed, waiting for support handling.",
+      manual_review_reason: reviewReason,
+    })
+    await notifyGlobalOrderSuccess({
+      orderNo: options.orderNo,
+      email: order.email,
+      amount: Number(order.amount),
+      productName,
+      quantity: order.quantity || 1,
+      paymentNetwork,
+      expectedAmount: Number(order.expected_amount || order.amount),
+      receivedAmount,
+      txHash,
+      deliveryStatus: "manual_review",
+      reviewReason,
     })
     return { ok: true, reason: "global_paid_manual_review" }
   }
 
   if (!order.product_id) {
+    const reviewReason = "Missing product id for global delivery."
     await updateGlobalOrder(options.orderNo, {
       ...paidUpdates,
       delivery_status: "manual_review",
-      manual_review_reason: "Missing product id for global delivery.",
+      manual_review_reason: reviewReason,
+    })
+    await notifyGlobalOrderSuccess({
+      orderNo: options.orderNo,
+      email: order.email,
+      amount: Number(order.amount),
+      productName,
+      quantity: order.quantity || 1,
+      paymentNetwork,
+      expectedAmount: Number(order.expected_amount || order.amount),
+      receivedAmount,
+      txHash,
+      deliveryStatus: "manual_review",
+      reviewReason,
     })
     return { ok: true, reason: "global_paid_missing_product" }
   }
@@ -82,22 +117,50 @@ async function completeGlobalPaidOrder(options: CompletePaidOrderOptions, order:
   })
 
   if (lockedCodes.length < (order.quantity || 1)) {
+    const reviewReason = "Global inventory is missing or insufficient."
     await Database.releaseLockedCode(options.orderNo)
     await updateGlobalOrder(options.orderNo, {
       ...paidUpdates,
       delivery_status: "manual_review",
-      manual_review_reason: "Global inventory is missing or insufficient.",
+      manual_review_reason: reviewReason,
+    })
+    await notifyGlobalOrderSuccess({
+      orderNo: options.orderNo,
+      email: order.email,
+      amount: Number(order.amount),
+      productName,
+      quantity: order.quantity || 1,
+      paymentNetwork,
+      expectedAmount: Number(order.expected_amount || order.amount),
+      receivedAmount,
+      txHash,
+      deliveryStatus: "manual_review",
+      reviewReason,
     })
     return { ok: true, reason: "global_paid_stock_missing" }
   }
 
   const soldCodes = await sellGlobalInventoryCodes(options.orderNo)
   if (soldCodes.length === 0) {
+    const reviewReason = "Inventory lock succeeded but delivery update failed."
     await Database.releaseLockedCode(options.orderNo)
     await updateGlobalOrder(options.orderNo, {
       ...paidUpdates,
       delivery_status: "delivery_failed",
-      manual_review_reason: "Inventory lock succeeded but delivery update failed.",
+      manual_review_reason: reviewReason,
+    })
+    await notifyGlobalOrderSuccess({
+      orderNo: options.orderNo,
+      email: order.email,
+      amount: Number(order.amount),
+      productName,
+      quantity: order.quantity || 1,
+      paymentNetwork,
+      expectedAmount: Number(order.expected_amount || order.amount),
+      receivedAmount,
+      txHash,
+      deliveryStatus: "delivery_failed",
+      reviewReason,
     })
     return { ok: false, reason: "global_code_sell_failed" }
   }
@@ -126,6 +189,24 @@ async function completeGlobalPaidOrder(options: CompletePaidOrderOptions, order:
       delivery_status: "manual_review",
       manual_review_reason: "Delivered, but delivery email failed. Admin should resend email.",
     })
+  }
+
+  try {
+    await notifyGlobalOrderSuccess({
+      orderNo: options.orderNo,
+      email: order.email,
+      amount: Number(order.amount),
+      productName,
+      quantity: order.quantity || 1,
+      paymentNetwork,
+      expectedAmount: Number(order.expected_amount || order.amount),
+      receivedAmount,
+      txHash,
+      deliveryStatus: "delivered",
+      deliveredCount: soldCodes.length,
+    })
+  } catch (error) {
+    console.error("[PaymentComplete] Global Telegram notification failed:", error)
   }
 
   return { ok: true, reason: "global_paid_fulfilled", codes: soldCodes.map((code) => code.id) }

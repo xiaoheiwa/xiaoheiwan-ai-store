@@ -3077,6 +3077,23 @@ const renderSettings = () => (
                 size="sm"
                 onClick={async () => {
                   try {
+                    const res = await fetch("/api/admin/telegram/test", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
+                      body: JSON.stringify({ type: "global-order" }),
+                    })
+                    const data = await res.json()
+                    setMessage(res.ok ? data.message : (data.error + (data.details ? `: ${data.details}` : "")))
+                  } catch (err) { setMessage("发送失败") }
+                }}
+              >
+                {"测试全球订单成功"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
                     setMessage("正在生成每日报告...")
                     const res = await fetch("/api/admin/telegram/test", {
                       method: "POST",

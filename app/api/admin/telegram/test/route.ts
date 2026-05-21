@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { verifyAdminRequest } from "@/lib/admin-auth"
-import { notifyOrderSuccess, notifyLowStock, notifyCryptoPending, sendTelegramMessage } from "@/lib/telegram"
+import { notifyGlobalOrderSuccess, notifyOrderSuccess, notifyLowStock, notifyCryptoPending, sendTelegramMessage } from "@/lib/telegram"
 import { neon } from "@/lib/db-client"
 
 export async function POST(request: NextRequest) {
@@ -47,6 +47,26 @@ export async function POST(request: NextRequest) {
         txHash: "0x1234567890abcdef1234567890abcdef12345678",
       })
       return NextResponse.json({ success: true, message: "USDT待验证通知已发送" })
+    }
+
+    if (type === "global-order") {
+      const sent = await notifyGlobalOrderSuccess({
+        orderNo: "GLOBAL-TEST-" + Date.now(),
+        email: "global-test@example.com",
+        amount: 18,
+        productName: "Claude Pro Code - USDT Self-Service Edition",
+        quantity: 1,
+        paymentNetwork: "TRC20",
+        expectedAmount: 18.03,
+        receivedAmount: 18.03,
+        txHash: "TEST_TX_HASH_DO_NOT_DELIVER",
+        deliveryStatus: "delivered",
+        deliveredCount: 1,
+      })
+      if (sent) {
+        return NextResponse.json({ success: true, message: "全球站订单成功通知已发送" })
+      }
+      return NextResponse.json({ error: "Telegram 发送失败" }, { status: 500 })
     }
 
     if (type === "daily-report") {
