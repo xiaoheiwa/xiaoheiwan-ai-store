@@ -58,11 +58,14 @@ export async function POST(request: Request) {
     }
 
     const notifyStatus = Number(payload.status || 0)
-    const notifyAmount = Number(payload.amount || 0)
-    if (notifyAmount > 0 && Math.abs(Number(order.amount) - notifyAmount) > 0.01) {
+    const notifyAmount = order.market === "GLOBAL"
+      ? Number(payload.actual_amount || payload.amount || 0)
+      : Number(payload.amount || 0)
+    const expectedAmount = order.market === "GLOBAL" ? Number(order.expected_amount || order.amount) : Number(order.amount)
+    if (notifyAmount > 0 && Math.abs(expectedAmount - notifyAmount) > 0.01) {
       console.error("[BEpusdt] Amount mismatch:", {
         orderNo,
-        orderAmount: order.amount,
+        orderAmount: expectedAmount,
         notifyAmount,
       })
       return failResponse()
@@ -89,6 +92,13 @@ export async function POST(request: Request) {
 
     if (notifyStatus === 3 && order.status === "pending") {
       await Database.updateOrder(orderNo, {
+        ...(order.market === "GLOBAL"
+          ? {
+              status: "failed",
+              payment_status: "expired",
+              delivery_status: "not_delivered",
+            }
+          : {}),
         crypto_status: "bepusdt_timeout",
         gateway_resp: JSON.stringify({
           provider: "bepusdt",

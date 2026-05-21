@@ -1,5 +1,12 @@
 import { Database } from "@/lib/database"
-import { sendCodeMail } from "@/lib/resend"
+import {
+  getRequiredConfirmations,
+  lockGlobalInventoryCodes,
+  sellGlobalInventoryCodes,
+  updateGlobalOrder,
+} from "@/lib/global-orders"
+import { normalizeInventoryMode, normalizePaymentNetwork } from "@/lib/market"
+import { sendCodeMail, sendGlobalDeliveryMail } from "@/lib/resend"
 import { checkOrderHighRisk } from "@/lib/risk-control"
 import { notifyHighRiskOrder, notifyLowStock, notifyOrderSuccess } from "@/lib/telegram"
 
@@ -16,9 +23,121 @@ async function getProductName(productId?: string | null) {
   return product?.name
 }
 
+function readGatewayNotify(gatewayResp: unknown) {
+  if (!gatewayResp || typeof gatewayResp !== "object") return {} as Record<string, unknown>
+  const wrapped = gatewayResp as Record<string, unknown>
+  const notify = wrapped.notify
+  return notify && typeof notify === "object" ? (notify as Record<string, unknown>) : wrapped
+}
+
+async function completeGlobalPaidOrder(options: CompletePaidOrderOptions, order: any) {
+  const notify = readGatewayNotify(options.gatewayResp)
+  const paymentNetwork = normalizePaymentNetwork(order.payment_network)
+  const txHash = String(notify.block_transaction_id || notify.tx_hash || order.tx_hash || order.crypto_tx_hash || "")
+  const receivedAmount = Number(notify.actual_amount || order.received_amount || order.expected_amount || order.amount || 0)
+  const paymentAddress = String(notify.token || order.payment_address || "")
+  const confirmations = getRequiredConfirmations(paymentNetwork)
+  const gateway_resp = JSON.stringify(options.gatewayResp)
+  const productName = order.product_title_snapshot || order.subject || (await getProductName(order.product_id))
+
+  const paidUpdates = {
+    status: "paid",
+    paid_at: new Date(),
+    gateway_resp,
+    crypto_status: options.cryptoStatus || "bepusdt_verified",
+    payment_status: "paid",
+    received_amount: receivedAmount || Number(order.expected_amount || order.amount || 0),
+    tx_hash: txHash || null,
+    crypto_tx_hash: txHash || null,
+    confirmations,
+    payment_address: paymentAddress || order.payment_address || null,
+  }
+
+  if ((order.delivery_type || "auto") === "manual") {
+    await updateGlobalOrder(options.orderNo, {
+      ...paidUpdates,
+      delivery_status: "manual_review",
+      manual_review_reason: "Manual service order. Payment confirmed, waiting for support handling.",
+    })
+    return { ok: true, reason: "global_paid_manual_review" }
+  }
+
+  if (!order.product_id) {
+    await updateGlobalOrder(options.orderNo, {
+      ...paidUpdates,
+      delivery_status: "manual_review",
+      manual_review_reason: "Missing product id for global delivery.",
+    })
+    return { ok: true, reason: "global_paid_missing_product" }
+  }
+
+  const product = await Database.getProduct(order.product_id)
+  const inventoryMode = normalizeInventoryMode((product as any)?.inventory_mode)
+  const lockedCodes = await lockGlobalInventoryCodes({
+    orderNo: options.orderNo,
+    productId: order.product_id,
+    quantity: order.quantity || 1,
+    market: "GLOBAL",
+    inventoryMode,
+  })
+
+  if (lockedCodes.length < (order.quantity || 1)) {
+    await Database.releaseLockedCode(options.orderNo)
+    await updateGlobalOrder(options.orderNo, {
+      ...paidUpdates,
+      delivery_status: "manual_review",
+      manual_review_reason: "Global inventory is missing or insufficient.",
+    })
+    return { ok: true, reason: "global_paid_stock_missing" }
+  }
+
+  const soldCodes = await sellGlobalInventoryCodes(options.orderNo)
+  if (soldCodes.length === 0) {
+    await Database.releaseLockedCode(options.orderNo)
+    await updateGlobalOrder(options.orderNo, {
+      ...paidUpdates,
+      delivery_status: "delivery_failed",
+      manual_review_reason: "Inventory lock succeeded but delivery update failed.",
+    })
+    return { ok: false, reason: "global_code_sell_failed" }
+  }
+
+  const codesText = soldCodes.map((code) => code.code).join("\n")
+  await updateGlobalOrder(options.orderNo, {
+    ...paidUpdates,
+    code: codesText,
+    fulfilled_at: new Date(),
+    delivery_status: "delivered",
+  })
+
+  try {
+    await sendGlobalDeliveryMail({
+      to: order.email,
+      orderNo: options.orderNo,
+      productName: productName || "Digital product",
+      paymentNetwork,
+      deliveryInfo: codesText,
+      usageGuide: order.product_description_snapshot || "Please follow the instructions included with your digital delivery.",
+    })
+    await Database.updateOrder(options.orderNo, { email_sent: true, email_sent_at: new Date() })
+  } catch (error) {
+    console.error("[PaymentComplete] Global email failed:", error)
+    await updateGlobalOrder(options.orderNo, {
+      delivery_status: "manual_review",
+      manual_review_reason: "Delivered, but delivery email failed. Admin should resend email.",
+    })
+  }
+
+  return { ok: true, reason: "global_paid_fulfilled", codes: soldCodes.map((code) => code.id) }
+}
+
 export async function completePaidOrder(options: CompletePaidOrderOptions) {
   const order = await Database.getOrder(options.orderNo)
   if (!order) return { ok: false, reason: "order_not_found" }
+
+  if (order.market === "GLOBAL") {
+    return completeGlobalPaidOrder(options, order)
+  }
 
   if (order.status === "paid" && order.fulfilled_at) {
     return { ok: true, reason: "already_fulfilled" }

@@ -14,6 +14,7 @@ type D1DatabaseLike = {
 
 const JSON_COLUMNS = new Set([
   "applicable_products",
+  "gallery_images",
   "gateway_resp",
   "metadata",
   "notify_raw",
@@ -22,7 +23,7 @@ const JSON_COLUMNS = new Set([
   "tags",
 ])
 
-const BOOLEAN_COLUMNS = new Set(["email_sent", "is_active", "is_high_risk", "require_region_selection"])
+const BOOLEAN_COLUMNS = new Set(["email_sent", "enabled", "is_active", "is_high_risk", "require_region_selection"])
 
 function raw(sql: string): RawSql {
   return { __rawSql: sql }

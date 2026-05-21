@@ -106,6 +106,10 @@ export interface Product {
   require_region_selection: boolean
   image_url: string | null
   activate_channel: string | null
+  product_type?: string | null
+  inventory_mode?: "shared" | "separate" | null
+  base_cost?: number | null
+  gallery_images?: string[] | null
   stock_count?: number
   created_at: Date
   updated_at: Date
@@ -180,13 +184,18 @@ export class Database {
     require_region_selection?: boolean
     image_url?: string | null
     activate_channel?: string | null
+    product_type?: string | null
+    inventory_mode?: "shared" | "separate" | null
+    base_cost?: number | null
+    gallery_images?: string[] | null
   }): Promise<Product> {
     return this.executeQuery(async () => {
       const s = getSql()
       const priceTiersJson = data.price_tiers ? JSON.stringify(data.price_tiers) : null
       const regionOptionsJson = data.region_options ? JSON.stringify(data.region_options) : null
+      const galleryImagesJson = data.gallery_images ? JSON.stringify(data.gallery_images) : null
       const result = await s`
-        INSERT INTO products (id, name, description, details, price, original_price, sku, status, sort_order, delivery_type, price_tiers, category_id, region_options, require_region_selection, image_url, activate_channel, created_at, updated_at)
+        INSERT INTO products (id, name, description, details, price, original_price, sku, status, sort_order, delivery_type, price_tiers, category_id, region_options, require_region_selection, image_url, activate_channel, product_type, inventory_mode, base_cost, gallery_images, created_at, updated_at)
         VALUES (
           gen_random_uuid(),
           ${data.name},
@@ -204,6 +213,10 @@ export class Database {
           ${data.require_region_selection || false},
           ${data.image_url || null},
           ${data.activate_channel || null},
+          ${data.product_type || "digital_code"},
+          ${data.inventory_mode || "shared"},
+          ${data.base_cost ?? null},
+          ${galleryImagesJson}::jsonb,
           NOW(), NOW()
         )
         RETURNING *
@@ -228,6 +241,10 @@ export class Database {
     require_region_selection?: boolean
     image_url?: string | null
     activate_channel?: string | null
+    product_type?: string | null
+    inventory_mode?: "shared" | "separate" | null
+    base_cost?: number | null
+    gallery_images?: string[] | null
   }): Promise<Product | null> {
     return this.executeQuery(async () => {
       const s = getSql()
@@ -239,8 +256,13 @@ export class Database {
       const hasRequireRegionSelection = "require_region_selection" in data
       const hasImageUrl = "image_url" in data
       const hasActivateChannel = "activate_channel" in data
+      const hasProductType = "product_type" in data
+      const hasInventoryMode = "inventory_mode" in data
+      const hasBaseCost = "base_cost" in data
+      const hasGalleryImages = "gallery_images" in data
       const priceTiersJson = hasPriceTiers ? (data.price_tiers ? JSON.stringify(data.price_tiers) : null) : null
       const regionOptionsJson = hasRegionOptions ? (data.region_options ? JSON.stringify(data.region_options) : null) : null
+      const galleryImagesJson = hasGalleryImages ? (data.gallery_images ? JSON.stringify(data.gallery_images) : null) : null
       // 处理空字符串为 null
       const nameVal = data.name || null
       const descVal = data.description ?? null
@@ -252,6 +274,8 @@ export class Database {
       const originalPriceVal = hasOriginalPrice ? (data.original_price ?? null) : null
       const categoryIdVal = hasCategoryId ? (data.category_id || null) : null
       const activateChannelVal = hasActivateChannel ? (data.activate_channel || null) : null
+      const productTypeVal = hasProductType ? (data.product_type || "digital_code") : null
+      const inventoryModeVal = hasInventoryMode ? (data.inventory_mode || "shared") : null
 
       const result = await s`
         UPDATE products SET
@@ -270,6 +294,10 @@ export class Database {
           require_region_selection = CASE WHEN ${hasRequireRegionSelection} THEN ${hasRequireRegionSelection ? (data.require_region_selection ?? false) : false}::boolean ELSE require_region_selection END,
           image_url = CASE WHEN ${hasImageUrl} THEN ${imageUrlVal}::text ELSE image_url END,
           activate_channel = CASE WHEN ${hasActivateChannel} THEN ${activateChannelVal}::varchar ELSE activate_channel END,
+          product_type = CASE WHEN ${hasProductType} THEN ${productTypeVal}::varchar ELSE product_type END,
+          inventory_mode = CASE WHEN ${hasInventoryMode} THEN ${inventoryModeVal}::varchar ELSE inventory_mode END,
+          base_cost = CASE WHEN ${hasBaseCost} THEN ${data.base_cost ?? null}::numeric ELSE base_cost END,
+          gallery_images = CASE WHEN ${hasGalleryImages} THEN ${galleryImagesJson}::jsonb ELSE gallery_images END,
           updated_at = NOW()
         WHERE id = ${id}
         RETURNING *

@@ -106,6 +106,24 @@ interface Product {
   region_options?: RegionOption[] | null
   require_region_selection?: boolean
   activate_channel?: string | null
+  product_type?: string | null
+  inventory_mode?: "shared" | "separate" | null
+  base_cost?: number | null
+  global_listing?: {
+    enabled: boolean
+    status: "draft" | "published" | "archived"
+    title: string
+    slug: string
+    short_description?: string | null
+    description?: string | null
+    price: number
+    compare_at_price?: number | null
+    service_level?: string | null
+    refund_policy?: string | null
+    risk_notice?: string | null
+    seo_title?: string | null
+    seo_description?: string | null
+  } | null
   created_at: string
   updated_at: string
 }
@@ -234,6 +252,39 @@ export default function AdminPage() {
   const [codesSummary, setCodesSummary] = useState({ available: 0, sold: 0, locked: 0 })
   const [showImportPanel, setShowImportPanel] = useState(false)
 
+  const emptyProductForm = () => ({
+    name: "",
+    description: "",
+    details: "",
+    price: "",
+    original_price: "",
+    sku: "",
+    sort_order: "0",
+    delivery_type: "auto" as string,
+    price_tiers: [] as { min_qty: number; price: number }[],
+    category_id: undefined as string | undefined,
+    region_options: [] as RegionOption[],
+    require_region_selection: false,
+    image_url: "",
+    activate_channel: "" as string,
+    product_type: "digital_code",
+    inventory_mode: "shared" as "shared" | "separate",
+    base_cost: "",
+    global_enabled: false,
+    global_status: "draft" as "draft" | "published" | "archived",
+    global_title: "",
+    global_slug: "",
+    global_short_description: "",
+    global_description: "",
+    global_price: "",
+    global_compare_at_price: "",
+    global_service_level: "USDT Self-Service Edition",
+    global_refund_policy: "Digital products are non-refundable after delivery.",
+    global_risk_notice: "Wrong-network payments may result in permanent loss.",
+    global_seo_title: "",
+    global_seo_description: "",
+  })
+
   // Product management state
   const [products, setProducts] = useState<Product[]>([])
   const [productCategories, setProductCategories] = useState<{ id: string; name: string; slug: string; icon?: string; product_count: number }[]>([])
@@ -243,7 +294,7 @@ export default function AdminPage() {
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [showProductForm, setShowProductForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [productForm, setProductForm] = useState({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto" as string, price_tiers: [] as { min_qty: number; price: number }[], category_id: undefined as string | undefined, region_options: [] as RegionOption[], require_region_selection: false, image_url: "", activate_channel: "" as string })
+  const [productForm, setProductForm] = useState(emptyProductForm())
   const [productLoading, setProductLoading] = useState(false)
   const [importProductId, setImportProductId] = useState("")
   const [importBatchName, setImportBatchName] = useState("")
@@ -3011,7 +3062,7 @@ const renderSettings = () => (
       if (response.ok) {
 setMessage("产品创建成功")
   setShowProductForm(false)
-  setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "", activate_channel: "" })
+  setProductForm(emptyProductForm())
   loadData()
       } else {
         setMessage("创建产品失败")
@@ -3039,7 +3090,7 @@ setMessage("产品创建成功")
 setMessage("产品更新成功")
   setEditingProduct(null)
   setShowProductForm(false)
-  setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "", activate_channel: "" })
+  setProductForm(emptyProductForm())
   loadData()
       } else {
         console.error("[v0] Update failed:", result)
@@ -3105,6 +3156,22 @@ original_price: product.original_price?.toString() || "",
   activate_channel: product.activate_channel || "",
       require_region_selection: product.require_region_selection || false,
       image_url: (product as any).image_url || "",
+      product_type: product.product_type || "digital_code",
+      inventory_mode: product.inventory_mode || "shared",
+      base_cost: product.base_cost?.toString() || "",
+      global_enabled: Boolean(product.global_listing?.enabled),
+      global_status: product.global_listing?.status || "draft",
+      global_title: product.global_listing?.title || "",
+      global_slug: product.global_listing?.slug || "",
+      global_short_description: product.global_listing?.short_description || "",
+      global_description: product.global_listing?.description || "",
+      global_price: product.global_listing?.price?.toString() || "",
+      global_compare_at_price: product.global_listing?.compare_at_price?.toString() || "",
+      global_service_level: product.global_listing?.service_level || "USDT Self-Service Edition",
+      global_refund_policy: product.global_listing?.refund_policy || "Digital products are non-refundable after delivery.",
+      global_risk_notice: product.global_listing?.risk_notice || "Wrong-network payments may result in permanent loss.",
+      global_seo_title: product.global_listing?.seo_title || "",
+      global_seo_description: product.global_listing?.seo_description || "",
     })
     setShowProductForm(true)
   }
@@ -3316,7 +3383,7 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
           <h2 className="text-lg font-semibold">产品���表</h2>
           <p className="text-sm text-muted-foreground">管理可销售的产品品类</p>
         </div>
-        <Button onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", details: "", price: "", original_price: "", sku: "", sort_order: "0", delivery_type: "auto", price_tiers: [], category_id: undefined, region_options: [], require_region_selection: false, image_url: "", activate_channel: "" }); setShowProductForm(true) }}>
+        <Button onClick={() => { setEditingProduct(null); setProductForm(emptyProductForm()); setShowProductForm(true) }}>
           <Plus className="w-4 h-4 mr-2" />
           添���产品
         </Button>
@@ -3422,6 +3489,44 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
   <p className="text-xs text-amber-600 mt-1">{"人工发货模式：用户下单后需要您在后台手动发货，适用于成品账号等时效性商品"}</p>
   )}
   </div>
+
+            <div className="p-4 rounded-lg bg-secondary/40 border border-border space-y-4">
+              <div>
+                <p className="text-sm font-medium">{"市场与库存"}</p>
+                <p className="text-xs text-muted-foreground">{"默认不影响中国站；开启全球站后才会出现在 /global"}</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>{"库存模式"}</Label>
+                  <select
+                    value={productForm.inventory_mode}
+                    onChange={(e) => setProductForm({ ...productForm, inventory_mode: e.target.value as "shared" | "separate" })}
+                    className="w-full mt-1 px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="shared">{"中全球共用库存"}</option>
+                    <option value="separate">{"中全球分开库存"}</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>{"商品类型"}</Label>
+                  <Input
+                    value={productForm.product_type}
+                    onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value })}
+                    placeholder="digital_code"
+                  />
+                </div>
+                <div>
+                  <Label>{"成本价（选填）"}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={productForm.base_cost}
+                    onChange={(e) => setProductForm({ ...productForm, base_cost: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
   
   {/* 激活渠道选择 */}
   <div>
@@ -3439,6 +3544,122 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
   </select>
   <p className="text-xs text-muted-foreground mt-1">{"关联激活渠道后，购买此产品的用户可以在订单页面直接跳转到对应激活入口"}</p>
   </div>
+
+            <div className="p-4 rounded-lg bg-neutral-950 text-white border border-neutral-950 space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold">{"Global Store Listing"}</p>
+                  <p className="text-xs text-neutral-300">{"全球站独立英文标题、USDT 价格、政策说明；不会显示在中国站"}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={productForm.global_enabled}
+                    onCheckedChange={(checked) => setProductForm({ ...productForm, global_enabled: checked })}
+                  />
+                  <span className="text-sm">{productForm.global_enabled ? "已开启" : "未开启"}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-white">{"状态"}</Label>
+                  <select
+                    value={productForm.global_status}
+                    onChange={(e) => setProductForm({ ...productForm, global_status: e.target.value as "draft" | "published" | "archived" })}
+                    className="w-full mt-1 px-3 py-2 border border-neutral-700 bg-neutral-900 rounded-md text-sm text-white focus:outline-none focus:ring-2 focus:ring-white"
+                  >
+                    <option value="draft">{"draft"}</option>
+                    <option value="published">{"published"}</option>
+                    <option value="archived">{"archived"}</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-white">{"USDT 价格"}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={productForm.global_price}
+                    onChange={(e) => setProductForm({ ...productForm, global_price: e.target.value })}
+                    placeholder="10.00"
+                    className="bg-neutral-900 border-neutral-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white">{"USDT 划线价"}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={productForm.global_compare_at_price}
+                    onChange={(e) => setProductForm({ ...productForm, global_compare_at_price: e.target.value })}
+                    placeholder="15.00"
+                    className="bg-neutral-900 border-neutral-700 text-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white">{"英文标题"}</Label>
+                  <Input
+                    value={productForm.global_title}
+                    onChange={(e) => setProductForm({ ...productForm, global_title: e.target.value })}
+                    placeholder="v0 Credits Code - USDT Self-Service Edition"
+                    className="bg-neutral-900 border-neutral-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white">{"英文 slug"}</Label>
+                  <Input
+                    value={productForm.global_slug}
+                    onChange={(e) => setProductForm({ ...productForm, global_slug: e.target.value })}
+                    placeholder="v0-credits-code"
+                    className="bg-neutral-900 border-neutral-700 text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-white">{"英文短描述"}</Label>
+                <textarea
+                  value={productForm.global_short_description}
+                  onChange={(e) => setProductForm({ ...productForm, global_short_description: e.target.value })}
+                  placeholder="Pay with USDT via TRC20 or BEP20. Digital delivery after confirmation."
+                  className="w-full h-20 p-3 border border-neutral-700 bg-neutral-900 text-sm text-white rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-white"
+                />
+              </div>
+              <div>
+                <Label className="text-white">{"英文详情 / Usage Guide"}</Label>
+                <textarea
+                  value={productForm.global_description}
+                  onChange={(e) => setProductForm({ ...productForm, global_description: e.target.value })}
+                  placeholder="Basic English delivery and usage instructions."
+                  className="w-full h-24 p-3 border border-neutral-700 bg-neutral-900 text-sm text-white rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-white"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-white">{"服务等级"}</Label>
+                  <Input
+                    value={productForm.global_service_level}
+                    onChange={(e) => setProductForm({ ...productForm, global_service_level: e.target.value })}
+                    className="bg-neutral-900 border-neutral-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white">{"退款政策"}</Label>
+                  <Input
+                    value={productForm.global_refund_policy}
+                    onChange={(e) => setProductForm({ ...productForm, global_refund_policy: e.target.value })}
+                    className="bg-neutral-900 border-neutral-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white">{"风险提示"}</Label>
+                  <Input
+                    value={productForm.global_risk_notice}
+                    onChange={(e) => setProductForm({ ...productForm, global_risk_notice: e.target.value })}
+                    className="bg-neutral-900 border-neutral-700 text-white"
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Price Tiers */}
             <div className="p-3 rounded-lg bg-secondary/50 border border-border space-y-3">
@@ -3649,6 +3870,15 @@ const startEditCategory = (category: { id: string; name: string; slug: string; i
                       <Badge variant="outline" className={`text-xs ${(product as any).delivery_type === "manual" ? "border-amber-500/50 text-amber-600" : "border-emerald-500/50 text-emerald-600"}`}>
                         {(product as any).delivery_type === "manual" ? "人工发货" : "自动发货"}
                       </Badge>
+                      {product.global_listing?.enabled && (
+                        <Badge variant="outline" className="text-xs border-neutral-950 text-neutral-950">
+                          {"GLOBAL "}
+                          {product.global_listing.status}
+                          {" · "}
+                          {Number(product.global_listing.price).toFixed(2)}
+                          {" USDT"}
+                        </Badge>
+                      )}
                       {(product as any).price_tiers?.length > 0 && (
                         <Badge variant="outline" className="text-xs border-blue-500/50 text-blue-600">
                           {"阶梯价"}

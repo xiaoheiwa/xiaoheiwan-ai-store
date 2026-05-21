@@ -107,6 +107,126 @@ export async function sendCodeMail(
 
 export const sendActivationCodeEmail = sendCodeMail
 
+interface SendGlobalDeliveryMailOptions {
+  to: string
+  orderNo: string
+  productName: string
+  paymentNetwork?: string | null
+  deliveryInfo: string
+  usageGuide?: string | null
+  supportLink?: string | null
+}
+
+export async function sendGlobalDeliveryMail(options: SendGlobalDeliveryMailOptions): Promise<void> {
+  try {
+    const resendApiKey = getEnv("RESEND_API_KEY")
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@upgrade.xiaoheiwan.com"
+    const supportLink = options.supportLink || process.env.GLOBAL_SUPPORT_TELEGRAM || "Telegram support"
+    const htmlContent = createGlobalDeliveryHTML({ ...options, supportLink })
+    const textContent = createGlobalDeliveryText({ ...options, supportLink })
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: `Xiaoheiwan Global <${fromEmail}>`,
+        to: [options.to],
+        subject: "Your Digital Code Has Been Delivered",
+        html: htmlContent,
+        text: textContent,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("[GlobalMail] Resend API error:", errorData)
+      throw new Error(`Resend API error: ${JSON.stringify(errorData)}`)
+    }
+  } catch (error) {
+    console.error("[GlobalMail] Delivery email failed:", error)
+    throw new Error(`Failed to send global delivery email: ${error instanceof Error ? error.message : "Unknown error"}`)
+  }
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
+function createGlobalDeliveryHTML(options: SendGlobalDeliveryMailOptions): string {
+  const deliveryInfo = escapeHtml(options.deliveryInfo).replace(/\n/g, "<br>")
+  const usageGuide = escapeHtml(options.usageGuide || "Please follow the instructions included with your digital delivery.")
+  const supportLink = escapeHtml(options.supportLink || "Telegram support")
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Digital Code Has Been Delivered</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f7f3;font-family:Arial,Helvetica,sans-serif;color:#111111;">
+  <div style="max-width:620px;margin:0 auto;padding:36px 18px;">
+    <div style="border:1px solid #111;background:#fff;padding:28px;">
+      <p style="margin:0 0 10px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#666;">Xiaoheiwan Global</p>
+      <h1 style="margin:0 0 20px;font-size:28px;line-height:1.2;">Your Digital Code Has Been Delivered</h1>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#444;">Hello,<br>Your order has been delivered.</p>
+      <div style="border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:18px 0;margin:20px 0;">
+        <p style="margin:0 0 10px;font-size:13px;color:#666;">Order ID</p>
+        <p style="margin:0 0 18px;font-family:monospace;font-size:16px;">${escapeHtml(options.orderNo)}</p>
+        <p style="margin:0 0 10px;font-size:13px;color:#666;">Product</p>
+        <p style="margin:0 0 18px;font-size:16px;">${escapeHtml(options.productName)}</p>
+        <p style="margin:0 0 10px;font-size:13px;color:#666;">Payment Network</p>
+        <p style="margin:0;font-family:monospace;font-size:16px;">${escapeHtml(options.paymentNetwork || "USDT")}</p>
+      </div>
+      <p style="margin:0 0 10px;font-size:13px;color:#666;">Delivery Info</p>
+      <div style="background:#f4f4f0;border:1px solid #ddd;padding:16px;font-family:monospace;font-size:15px;line-height:1.7;white-space:normal;">${deliveryInfo}</div>
+      <p style="margin:24px 0 10px;font-size:13px;color:#666;">Usage Guide</p>
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#444;">${usageGuide}</p>
+      <p style="margin:0 0 8px;font-weight:bold;">Important</p>
+      <p style="margin:0 0 20px;font-size:14px;line-height:1.7;color:#444;">Digital products are non-refundable after delivery. Please keep this email safe.</p>
+      <p style="margin:0;font-size:14px;color:#444;">Support: ${supportLink}</p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+function createGlobalDeliveryText(options: SendGlobalDeliveryMailOptions): string {
+  return `Hello,
+
+Your order has been delivered.
+
+Order ID:
+${options.orderNo}
+
+Product:
+${options.productName}
+
+Payment Network:
+${options.paymentNetwork || "USDT"}
+
+Delivery Info:
+${options.deliveryInfo}
+
+Usage Guide:
+${options.usageGuide || "Please follow the instructions included with your digital delivery."}
+
+Important:
+Digital products are non-refundable after delivery.
+Please keep this email safe.
+
+Support:
+${options.supportLink || process.env.GLOBAL_SUPPORT_TELEGRAM || "Telegram support"}`
+}
+
 // 推广员申请相关邮件
 interface PromoterApprovalEmailOptions {
   to: string

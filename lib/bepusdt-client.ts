@@ -104,15 +104,20 @@ export async function createBepusdtTransaction(params: {
   notifyUrl: string
   redirectUrl: string
   tradeType?: BepusdtTradeType
+  fiat?: string
+  rate?: string
+  address?: string
 }) {
   const config = getBepusdtConfig()
 
   return postBepusdt<BepusdtTransactionData>("/api/v1/order/create-transaction", {
     order_id: params.orderId,
     amount: Number(params.amount.toFixed(2)),
-    fiat: config.fiat,
+    fiat: params.fiat || config.fiat,
     trade_type: params.tradeType || config.tradeType,
     name: params.name,
+    rate: params.rate,
+    address: params.address,
     notify_url: params.notifyUrl,
     redirect_url: params.redirectUrl,
     timeout: Math.max(120, config.timeout || 1200),
