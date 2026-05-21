@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { neon } from "@/lib/db-client"
-import { notifyCryptoPending, notifyOrderSuccess, notifyLowStock } from "@/lib/telegram"
+import { notifyCryptoPending } from "@/lib/telegram"
 import { verifyUsdtTransaction } from "@/lib/tron-verify"
-import { sendCodeMail } from "@/lib/resend"
+import { completePaidOrder } from "@/lib/order-payment-completion"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -43,6 +43,10 @@ export async function POST(request: Request) {
     }
 
     const order = orders[0]
+
+    if (String(order.market || "CN").toUpperCase() === "GLOBAL") {
+      return NextResponse.json({ error: "全球站订单请使用全球站支付页面确认" }, { status: 400 })
+    }
     
     if (order.status !== "pending") {
       return NextResponse.json({ error: "订单状态无效" }, { status: 400 })
@@ -84,134 +88,21 @@ export async function POST(request: Request) {
       )
 
       if (verifyResult.success) {
-        // Auto-verify successful - process order automatically
-        const quantity = order.quantity || 1
-
-        // Update order status to paid
-        await sql`
-          UPDATE orders SET 
-            status = 'paid',
-            crypto_status = 'verified',
-            paid_at = NOW(),
-            updated_at = NOW()
-          WHERE out_trade_no = ${orderNo}
-        `
-
-        // Handle auto delivery
-        if (order.delivery_type !== "manual") {
-          // Get available codes
-          let codesQuery
-          if (order.product_id) {
-            codesQuery = await sql`
-              SELECT id, code FROM activation_codes 
-              WHERE status = 'available' 
-              AND (product_id = ${order.product_id} OR product_id IS NULL)
-              ORDER BY product_id DESC NULLS LAST, created_at ASC
-              LIMIT ${quantity}
-            `
-          } else {
-            codesQuery = await sql`
-              SELECT id, code FROM activation_codes 
-              WHERE status = 'available' 
-              ORDER BY created_at ASC
-              LIMIT ${quantity}
-            `
-          }
-
-          if (codesQuery.length >= quantity) {
-            const codes = codesQuery.map((c: any) => c.code)
-            const codeIds = codesQuery.map((c: any) => c.id)
-
-            // Mark codes as used
-            await sql`
-              UPDATE activation_codes SET 
-                status = 'used',
-                used_at = NOW(),
-                used_by_order = ${orderNo}
-              WHERE id = ANY(${codeIds})
-            `
-
-            // Update order with codes
-            await sql`
-              UPDATE orders SET 
-                activation_code = ${codes.join(", ")},
-                fulfilled_at = NOW()
-              WHERE out_trade_no = ${orderNo}
-            `
-
-            // Send email
-            try {
-              await sendCodeMail({
-                to: order.email,
-                orderNo,
-                codes,
-                productName: order.product_name || order.subject,
-              })
-            } catch (emailErr) {
-              console.error("Email send failed:", emailErr)
-            }
-
-            // Send Telegram notification
-            try {
-              await notifyOrderSuccess({
-                orderNo,
-                email: order.email,
-                amount: Number(order.amount),
-                productName: order.product_name || order.subject,
-                quantity,
-                paymentMethod: "usdt",
-                codes,
-                regionName: order.region_name || undefined,
-              })
-
-              // Check stock
-              if (order.product_id) {
-                const stockResult = await sql`
-                  SELECT COUNT(*) as count FROM activation_codes 
-                  WHERE status = 'available' 
-                  AND (product_id = ${order.product_id} OR product_id IS NULL)
-                `
-                const remaining = Number(stockResult[0]?.count || 0)
-                if (remaining <= 10) {
-                  await notifyLowStock({
-                    productId: order.product_id,
-                    productName: order.product_name,
-                    remaining,
-                    threshold: 10,
-                  })
-                }
-              }
-            } catch (tgErr) {
-              console.error("Telegram notification failed:", tgErr)
-            }
-
-            return NextResponse.json({ 
-              success: true, 
-              verified: true,
-              message: "支付已自动验证，激活码已发送到您的邮箱" 
-            })
-          }
-        }
-
-        // Manual delivery order - just mark as paid
-        try {
-          await notifyOrderSuccess({
-            orderNo,
-            email: order.email,
-            amount: Number(order.amount),
-            productName: order.product_name || order.subject,
-            quantity,
-            paymentMethod: "usdt",
-            regionName: order.region_name || undefined,
-          })
-        } catch (tgErr) {
-          console.error("Telegram notification failed:", tgErr)
-        }
+        const result = await completePaidOrder({
+          orderNo,
+          paymentMethod: "usdt",
+          cryptoStatus: "verified",
+          gatewayResp: {
+            provider: "manual_tron_submit",
+            txHash: cleanTxHash,
+            verifyResult,
+          },
+        })
 
         return NextResponse.json({ 
-          success: true, 
+          success: result.ok, 
           verified: true,
-          message: "支付已自动验证，订单正在处理中" 
+          message: result.ok ? "支付已自动验证，订单正在处理中" : "支付已验证，但发货处理失败，请联系客服"
         })
       } else {
         // Verification failed - notify admin for manual check

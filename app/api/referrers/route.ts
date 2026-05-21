@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 import { neon } from "@/lib/db-client"
 import bcrypt from "bcryptjs"
 
@@ -7,7 +8,10 @@ function getDb() {
 }
 
 // GET - 获取所有推广用户列表
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const { searchParams } = new URL(request.url)
@@ -35,7 +39,7 @@ export async function GET(request: Request) {
     
     return NextResponse.json({
       success: true,
-      data: referrers.map(r => ({
+      data: referrers.map((r: any) => ({
         ...r,
         total_orders: Number(r.total_orders) || 0,
         total_earnings: Number(r.total_earnings) || 0,
@@ -53,7 +57,10 @@ export async function GET(request: Request) {
 }
 
 // POST - 创建推广用户
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     const { username, referral_code, commission_rate, email, password } = body
@@ -120,7 +127,10 @@ export async function POST(request: Request) {
 }
 
 // DELETE - 删除推广用户
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
@@ -148,7 +158,10 @@ export async function DELETE(request: Request) {
 }
 
 // PATCH - 更新推广用户（支持修改状态和佣金比例）
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     const { id, status, commission_rate } = body

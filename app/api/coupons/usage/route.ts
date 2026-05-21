@@ -1,5 +1,6 @@
 import { neon } from "@/lib/db-client"
 import { NextResponse, NextRequest } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 
 function getDb() {
   return neon(process.env.DATABASE_URL!)
@@ -7,6 +8,9 @@ function getDb() {
 
 // 获取优惠码使用记录
 export async function GET(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const { searchParams } = new URL(request.url)
@@ -70,6 +74,9 @@ export async function GET(request: NextRequest) {
 
 // 获取推广用户的佣金统计
 export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const { referrer_id } = await request.json()

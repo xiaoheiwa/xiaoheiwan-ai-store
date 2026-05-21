@@ -7,7 +7,12 @@ function getDb() {
   return neon(process.env.DATABASE_URL!)
 }
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "referrer-secret-key-change-in-production")
+function getJwtSecret() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET environment variable is not set")
+  }
+  return new TextEncoder().encode(process.env.JWT_SECRET)
+}
 
 export async function POST(request: Request) {
   try {
@@ -51,7 +56,7 @@ export async function POST(request: Request) {
     })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("7d")
-      .sign(JWT_SECRET)
+      .sign(getJwtSecret())
 
     return NextResponse.json({
       success: true,

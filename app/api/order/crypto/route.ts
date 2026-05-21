@@ -6,6 +6,7 @@ import { NextResponse } from "next/server"
 import { Database } from "@/lib/database"
 import { neon } from "@/lib/db-client"
 import { createBepusdtTransaction, getBepusdtConfig, normalizeBepusdtTradeType } from "@/lib/bepusdt-client"
+import { checkRisk } from "@/lib/risk-control"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
     const { email, amount, productId, productName, queryPassword, quantity = 1, deliveryType = "auto", selectedRegion, regionName, couponId, couponCode, discountAmount = 0, referralCode, cryptoNetwork, tradeType } = body
+    const clientIp = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || undefined
 
     if (!email || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
@@ -137,6 +139,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "价格验证失败" }, { status: 400 })
     }
     const verifiedAmount = expectedAmount
+
+    const riskResult = await checkRisk({
+      email,
+      clientIp,
+      amount: verifiedAmount,
+      productId,
+    })
+    if (!riskResult.allowed) {
+      return NextResponse.json({ error: riskResult.reason || "订单创建失败，请稍后再试" }, { status: 403 })
+    }
     
     // SECURITY: Use product name from database, not from client
     const verifiedProductName = product.name
@@ -192,6 +204,7 @@ export async function POST(req: Request) {
       delivery_type: deliveryType,
       selected_region: selectedRegion || null,
       region_name: regionName || null,
+      client_ip: clientIp || null,
     })
 
     if (bepusdtConfig.enabled) {

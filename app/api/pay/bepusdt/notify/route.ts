@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { getBepusdtConfig, verifyBepusdtSignature } from "@/lib/bepusdt-client"
 import { Database } from "@/lib/database"
+import { sql } from "@/lib/db"
+import { bepusdtTradeTypeToPaymentNetwork, normalizePaymentNetwork } from "@/lib/market"
 import { completePaidOrder } from "@/lib/order-payment-completion"
 
 export const runtime = "nodejs"
@@ -26,6 +28,28 @@ function successResponse() {
 
 function failResponse(message = "fail") {
   return new Response(message, { status: 400, headers: { "Content-Type": "text/plain" } })
+}
+
+async function markGlobalPaymentReview(
+  orderNo: string,
+  payload: NotifyPayload,
+  paymentStatus: "underpaid" | "overpaid" | "failed",
+  reason: string,
+) {
+  const txHash = String(payload.block_transaction_id || payload.tx_hash || "")
+  await Database.updateOrder(orderNo, {
+    status: "manual_review",
+    payment_status: paymentStatus,
+    delivery_status: "manual_review",
+    received_amount: Number(payload.actual_amount || payload.amount || 0) || null,
+    tx_hash: txHash || null,
+    crypto_tx_hash: txHash || null,
+    manual_review_reason: reason,
+    gateway_resp: JSON.stringify({
+      provider: "bepusdt",
+      notify: payload,
+    }),
+  })
 }
 
 export async function POST(request: Request) {
@@ -62,12 +86,58 @@ export async function POST(request: Request) {
       ? Number(payload.actual_amount || payload.amount || 0)
       : Number(payload.amount || 0)
     const expectedAmount = order.market === "GLOBAL" ? Number(order.expected_amount || order.amount) : Number(order.amount)
+
+    if (order.market === "GLOBAL" && notifyStatus === 2) {
+      const expectedNetwork = normalizePaymentNetwork(order.payment_network)
+      const actualNetwork = bepusdtTradeTypeToPaymentNetwork(payload.trade_type || payload.type || payload.network)
+      if (expectedNetwork && actualNetwork && expectedNetwork !== actualNetwork) {
+        await markGlobalPaymentReview(
+          orderNo,
+          payload,
+          "failed",
+          `Payment network mismatch. Expected ${expectedNetwork}, received ${actualNetwork}.`,
+        )
+        return successResponse()
+      }
+
+      const txHash = String(payload.block_transaction_id || payload.tx_hash || "")
+      if (txHash) {
+        const duplicateTx = await sql`
+          SELECT out_trade_no
+          FROM orders
+          WHERE out_trade_no != ${orderNo}
+            AND (tx_hash = ${txHash} OR crypto_tx_hash = ${txHash})
+          LIMIT 1
+        `
+        if (duplicateTx.length > 0) {
+          await markGlobalPaymentReview(
+            orderNo,
+            payload,
+            "failed",
+            `Duplicate transaction hash already used by order ${duplicateTx[0].out_trade_no}.`,
+          )
+          return successResponse()
+        }
+      }
+    }
+
     if (notifyAmount > 0 && Math.abs(expectedAmount - notifyAmount) > 0.01) {
       console.error("[BEpusdt] Amount mismatch:", {
         orderNo,
         orderAmount: expectedAmount,
         notifyAmount,
       })
+      if (order.market === "GLOBAL" && notifyStatus === 2) {
+        await markGlobalPaymentReview(
+          orderNo,
+          payload,
+          notifyAmount < expectedAmount ? "underpaid" : "overpaid",
+          notifyAmount < expectedAmount
+            ? `Underpaid global order. Expected ${expectedAmount}, received ${notifyAmount}.`
+            : `Overpaid global order. Expected ${expectedAmount}, received ${notifyAmount}.`,
+        )
+        return successResponse()
+      }
       return failResponse()
     }
 

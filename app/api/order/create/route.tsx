@@ -49,7 +49,12 @@ export async function POST(req: Request) {
     }
 
     // 风控检查
-    const clientIp = clientip || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || undefined
+    const headerClientIp =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      undefined
+    const clientIp = headerClientIp || (typeof clientip === "string" ? clientip : undefined)
     const riskResult = await checkRisk({
       email,
       clientIp,
@@ -204,6 +209,7 @@ export async function POST(req: Request) {
       delivery_type: deliveryType,
       selected_region: selectedRegion || null,
       region_name: regionName || null,
+      client_ip: clientIp || null,
     })
     console.log("[v0] Order created:", order.out_trade_no)
 
@@ -292,7 +298,7 @@ export async function POST(req: Request) {
     // 微信支付使用 API 方式（支持手机端 JSAPI）
     if (paymentMethod === "wxpay") {
       // 获取客户端 IP（从请求头或前端传递）
-      const ip = clientip || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "127.0.0.1"
+      const ip = clientIp || "127.0.0.1"
       console.log("[v0] 微信支付 API 方式, clientip:", ip)
       
       const apiResult = await ZPayz.createApiPayment({

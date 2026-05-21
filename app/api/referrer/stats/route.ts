@@ -6,7 +6,12 @@ function getDb() {
   return neon(process.env.DATABASE_URL!)
 }
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "referrer-secret-key-change-in-production")
+function getJwtSecret() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET environment variable is not set")
+  }
+  return new TextEncoder().encode(process.env.JWT_SECRET)
+}
 
 // 验证 token 并获取用户 ID
 async function verifyToken(request: Request): Promise<number | null> {
@@ -17,7 +22,7 @@ async function verifyToken(request: Request): Promise<number | null> {
 
   try {
     const token = authHeader.substring(7)
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, getJwtSecret())
     if (payload.type !== "referrer" || !payload.id) {
       return null
     }
@@ -102,11 +107,11 @@ export async function GET(request: Request) {
           available_balance: Number(user.available_balance) || 0,
           created_at: user.created_at
         },
-        coupons: coupons.map(c => ({
+        coupons: coupons.map((c: any) => ({
           ...c,
           discount_value: Number(c.discount_value)
         })),
-        usage_records: usageRecords.map(r => ({
+        usage_records: usageRecords.map((r: any) => ({
           ...r,
           order_amount: Number(r.order_amount),
           discount_amount: Number(r.discount_amount),

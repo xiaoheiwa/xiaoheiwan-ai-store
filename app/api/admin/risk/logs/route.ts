@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 import { getRiskLogs } from "@/lib/risk-control"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authError = await requireAdmin(req)
+  if (authError) return authError
+
   try {
     const data = await getRiskLogs(100)
     return NextResponse.json({ success: true, data })

@@ -534,7 +534,7 @@ export class Database {
         INSERT INTO orders (
           out_trade_no, email, amount, subject, status, pay_channel, product_id, code,
           quantity, delivery_type, selected_region, region_name,
-          paid_at, fulfilled_at, gateway_resp, notify_raw, query_password_hash, created_at, updated_at
+          paid_at, fulfilled_at, gateway_resp, notify_raw, query_password_hash, client_ip, created_at, updated_at
         ) VALUES (
           ${order.out_trade_no}, ${order.email}, ${order.amount}, ${order.subject},
           ${order.status}, ${order.pay_channel}, ${order.product_id || null}, ${order.code || null},
@@ -542,7 +542,7 @@ export class Database {
           ${order.selected_region || null}, ${order.region_name || null},
           ${order.paid_at || null}, ${order.fulfilled_at || null},
           ${order.gateway_resp || null}, ${order.notify_raw || null},
-          ${order.query_password_hash || null},
+          ${order.query_password_hash || null}, ${order.client_ip || null},
           NOW(), NOW()
         )
         RETURNING *

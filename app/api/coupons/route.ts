@@ -1,12 +1,16 @@
 import { neon } from "@/lib/db-client"
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 
 function getDb() {
   return neon(process.env.DATABASE_URL!)
 }
 
 // 获取优惠码列表（包含推广用户信息）
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const coupons = await sql`
@@ -33,7 +37,10 @@ export async function GET() {
 }
 
 // 创建优惠码
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const body = await request.json()
@@ -104,7 +111,10 @@ export async function POST(request: Request) {
 }
 
 // 删除优惠码
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const { searchParams } = new URL(request.url)
@@ -126,7 +136,10 @@ export async function DELETE(request: Request) {
 }
 
 // 更新优惠码
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const body = await request.json()

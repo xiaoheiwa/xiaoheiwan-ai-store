@@ -327,7 +327,7 @@ async function handle(params: Record<string, string>) {
 
       // Check stock and send low stock alert if needed
       if (order.product_id) {
-        const remaining = await Database.getAvailableCodeCount(order.product_id)
+        const remaining = await Database.getAvailableCodesCountByProduct(order.product_id)
         if (remaining <= 10) {
           await notifyLowStock({
             productId: order.product_id,

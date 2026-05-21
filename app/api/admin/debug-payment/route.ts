@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 import { ZPayz } from "@/lib/zpayz-client"
 
 // 仅用于调试支付配置
 export async function GET(request: NextRequest) {
-  // 简单的管理员验证
-  const authHeader = request.headers.get("authorization")
-  if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const authError = await requireAdmin(request)
+  if (authError) return authError
 
   const config = ZPayz.getConfig()
   

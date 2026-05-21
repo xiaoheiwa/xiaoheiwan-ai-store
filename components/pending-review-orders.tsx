@@ -28,7 +28,9 @@ export function PendingReviewOrders({ adminToken }: Props) {
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/orders/review?token=${adminToken}`)
+      const res = await fetch("/api/admin/orders/review", {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      })
       const data = await res.json()
       if (data.ok) {
         setOrders(data.orders || [])
@@ -52,9 +54,9 @@ export function PendingReviewOrders({ adminToken }: Props) {
     setMessage(null)
     
     try {
-      const res = await fetch(`/api/admin/orders/review?token=${adminToken}`, {
+      const res = await fetch("/api/admin/orders/review", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({ orderNo, action }),
       })
       const data = await res.json()

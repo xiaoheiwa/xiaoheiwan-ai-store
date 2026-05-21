@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 import { neon } from "@/lib/db-client"
 
 function getDb() {
@@ -6,7 +7,10 @@ function getDb() {
 }
 
 // GET - 获取所有提现申请
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
 
@@ -24,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      data: withdrawals.map(w => ({
+      data: withdrawals.map((w: any) => ({
         ...w,
         amount: Number(w.amount),
         referrer_name: w.referrer_name || "未知用户",
@@ -41,7 +45,10 @@ export async function GET() {
 }
 
 // PATCH - 处理提现申请
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const body = await request.json()

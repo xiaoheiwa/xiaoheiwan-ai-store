@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 import { Database } from "@/lib/database"
+import { sql } from "@/lib/db"
 import { sendCodeMail } from "@/lib/resend"
 import { notifyOrderSuccess } from "@/lib/telegram"
 
@@ -7,23 +9,19 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 // 获取待审核订单列表
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const adminToken = searchParams.get("token")
-  
-  if (adminToken !== process.env.ADMIN_TOKEN) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+export async function GET(req: NextRequest) {
+  const authError = await requireAdmin(req)
+  if (authError) return authError
   
   try {
-    const orders = await Database.query(`
+    const orders = await sql`
       SELECT o.*, p.name as product_name 
       FROM orders o
       LEFT JOIN products p ON o.product_id = p.id
       WHERE o.is_high_risk = true AND o.review_status = 'pending_review'
       ORDER BY o.paid_at DESC
       LIMIT 50
-    `)
+    `
     
     return NextResponse.json({ ok: true, orders })
   } catch (error) {
@@ -33,13 +31,9 @@ export async function GET(req: Request) {
 }
 
 // 处理审核操作
-export async function POST(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const adminToken = searchParams.get("token")
-  
-  if (adminToken !== process.env.ADMIN_TOKEN) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+export async function POST(req: NextRequest) {
+  const authError = await requireAdmin(req)
+  if (authError) return authError
   
   try {
     const { orderNo, action } = await req.json()
@@ -72,16 +66,17 @@ export async function POST(req: Request) {
         }
       }
       
-      if (lockedCodes.length === 0) {
+      if (lockedCodes.length < orderQuantity) {
+        await Database.releaseLockedCode(orderNo)
         return NextResponse.json({ error: "No stock available" }, { status: 400 })
       }
       
-      // Sell codes
-      const codeStrings: string[] = []
-      for (const code of lockedCodes) {
-        await Database.sellCode(code.id, orderNo)
-        codeStrings.push(code.code)
+      const soldCodes = await Database.sellMultipleCodes(orderNo)
+      if (soldCodes.length < orderQuantity) {
+        await Database.releaseLockedCode(orderNo)
+        return NextResponse.json({ error: "Failed to sell locked codes" }, { status: 500 })
       }
+      const codeStrings = soldCodes.map((code) => code.code)
       
       // Update order
       await Database.updateOrder(orderNo, {

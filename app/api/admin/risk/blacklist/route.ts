@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 import { getBlacklist, addToBlacklist, removeFromBlacklist } from "@/lib/risk-control"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authError = await requireAdmin(req)
+  if (authError) return authError
+
   try {
     const data = await getBlacklist()
     return NextResponse.json({ success: true, data })
@@ -13,7 +17,10 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const authError = await requireAdmin(req)
+  if (authError) return authError
+
   try {
     const { type, value, reason, expiresAt } = await req.json()
     if (!type || !value || !reason) {
@@ -27,7 +34,10 @@ export async function POST(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  const authError = await requireAdmin(req)
+  if (authError) return authError
+
   try {
     const { type, value } = await req.json()
     if (!type || !value) {

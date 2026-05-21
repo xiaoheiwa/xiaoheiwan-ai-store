@@ -22,7 +22,7 @@ export interface RiskCheckParams {
   clientIp?: string
   fingerprint?: string
   amount?: number
-  productId?: number
+  productId?: string | number
 }
 
 // 获取风控配置

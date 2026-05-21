@@ -20,6 +20,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "订单不存在，请检查订单号是否正确" }, { status: 404 })
     }
 
+    if (String(order.market || "CN").toUpperCase() === "GLOBAL") {
+      return NextResponse.json(
+        { error: "请使用全球站订单查询页面查看该订单" },
+        { status: 404, headers: { "Cache-Control": "no-store" } },
+      )
+    }
+
     // Check query password
     const url = new URL(request.url)
     const queryPassword = url.searchParams.get("pwd") || ""

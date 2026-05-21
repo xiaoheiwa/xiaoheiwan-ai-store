@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 import { neon } from "@/lib/db-client"
 import bcrypt from "bcryptjs"
 import { sendPromoterApprovalEmail, sendPromoterRejectionEmail } from "@/lib/resend"
@@ -25,7 +26,10 @@ function generateReferralCode(username: string) {
 }
 
 // GET - 获取所有申请
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const sql = getDb()
     const { searchParams } = new URL(request.url)
@@ -63,7 +67,10 @@ export async function GET(request: Request) {
 }
 
 // POST - 审核申请（批准或拒绝）
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     const { id, action, admin_note, commission_rate = 10 } = body

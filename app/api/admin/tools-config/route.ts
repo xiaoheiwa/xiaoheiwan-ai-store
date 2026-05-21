@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-auth"
 import { neon } from "@/lib/db-client"
 
 const sql = neon(process.env.DATABASE_URL!)
 
 // 获取工具配置
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     // 从 system_settings 表获取工具配置
     const result = await sql`
@@ -30,6 +34,9 @@ export async function GET() {
 
 // 更新工具配置
 export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const config = await request.json()
     

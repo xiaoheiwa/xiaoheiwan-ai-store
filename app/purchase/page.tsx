@@ -865,7 +865,7 @@ body: JSON.stringify({
 
             <button
               type="submit"
-              disabled={loading || (!isManual && stockCount < quantity) || (requiresRegion && !selectedRegion)}
+              disabled={loading || (!isManual && stockCount < quantity) || Boolean(requiresRegion && !selectedRegion)}
               className="w-full bg-accent hover:bg-accent/90 disabled:bg-muted disabled:cursor-not-allowed text-accent-foreground py-5 rounded-2xl font-semibold text-lg transition-all duration-300 hover:shadow-xl hover:shadow-accent/30 active:scale-[0.98] flex items-center justify-center gap-3 ripple opacity-0 animate-fade-up delay-300"
               style={{ animationFillMode: "forwards" }}
             >

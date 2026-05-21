@@ -101,11 +101,11 @@ export async function POST(request: NextRequest) {
       `
 
       const totalOrders = orders.length
-      const totalRevenue = orders.reduce((sum, o) => sum + parseFloat(o.amount || "0"), 0)
-      const totalQuantity = orders.reduce((sum, o) => sum + (o.quantity || 1), 0)
+      const totalRevenue = orders.reduce((sum: number, o: any) => sum + parseFloat(o.amount || "0"), 0)
+      const totalQuantity = orders.reduce((sum: number, o: any) => sum + (o.quantity || 1), 0)
 
       const productStats: Record<string, { count: number; revenue: number }> = {}
-      orders.forEach((order) => {
+      orders.forEach((order: any) => {
         const product = order.subject || "未知商品"
         if (!productStats[product]) productStats[product] = { count: 0, revenue: 0 }
         productStats[product].count++
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       })
 
       const channelStats: Record<string, { count: number; revenue: number }> = {}
-      orders.forEach((order) => {
+      orders.forEach((order: any) => {
         const channel = order.pay_channel || "未知"
         if (!channelStats[channel]) channelStats[channel] = { count: 0, revenue: 0 }
         channelStats[channel].count++

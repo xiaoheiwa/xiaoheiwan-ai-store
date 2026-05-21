@@ -3,7 +3,8 @@ import { NextResponse } from "next/server"
 import { createBepusdtTransaction, getBepusdtConfig } from "@/lib/bepusdt-client"
 import { getMarketListingBySlug } from "@/lib/global-market"
 import { createGlobalUsdtOrder, getGlobalOrderExpiryDate } from "@/lib/global-orders"
-import { normalizePaymentNetwork, paymentNetworkToBepusdtTradeType } from "@/lib/market"
+import { isGlobalStoreEnabled, normalizePaymentNetwork, paymentNetworkToBepusdtTradeType } from "@/lib/market"
+import { checkRisk } from "@/lib/risk-control"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -23,10 +24,15 @@ function getClientIp(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!isGlobalStoreEnabled()) {
+      return NextResponse.json({ error: "Global Store is currently unavailable." }, { status: 503 })
+    }
+
     const body = await request.json().catch(() => ({}))
     const email = String(body.email || "").trim().toLowerCase()
     const slug = String(body.productSlug || body.slug || "").trim()
     const paymentNetwork = normalizePaymentNetwork(body.paymentNetwork || body.network)
+    const clientIp = getClientIp(request)
 
     if (!isEmail(email)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 })
@@ -44,6 +50,16 @@ export async function POST(request: Request) {
     }
     if (product.delivery_type !== "manual" && product.stock_count <= 0) {
       return NextResponse.json({ error: "This product is currently out of stock." }, { status: 400 })
+    }
+
+    const riskResult = await checkRisk({
+      email,
+      clientIp: clientIp || undefined,
+      amount: product.price,
+      productId: product.product_id,
+    })
+    if (!riskResult.allowed) {
+      return NextResponse.json({ error: riskResult.reason || "Order creation is temporarily unavailable." }, { status: 403 })
     }
 
     const config = getBepusdtConfig()
@@ -82,7 +98,7 @@ export async function POST(request: Request) {
         tradeType,
         create: bepusdtOrder,
       },
-      customerIp: getClientIp(request),
+      customerIp: clientIp,
       customerCountry: request.headers.get("cf-ipcountry"),
       userAgent: request.headers.get("user-agent"),
     })
