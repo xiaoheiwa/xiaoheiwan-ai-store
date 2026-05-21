@@ -13,23 +13,44 @@ function getInternalCronUrl(env: WorkerEnv): string {
   return new URL("/api/cron/daily-report", baseUrl).toString()
 }
 
+function getInternalUrl(env: WorkerEnv, path: string): string {
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL || env.SITE_BASE_URL || "https://xiaoheiwan-ai-store.local"
+  return new URL(path, baseUrl).toString()
+}
+
 export default {
   fetch: openNextWorker.fetch,
 
-  async scheduled(_event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
+  async scheduled(event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
     if (!env.CRON_SECRET) {
       console.error("CRON_SECRET is not configured; skipping daily report cron.")
       return
     }
 
-    const request = new Request(getInternalCronUrl(env), {
+    const globalOrdersRequest = new Request(getInternalUrl(env, "/api/cron/global-orders"), {
       headers: {
         authorization: `Bearer ${env.CRON_SECRET}`,
       },
     })
 
     ctx.waitUntil(
-      openNextWorker.fetch(request, env, ctx).then(async (response: Response) => {
+      openNextWorker.fetch(globalOrdersRequest, env, ctx).then(async (response: Response) => {
+        if (!response.ok) {
+          console.error("Global orders cron failed", response.status, await response.text())
+        }
+      }),
+    )
+
+    if (event.cron !== "0 16 * * *") return
+
+    const dailyReportRequest = new Request(getInternalCronUrl(env), {
+      headers: {
+        authorization: `Bearer ${env.CRON_SECRET}`,
+      },
+    })
+
+    ctx.waitUntil(
+      openNextWorker.fetch(dailyReportRequest, env, ctx).then(async (response: Response) => {
         if (!response.ok) {
           console.error("Daily report cron failed", response.status, await response.text())
         }

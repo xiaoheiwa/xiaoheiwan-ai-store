@@ -54,11 +54,13 @@ interface Order {
   out_trade_no: string
   email: string
   amount: number
-  status: "pending" | "paid" | "failed"
+  status: "pending" | "paid" | "failed" | "expired" | "refunded" | "manual_review"
   pay_channel: string
   code: string
   product_id?: string
   product_name?: string
+  product_title_snapshot?: string | null
+  product_inventory_mode?: "shared" | "separate" | null
   created_at: string
   paid_at?: string
   fulfilled_at?: string
@@ -68,6 +70,25 @@ interface Order {
   quantity?: number
   selected_region?: string
   region_name?: string
+  market?: "CN" | "GLOBAL" | string | null
+  normalized_market?: "CN" | "GLOBAL" | string | null
+  payment_method?: string | null
+  payment_network?: "TRC20" | "BEP20" | string | null
+  token?: string | null
+  payment_address?: string | null
+  expected_amount?: number | null
+  received_amount?: number | null
+  tx_hash?: string | null
+  confirmations?: number | null
+  payment_expired_at?: string | null
+  payment_status?: string | null
+  delivery_status?: string | null
+  risk_status?: string | null
+  manual_review_reason?: string | null
+  currency?: string | null
+  price_snapshot?: number | null
+  normalized_payment_status?: string | null
+  normalized_delivery_status?: string | null
 }
 
 interface Stats {
@@ -75,6 +96,15 @@ interface Stats {
   paidOrders: number
   totalRevenue: number
   stockCount: number
+  pendingFulfill?: number
+  cnOrders?: number
+  globalOrders?: number
+  cnRevenue?: number
+  globalRevenue?: number
+  globalPaymentAbnormal?: number
+  globalManualReview?: number
+  trc20Orders?: number
+  bep20Orders?: number
 }
 
 interface ActivationCode {
@@ -188,8 +218,26 @@ export default function AdminPage() {
   const [ordersTotalPages, setOrdersTotalPages] = useState(1)
   const [ordersStatusFilter, setOrdersStatusFilter] = useState("")
   const [ordersProductFilter, setOrdersProductFilter] = useState("")
+  const [ordersMarketFilter, setOrdersMarketFilter] = useState("")
+  const [ordersNetworkFilter, setOrdersNetworkFilter] = useState("")
+  const [ordersPaymentStatusFilter, setOrdersPaymentStatusFilter] = useState("")
+  const [ordersDeliveryStatusFilter, setOrdersDeliveryStatusFilter] = useState("")
   const [ordersSearch, setOrdersSearch] = useState("")
-  const [ordersSummary, setOrdersSummary] = useState({ paid: 0, pending: 0, failed: 0, total: 0, totalRevenue: 0 })
+  const [ordersSummary, setOrdersSummary] = useState({
+    paid: 0,
+    pending: 0,
+    failed: 0,
+    total: 0,
+    totalRevenue: 0,
+    cnOrders: 0,
+    globalOrders: 0,
+    globalPending: 0,
+    globalManualReview: 0,
+    usdtOrders: 0,
+    trc20Orders: 0,
+    bep20Orders: 0,
+    globalRevenue: 0,
+  })
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [showOrderDeleteConfirm, setShowOrderDeleteConfirm] = useState(false)
 // 通知管理状态
@@ -244,6 +292,7 @@ export default function AdminPage() {
   const [fulfillSupplier, setFulfillSupplier] = useState("")
   const [fulfillCostNotes, setFulfillCostNotes] = useState("")
   const [fulfilling, setFulfilling] = useState(false)
+  const [orderActionLoading, setOrderActionLoading] = useState<string | null>(null)
 
   // Codes filter state
   const [codesStatusFilter, setCodesStatusFilter] = useState("")
@@ -555,15 +604,32 @@ setAdminToken(data.token)
     }
   }
 
-  const loadOrders = async (page: number, statusFilter?: string, productFilter?: string, searchTerm?: string) => {
+  const loadOrders = async (
+    page: number,
+    statusFilter?: string,
+    productFilter?: string,
+    searchTerm?: string,
+    marketFilter?: string,
+    networkFilter?: string,
+    paymentStatusFilter?: string,
+    deliveryStatusFilter?: string,
+  ) => {
     try {
       const s = statusFilter ?? ordersStatusFilter
       const p = productFilter ?? ordersProductFilter
       const q = searchTerm ?? ordersSearch
+      const m = marketFilter ?? ordersMarketFilter
+      const n = networkFilter ?? ordersNetworkFilter
+      const ps = paymentStatusFilter ?? ordersPaymentStatusFilter
+      const ds = deliveryStatusFilter ?? ordersDeliveryStatusFilter
       const params = new URLSearchParams({ page: String(page), limit: "30" })
       if (s) params.set("status", s)
       if (p) params.set("productId", p)
       if (q) params.set("search", q)
+      if (m) params.set("market", m)
+      if (n) params.set("paymentNetwork", n)
+      if (ps) params.set("paymentStatus", ps)
+      if (ds) params.set("deliveryStatus", ds)
 
       const res = await fetch(`/api/admin/orders?${params.toString()}`, {
         headers: { Authorization: `Bearer ${adminToken}` },
@@ -1132,6 +1198,32 @@ setAdminToken(data.token)
     setFulfilling(false)
   }
 
+  const handleGlobalOrderAction = async (orderNo: string, action: string, reason?: string) => {
+    const loadingKey = `${orderNo}:${action}`
+    setOrderActionLoading(loadingKey)
+    try {
+      const response = await fetch("/api/admin/orders/global-action", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ orderNo, action, reason }),
+      })
+      const result = await response.json()
+      if (response.ok) {
+        setMessage(result.message || "操作成功")
+        loadOrders(ordersPage)
+      } else {
+        setMessage(result.error || "操作失败")
+      }
+    } catch {
+      setMessage("操作失败，请重试")
+    } finally {
+      setOrderActionLoading(null)
+    }
+  }
+
   const renderDashboard = () => (
     <div className="space-y-4 sm:space-y-6">
       {/* Stats Grid - Enhanced mobile responsiveness */}
@@ -1218,6 +1310,60 @@ setAdminToken(data.token)
         </Card>
       </div>
 
+      <Card className="border-neutral-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+            市场与 USDT 概览
+          </CardTitle>
+          <CardDescription className="text-xs sm:text-sm">快速判断中国站、全球站、支付网络和异常订单</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-8">
+            <button onClick={() => { setActiveTab("orders"); handleOrdersFilterChange("market", "CN") }} className="rounded-lg border border-border bg-background p-3 text-left hover:border-foreground/40">
+              <p className="text-xs text-muted-foreground">中国站订单</p>
+              <p className="mt-1 text-xl font-semibold">{stats?.cnOrders || 0}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">¥{Number(stats?.cnRevenue || 0).toFixed(2)}</p>
+            </button>
+            <button onClick={() => { setActiveTab("orders"); handleOrdersFilterChange("market", "GLOBAL") }} className="rounded-lg border border-border bg-background p-3 text-left hover:border-foreground/40">
+              <p className="text-xs text-muted-foreground">全球站订单</p>
+              <p className="mt-1 text-xl font-semibold">{stats?.globalOrders || 0}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{Number(stats?.globalRevenue || 0).toFixed(2)} USDT</p>
+            </button>
+            <button onClick={() => { setActiveTab("orders"); handleOrdersFilterChange("network", "TRC20") }} className="rounded-lg border border-border bg-background p-3 text-left hover:border-foreground/40">
+              <p className="text-xs text-muted-foreground">TRC20</p>
+              <p className="mt-1 text-xl font-semibold">{stats?.trc20Orders || 0}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">USDT 网络</p>
+            </button>
+            <button onClick={() => { setActiveTab("orders"); handleOrdersFilterChange("network", "BEP20") }} className="rounded-lg border border-border bg-background p-3 text-left hover:border-foreground/40">
+              <p className="text-xs text-muted-foreground">BEP20</p>
+              <p className="mt-1 text-xl font-semibold">{stats?.bep20Orders || 0}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">USDT 网络</p>
+            </button>
+            <button onClick={() => { setActiveTab("orders"); handleOrdersFilterChange("deliveryStatus", "manual_review") }} className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-left hover:border-orange-400 dark:border-orange-900 dark:bg-orange-950/20">
+              <p className="text-xs text-orange-700 dark:text-orange-300">全球人工审核</p>
+              <p className="mt-1 text-xl font-semibold text-orange-700 dark:text-orange-300">{stats?.globalManualReview || 0}</p>
+              <p className="mt-1 text-[11px] text-orange-700/70 dark:text-orange-300/70">需要处理</p>
+            </button>
+            <button onClick={() => { setActiveTab("orders"); handleOrdersFilterChange("paymentStatus", "underpaid") }} className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-left hover:border-amber-400 dark:border-amber-900 dark:bg-amber-950/20">
+              <p className="text-xs text-amber-700 dark:text-amber-300">支付异常</p>
+              <p className="mt-1 text-xl font-semibold text-amber-700 dark:text-amber-300">{stats?.globalPaymentAbnormal || 0}</p>
+              <p className="mt-1 text-[11px] text-amber-700/70 dark:text-amber-300/70">少付/多付/超时</p>
+            </button>
+            <button onClick={() => { setActiveTab("orders"); handleOrdersFilterChange("paymentStatus", "unpaid") }} className="rounded-lg border border-border bg-background p-3 text-left hover:border-foreground/40">
+              <p className="text-xs text-muted-foreground">待付款</p>
+              <p className="mt-1 text-xl font-semibold">{ordersSummary.pending}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">当前订单统计</p>
+            </button>
+            <button onClick={() => setActiveTab("codes")} className="rounded-lg border border-border bg-background p-3 text-left hover:border-foreground/40">
+              <p className="text-xs text-muted-foreground">可用库存</p>
+              <p className="mt-1 text-xl font-semibold">{stats?.stockCount || 0}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">库存管理</p>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
       {stats && stats.stockCount === 0 && stats.paidOrders > 0 && !(stats as any).pendingFulfill && (
         <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
           <CardHeader>
@@ -1270,7 +1416,7 @@ setAdminToken(data.token)
                     </p>
                   </div>
                   <div className="text-right shrink-0 ml-2">
-                    <p className="text-xs sm:text-sm font-medium">¥{order.amount}</p>
+                    <p className="text-xs sm:text-sm font-medium">{formatOrderAmount(order)}</p>
                     <span
                       className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
                         order.status === "paid"
@@ -1329,13 +1475,44 @@ setAdminToken(data.token)
     if (s === "paid") return "已支付"
     if (s === "pending") return "待支付"
     if (s === "failed") return "失败"
+    if (s === "expired") return "已超时"
+    if (s === "refunded") return "已退款"
+    if (s === "manual_review") return "人工审核"
     return s
   }
   const orderStatusColor = (s: string) => {
     if (s === "paid") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
     if (s === "pending") return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
     if (s === "failed") return "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+    if (s === "expired") return "bg-zinc-100 text-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300"
+    if (s === "manual_review") return "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300"
     return ""
+  }
+  const marketLabel = (order: Order) => (order.normalized_market || order.market || "CN") === "GLOBAL" ? "GLOBAL" : "CN"
+  const paymentStatusLabel = (status?: string | null) => {
+    if (!status) return "-"
+    if (status === "unpaid") return "未支付"
+    if (status === "confirming") return "确认中"
+    if (status === "paid") return "已支付"
+    if (status === "underpaid") return "少付"
+    if (status === "overpaid") return "多付"
+    if (status === "expired") return "已超时"
+    if (status === "failed") return "失败"
+    return status
+  }
+  const deliveryStatusLabel = (status?: string | null) => {
+    if (!status) return "-"
+    if (status === "not_delivered") return "未发货"
+    if (status === "delivering") return "发货中"
+    if (status === "delivered") return "已发货"
+    if (status === "delivery_failed") return "发货失败"
+    if (status === "manual_review") return "人工审核"
+    return status
+  }
+  const formatOrderAmount = (order: Order) => {
+    const currency = order.currency || (marketLabel(order) === "GLOBAL" ? "USDT" : "CNY")
+    const value = Number(order.price_snapshot ?? order.expected_amount ?? order.amount ?? 0)
+    return currency === "USDT" ? `${value.toFixed(2)} USDT` : `¥${value.toFixed(2)}`
   }
 
   const renderOrders = () => (
@@ -1348,7 +1525,7 @@ setAdminToken(data.token)
       </Card>
       
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
         <Card className="cursor-pointer hover:ring-2 hover:ring-emerald-500/50 transition-all" onClick={() => handleOrdersFilterChange("status", ordersStatusFilter === "paid" ? "" : "paid")}>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-emerald-600">{ordersSummary.paid}</p>
@@ -1371,6 +1548,36 @@ setAdminToken(data.token)
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-foreground">{ordersSummary.totalRevenue.toFixed(2)}</p>
             <p className="text-xs text-muted-foreground mt-1">总收入 (元)</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:ring-2 hover:ring-neutral-500/50 transition-all" onClick={() => handleOrdersFilterChange("market", ordersMarketFilter === "CN" ? "" : "CN")}>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{ordersSummary.cnOrders}</p>
+            <p className="text-xs text-muted-foreground mt-1">中国站</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:ring-2 hover:ring-neutral-500/50 transition-all" onClick={() => handleOrdersFilterChange("market", ordersMarketFilter === "GLOBAL" ? "" : "GLOBAL")}>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{ordersSummary.globalOrders}</p>
+            <p className="text-xs text-muted-foreground mt-1">全球站</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:ring-2 hover:ring-orange-500/50 transition-all" onClick={() => handleOrdersFilterChange("deliveryStatus", ordersDeliveryStatusFilter === "manual_review" ? "" : "manual_review")}>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-orange-600">{ordersSummary.globalManualReview}</p>
+            <p className="text-xs text-muted-foreground mt-1">全球审核</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:ring-2 hover:ring-[#26A17B]/50 transition-all" onClick={() => handleOrdersFilterChange("network", ordersNetworkFilter === "TRC20" ? "" : "TRC20")}>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-[#26A17B]">{ordersSummary.trc20Orders}</p>
+            <p className="text-xs text-muted-foreground mt-1">TRC20</p>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:ring-2 hover:ring-[#f0b90b]/50 transition-all" onClick={() => handleOrdersFilterChange("network", ordersNetworkFilter === "BEP20" ? "" : "BEP20")}>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-[#b8860b]">{ordersSummary.bep20Orders}</p>
+            <p className="text-xs text-muted-foreground mt-1">BEP20</p>
           </CardContent>
         </Card>
       </div>
@@ -1400,16 +1607,25 @@ setAdminToken(data.token)
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Filter Bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
+          <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap">
+            <div className="min-w-[220px] flex-1">
               <Input
-                placeholder="搜索订单号/邮箱/激活码..."
+                placeholder="搜索订单号/邮箱/激活码/Tx Hash..."
                 value={ordersSearch}
                 onChange={(e) => setOrdersSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") handleOrdersSearch() }}
                 className="text-sm"
               />
             </div>
+            <select
+              value={ordersMarketFilter}
+              onChange={(e) => handleOrdersFilterChange("market", e.target.value)}
+              className="px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[120px]"
+            >
+              <option value="">全部市场</option>
+              <option value="CN">中国站</option>
+              <option value="GLOBAL">全球站</option>
+            </select>
             <select
               value={ordersStatusFilter}
               onChange={(e) => handleOrdersFilterChange("status", e.target.value)}
@@ -1419,6 +1635,42 @@ setAdminToken(data.token)
               <option value="paid">已支付</option>
               <option value="pending">待支付</option>
               <option value="failed">失败</option>
+              <option value="expired">已超时</option>
+              <option value="refunded">已退款</option>
+            </select>
+            <select
+              value={ordersNetworkFilter}
+              onChange={(e) => handleOrdersFilterChange("network", e.target.value)}
+              className="px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]"
+            >
+              <option value="">全部网络</option>
+              <option value="TRC20">USDT-TRC20</option>
+              <option value="BEP20">USDT-BEP20</option>
+            </select>
+            <select
+              value={ordersPaymentStatusFilter}
+              onChange={(e) => handleOrdersFilterChange("paymentStatus", e.target.value)}
+              className="px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]"
+            >
+              <option value="">全部付款</option>
+              <option value="unpaid">未支付</option>
+              <option value="confirming">确认中</option>
+              <option value="paid">已付款</option>
+              <option value="underpaid">少付</option>
+              <option value="overpaid">多付</option>
+              <option value="expired">已超时</option>
+            </select>
+            <select
+              value={ordersDeliveryStatusFilter}
+              onChange={(e) => handleOrdersFilterChange("deliveryStatus", e.target.value)}
+              className="px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]"
+            >
+              <option value="">全部发货</option>
+              <option value="not_delivered">未发货</option>
+              <option value="delivering">发货中</option>
+              <option value="delivered">已发货</option>
+              <option value="manual_review">人工审核</option>
+              <option value="delivery_failed">发货失败</option>
             </select>
             {products.length > 0 && (
               <select
@@ -1431,6 +1683,26 @@ setAdminToken(data.token)
                   <option key={product.id} value={product.id}>{product.name}</option>
                 ))}
               </select>
+            )}
+            {(ordersMarketFilter || ordersStatusFilter || ordersNetworkFilter || ordersPaymentStatusFilter || ordersDeliveryStatusFilter || ordersProductFilter || ordersSearch) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setOrdersMarketFilter("")
+                  setOrdersStatusFilter("")
+                  setOrdersNetworkFilter("")
+                  setOrdersPaymentStatusFilter("")
+                  setOrdersDeliveryStatusFilter("")
+                  setOrdersProductFilter("")
+                  setOrdersSearch("")
+                  setSelectedOrders([])
+                  loadOrders(1, "", "", "", "", "", "", "")
+                }}
+                className="shrink-0"
+              >
+                清空
+              </Button>
             )}
             <Button variant="outline" size="sm" onClick={handleOrdersSearch} className="shrink-0 bg-transparent">
               搜索
@@ -1491,25 +1763,45 @@ setAdminToken(data.token)
                         </td>
                         <td className="p-3">
                           <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={marketLabel(order) === "GLOBAL" ? "border-neutral-900 bg-neutral-900 text-white" : ""}>
+                                {marketLabel(order)}
+                              </Badge>
+                              {order.payment_network && (
+                                <Badge variant="secondary" className="font-mono text-[10px]">
+                                  {order.payment_network}
+                                </Badge>
+                              )}
+                            </div>
                             <p className="font-medium text-sm truncate max-w-[180px]">{order.email || "无邮箱"}</p>
                             <p className="text-xs text-muted-foreground font-mono">{order.out_trade_no}</p>
                           </div>
                         </td>
                         <td className="p-3 hidden md:table-cell">
                           <div className="space-y-0.5">
-                            <span className="text-xs text-muted-foreground">{order.product_name || "通用"}</span>
-                            {(order.quantity > 1 || order.delivery_type === "manual" || order.region_name) && (
+                            <span className="text-xs text-muted-foreground">{order.product_title_snapshot || order.product_name || "通用"}</span>
+                            {((order.quantity || 1) > 1 || order.delivery_type === "manual" || order.region_name || order.product_inventory_mode) && (
                               <div className="flex items-center gap-1 flex-wrap">
                                 {order.region_name && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">{order.region_name}</span>}
-                                {order.quantity > 1 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">x{order.quantity}</span>}
+                                {(order.quantity || 1) > 1 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">x{order.quantity || 1}</span>}
                                 {order.delivery_type === "manual" && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">{"人工"}</span>}
+                                {order.product_inventory_mode && <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300">{order.product_inventory_mode === "separate" ? "分库存" : "共库存"}</span>}
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="p-3 font-medium">{order.amount}</td>
                         <td className="p-3">
-                          {order.status === "paid" && order.delivery_type === "manual" && !order.fulfilled_at ? (
+                          <div className="font-medium whitespace-nowrap">{formatOrderAmount(order)}</div>
+                          {order.expected_amount && (
+                            <p className="text-[11px] text-muted-foreground font-mono">应付 {Number(order.expected_amount).toFixed(2)}</p>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {order.normalized_delivery_status === "manual_review" || order.delivery_status === "manual_review" ? (
+                            <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
+                              人工审核
+                            </Badge>
+                          ) : order.status === "paid" && order.delivery_type === "manual" && !order.fulfilled_at ? (
                             <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 animate-pulse">
                               {"待发货"}
                             </Badge>
@@ -1521,6 +1813,9 @@ setAdminToken(data.token)
                             <Badge variant="secondary" className={orderStatusColor(order.status)}>
                               {orderStatusLabel(order.status)}
                             </Badge>
+                          )}
+                          {order.payment_status && (
+                            <p className="mt-1 text-[11px] text-muted-foreground">{paymentStatusLabel(order.payment_status)}</p>
                           )}
                         </td>
                         <td className="p-3 text-xs text-muted-foreground whitespace-nowrap hidden lg:table-cell">
@@ -1544,7 +1839,7 @@ setAdminToken(data.token)
                               <Button
                                 variant="default"
                                 size="sm"
-                                onClick={() => setFulfillModal({ orderNo: order.out_trade_no, email: order.email, productName: order.product_name || order.subject || "", quantity: order.quantity || 1 })}
+                                onClick={() => setFulfillModal({ orderNo: order.out_trade_no, email: order.email, productName: order.product_title_snapshot || order.product_name || order.subject || "", quantity: order.quantity || 1 })}
                                 className="h-7 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-white"
                               >
                                 <Package className="w-3 h-3 mr-1" />
@@ -1593,11 +1888,13 @@ setAdminToken(data.token)
                                 <div className="space-y-1">
                                   <p><span className="text-muted-foreground">{"订单号:"}</span> <span className="font-mono text-xs">{order.out_trade_no}</span></p>
                                   <p><span className="text-muted-foreground">{"邮箱:"}</span> {order.email || "-"}</p>
-                                  <p><span className="text-muted-foreground">{"产品:"}</span> {order.product_name || "通用"}</p>
+                                  <p><span className="text-muted-foreground">{"市场:"}</span> <span className="font-mono">{marketLabel(order)}</span></p>
+                                  <p><span className="text-muted-foreground">{"产品:"}</span> {order.product_title_snapshot || order.product_name || "通用"}</p>
                                   {order.region_name && <p><span className="text-muted-foreground">{"区域:"}</span> <span className="text-purple-600 dark:text-purple-400 font-medium">{order.region_name}</span></p>}
                                   <p><span className="text-muted-foreground">{"数量:"}</span> {order.quantity || 1}</p>
                                   <p><span className="text-muted-foreground">{"发货方式:"}</span> {order.delivery_type === "manual" ? "人工发货" : "自动发货"}</p>
                                   <p><span className="text-muted-foreground">{"支付渠道:"}</span> {order.pay_channel || "-"}</p>
+                                  <p><span className="text-muted-foreground">{"金额:"}</span> <span className="font-mono">{formatOrderAmount(order)}</span></p>
                                 </div>
                                 {/* 重置查询密码 */}
                                 <div className="mt-3 pt-3 border-t border-border/50">
@@ -1641,8 +1938,86 @@ setAdminToken(data.token)
                                   <p><span className="text-muted-foreground">创建:</span> {formatBeijingDateTime(order.created_at)}</p>
                                   <p><span className="text-muted-foreground">支付:</span> {formatBeijingDateTime(order.paid_at)}</p>
                                   <p><span className="text-muted-foreground">发货:</span> {formatBeijingDateTime(order.fulfilled_at)}</p>
+                                  {order.payment_expired_at && <p><span className="text-muted-foreground">支付超时:</span> {formatBeijingDateTime(order.payment_expired_at)}</p>}
                                 </div>
                               </div>
+                              {marketLabel(order) === "GLOBAL" && (
+                                <div className="space-y-2">
+                                  <p className="text-xs font-medium text-muted-foreground uppercase">USDT 支付</p>
+                                  <div className="space-y-1">
+                                    <p><span className="text-muted-foreground">网络:</span> <span className="font-mono">{order.payment_network || "-"}</span></p>
+                                    <p><span className="text-muted-foreground">Token:</span> <span className="font-mono">{order.token || "USDT"}</span></p>
+                                    <p><span className="text-muted-foreground">付款状态:</span> {paymentStatusLabel(order.payment_status || order.normalized_payment_status)}</p>
+                                    <p><span className="text-muted-foreground">发货状态:</span> {deliveryStatusLabel(order.delivery_status || order.normalized_delivery_status)}</p>
+                                    <p><span className="text-muted-foreground">应付:</span> <span className="font-mono">{order.expected_amount ? Number(order.expected_amount).toFixed(2) : "-"}</span></p>
+                                    <p><span className="text-muted-foreground">实收:</span> <span className="font-mono">{order.received_amount ? Number(order.received_amount).toFixed(2) : "-"}</span></p>
+                                    <p><span className="text-muted-foreground">确认数:</span> <span className="font-mono">{order.confirmations ?? 0}</span></p>
+                                    {order.payment_address && (
+                                      <p><span className="text-muted-foreground">地址:</span> <span className="font-mono break-all text-xs">{order.payment_address}</span></p>
+                                    )}
+                                    {order.tx_hash && (
+                                      <p><span className="text-muted-foreground">Tx:</span> <span className="font-mono break-all text-xs">{order.tx_hash}</span></p>
+                                    )}
+                                    {order.manual_review_reason && (
+                                      <p className="rounded border border-orange-200 bg-orange-50 p-2 text-xs text-orange-800 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-300">
+                                        {order.manual_review_reason}
+                                      </p>
+                                    )}
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                      {order.status === "paid" && (order.delivery_status !== "delivered" && !order.fulfilled_at) && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-7 text-xs bg-transparent"
+                                          onClick={() => handleGlobalOrderAction(order.out_trade_no, "retry_delivery")}
+                                          disabled={orderActionLoading === `${order.out_trade_no}:retry_delivery`}
+                                        >
+                                          {orderActionLoading === `${order.out_trade_no}:retry_delivery` ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                                          重试自动发货
+                                        </Button>
+                                      )}
+                                      {order.code && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-7 text-xs bg-transparent"
+                                          onClick={() => handleGlobalOrderAction(order.out_trade_no, "resend_email")}
+                                          disabled={orderActionLoading === `${order.out_trade_no}:resend_email`}
+                                        >
+                                          {orderActionLoading === `${order.out_trade_no}:resend_email` ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                                          重发英文邮件
+                                        </Button>
+                                      )}
+                                      {order.delivery_status !== "manual_review" && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-7 border-orange-200 text-orange-700 hover:bg-orange-50 dark:border-orange-900 dark:text-orange-300 dark:hover:bg-orange-950/30"
+                                          onClick={() => handleGlobalOrderAction(order.out_trade_no, "mark_manual_review", "Admin marked this global order for manual review.")}
+                                          disabled={orderActionLoading === `${order.out_trade_no}:mark_manual_review`}
+                                        >
+                                          标记人工审核
+                                        </Button>
+                                      )}
+                                      {order.status !== "failed" && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-7 border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                                          onClick={() => {
+                                            if (confirm(`确定要把订单 ${order.out_trade_no} 标记为失败吗？`)) {
+                                              handleGlobalOrderAction(order.out_trade_no, "mark_failed", "Admin marked this global order as failed.")
+                                            }
+                                          }}
+                                          disabled={orderActionLoading === `${order.out_trade_no}:mark_failed`}
+                                        >
+                                          标记失败
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                               <div className="space-y-2">
                                 <p className="text-xs font-medium text-muted-foreground uppercase">激活码</p>
                                 {order.code ? (
@@ -4018,12 +4393,28 @@ case "coupons":
       setOrdersProductFilter(value)
       setSelectedOrders([])
       loadOrders(1, ordersStatusFilter, value, ordersSearch)
+    } else if (type === "market") {
+      setOrdersMarketFilter(value)
+      setSelectedOrders([])
+      loadOrders(1, ordersStatusFilter, ordersProductFilter, ordersSearch, value)
+    } else if (type === "network") {
+      setOrdersNetworkFilter(value)
+      setSelectedOrders([])
+      loadOrders(1, ordersStatusFilter, ordersProductFilter, ordersSearch, ordersMarketFilter, value)
+    } else if (type === "paymentStatus") {
+      setOrdersPaymentStatusFilter(value)
+      setSelectedOrders([])
+      loadOrders(1, ordersStatusFilter, ordersProductFilter, ordersSearch, ordersMarketFilter, ordersNetworkFilter, value)
+    } else if (type === "deliveryStatus") {
+      setOrdersDeliveryStatusFilter(value)
+      setSelectedOrders([])
+      loadOrders(1, ordersStatusFilter, ordersProductFilter, ordersSearch, ordersMarketFilter, ordersNetworkFilter, ordersPaymentStatusFilter, value)
     }
   }
 
   const handleOrdersSearch = () => {
     setSelectedOrders([])
-    loadOrders(1, ordersStatusFilter, ordersProductFilter, ordersSearch)
+    loadOrders(1, ordersStatusFilter, ordersProductFilter, ordersSearch, ordersMarketFilter, ordersNetworkFilter, ordersPaymentStatusFilter, ordersDeliveryStatusFilter)
   }
 
   if (!isAuthenticated) {
@@ -4112,7 +4503,7 @@ case "coupons":
                 setMobileMenuOpen(false)
               }}
               onLogout={handleLogout}
-              stats={stats}
+              stats={stats || undefined}
             />
           </div>
         )}
@@ -4120,7 +4511,7 @@ case "coupons":
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
-        <AdminSidebar activeTab={activeTab} onTabChange={handleTabChange} onLogout={handleLogout} stats={stats} />
+        <AdminSidebar activeTab={activeTab} onTabChange={handleTabChange} onLogout={handleLogout} stats={stats || undefined} />
       </div>
 
       {/* Main Content */}

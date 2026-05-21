@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sendCodeMail } from "@/lib/resend"
+import { sendCodeMail, sendGlobalDeliveryMail } from "@/lib/resend"
 import { sql } from "@/lib/db"
 import { requireAdmin } from "@/lib/admin-auth"
 
@@ -61,15 +61,27 @@ export async function POST(request: NextRequest) {
       `
     }
 
-    // Send fulfillment email
-    const productName = order.product_name || order.subject || ""
-    await sendCodeMail({
-      to: order.email,
-      subject: productName ? `${productName} - 已发货` : "您的订单已发货",
-      activationCode: codesText,
-      orderNo,
-      productName,
-    })
+    const market = String(order.market || "CN").toUpperCase()
+    const productName = order.product_title_snapshot || order.product_name || order.subject || ""
+
+    if (market === "GLOBAL") {
+      await sendGlobalDeliveryMail({
+        to: order.email,
+        orderNo,
+        productName,
+        paymentNetwork: order.payment_network || "USDT",
+        deliveryInfo: codesText,
+        supportLink: process.env.GLOBAL_SUPPORT_TELEGRAM,
+      })
+    } else {
+      await sendCodeMail({
+        to: order.email,
+        subject: productName ? `${productName} - 已发货` : "您的订单已发货",
+        activationCode: codesText,
+        orderNo,
+        productName,
+      })
+    }
 
     // Update order with code and fulfilled timestamp
     await sql`
@@ -78,6 +90,8 @@ export async function POST(request: NextRequest) {
           fulfilled_at = NOW(), 
           email_sent = true,
           email_sent_at = NOW(),
+          delivery_status = 'delivered',
+          manual_review_reason = NULL,
           updated_at = NOW()
       WHERE out_trade_no = ${orderNo}
     `

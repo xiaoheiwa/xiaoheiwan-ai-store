@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       await Database.updateOrder(orderNo, {
         ...(order.market === "GLOBAL"
           ? {
-              status: "failed",
+              status: "expired",
               payment_status: "expired",
               delivery_status: "not_delivered",
             }
