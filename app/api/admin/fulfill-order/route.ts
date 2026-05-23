@@ -83,15 +83,20 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Update order with code and fulfilled timestamp
+    // Update order with code and fulfilled timestamp.
+    // If the order was waiting on high-risk review, mark it approved in the same write
+    // so it drops out of the pending-review list.
     await sql`
-      UPDATE orders 
-      SET code = ${codesText}, 
-          fulfilled_at = NOW(), 
+      UPDATE orders
+      SET code = ${codesText},
+          fulfilled_at = NOW(),
           email_sent = true,
           email_sent_at = NOW(),
           delivery_status = 'delivered',
           manual_review_reason = NULL,
+          review_status = CASE WHEN review_status = 'pending_review' THEN 'approved' ELSE review_status END,
+          reviewed_at = CASE WHEN review_status = 'pending_review' THEN NOW() ELSE reviewed_at END,
+          reviewed_by = CASE WHEN review_status = 'pending_review' THEN 'admin' ELSE reviewed_by END,
           updated_at = NOW()
       WHERE out_trade_no = ${orderNo}
     `

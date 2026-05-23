@@ -12,6 +12,14 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Trash2, Loader2, Copy, Check, Ticket, Users, Eye, RefreshCw } from "lucide-react"
 
+interface Product {
+  id: string
+  name: string
+  category_name: string | null
+  category_slug: string | null
+  stock_count: number
+}
+
 interface Referrer {
   id: number
   name: string
@@ -39,6 +47,7 @@ interface Coupon {
   referrer_id: number | null
   commission_rate: number | null
   referrer_name?: string
+  applicable_products: string[] | null
 }
 
 interface CouponUsage {
@@ -64,13 +73,16 @@ const defaultFormData = {
   valid_until: "",
   notes: "",
   referrer_id: "",
-  commission_rate: ""
+  commission_rate: "",
+  applicable_product_ids: [] as string[]
 }
 
 export function CouponManager() {
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [referrers, setReferrers] = useState<Referrer[]>([])
   const [usageRecords, setUsageRecords] = useState<CouponUsage[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [productSearch, setProductSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -117,6 +129,22 @@ export function CouponManager() {
     }
   }, [])
 
+  // 加载产品列表
+  const loadProducts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/products")
+      if (!res.ok) {
+        setProducts([])
+        return
+      }
+      const data = await res.json()
+      setProducts(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error("加载产品列表失败:", err)
+      setProducts([])
+    }
+  }, [])
+
   // 加载使用记录
   const loadUsageRecords = useCallback(async (couponCode?: string) => {
     try {
@@ -137,7 +165,8 @@ export function CouponManager() {
   useEffect(() => {
     loadCoupons()
     loadReferrers()
-  }, [loadCoupons, loadReferrers])
+    loadProducts()
+  }, [loadCoupons, loadReferrers, loadProducts])
 
   // 生成随机优惠码
   function generateCode() {
@@ -175,6 +204,18 @@ export function CouponManager() {
     }
   }
 
+  // 切换产品选择
+  function toggleProduct(productId: string) {
+    setFormData(prev => {
+      const ids = prev.applicable_product_ids || []
+      if (ids.includes(productId)) {
+        return { ...prev, applicable_product_ids: ids.filter(id => id !== productId) }
+      } else {
+        return { ...prev, applicable_product_ids: [...ids, productId] }
+      }
+    })
+  }
+
   // 创建优惠码
   async function handleCreate() {
     setError(null)
@@ -202,7 +243,8 @@ export function CouponManager() {
         valid_until: formData.valid_until || null,
         notes: formData.notes.trim() || null,
         referrer_id: formData.referrer_id ? parseInt(formData.referrer_id) : null,
-        commission_rate: formData.commission_rate ? parseFloat(formData.commission_rate) : null
+        commission_rate: formData.commission_rate ? parseFloat(formData.commission_rate) : null,
+        applicable_products: formData.applicable_product_ids.length > 0 ? formData.applicable_product_ids : null
       }
       
       const res = await fetch("/api/coupons", {
@@ -270,6 +312,15 @@ export function CouponManager() {
     setTimeout(() => setCopiedCode(null), 2000)
   }
 
+  // 获取产品名称
+  function getProductNames(productIds: string[] | null): string {
+    if (!productIds || productIds.length === 0) return "全部商品"
+    return productIds
+      .map(id => products.find(p => p.id === id)?.name || id.slice(0, 8) + "...")
+      .slice(0, 3)
+      .join("、") + (productIds.length > 3 ? ` 等${productIds.length}个` : "")
+  }
+
   // 查看使用记录
   function viewUsage(couponCode: string) {
     setSelectedCouponCode(couponCode)
@@ -299,6 +350,11 @@ export function CouponManager() {
     active: coupons.filter(c => c.status === "active").length,
     totalUsed: coupons.reduce((sum, c) => sum + (c.used_count || 0), 0)
   }
+
+  // 产品搜索过滤
+  const filteredProducts = productSearch
+    ? products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+    : products
 
   return (
     <Card>
@@ -487,6 +543,63 @@ export function CouponManager() {
                   </div>
                 )}
 
+                {/* 适用产品 */}
+                <div className="grid gap-2">
+                  <Label>适用产品</Label>
+                  <div className="border rounded-lg p-3 space-y-2 max-h-[200px] overflow-y-auto">
+                    <Input
+                      placeholder="搜索产品..."
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                    {filteredProducts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-2">
+                        {products.length === 0 ? "加载中..." : "无匹配产品"}
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.applicable_product_ids.length === 0}
+                            onChange={() => setFormData(prev => ({ ...prev, applicable_product_ids: [] }))}
+                            className="rounded"
+                          />
+                          <span className="text-sm font-medium">全部商品（通用优惠）</span>
+                        </label>
+                        {filteredProducts.map((product) => (
+                          <label
+                            key={product.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.applicable_product_ids.includes(product.id)}
+                              onChange={() => toggleProduct(product.id)}
+                              className="rounded"
+                            />
+                            <span className="text-sm flex-1">{product.name}</span>
+                            {product.category_name && (
+                              <span className="text-xs text-muted-foreground">{product.category_name}</span>
+                            )}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {formData.applicable_product_ids.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      已选择 {formData.applicable_product_ids.length} 个产品，仅这些产品可用此优惠码
+                    </p>
+                  )}
+                  {formData.applicable_product_ids.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      未选择则适用于全部商品（通用优惠码）
+                    </p>
+                  )}
+                </div>
+
                 {/* 备注 */}
                 <div className="grid gap-2">
                   <Label>备注</Label>
@@ -558,6 +671,7 @@ export function CouponManager() {
                 <TableHead>优惠码</TableHead>
                 <TableHead>折扣</TableHead>
                 <TableHead>使用/限制</TableHead>
+                <TableHead>适用产品</TableHead>
                 <TableHead>推广用户</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>操作</TableHead>
@@ -587,6 +701,9 @@ export function CouponManager() {
                   <TableCell>{formatDiscount(coupon)}</TableCell>
                   <TableCell>
                     {coupon.used_count || 0}/{coupon.usage_limit || "∞"}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground max-w-[160px] truncate">
+                    {getProductNames(coupon.applicable_products)}
                   </TableCell>
                   <TableCell>
                     {coupon.referrer_name ? (

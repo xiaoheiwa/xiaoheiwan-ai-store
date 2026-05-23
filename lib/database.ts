@@ -380,7 +380,7 @@ export class Database {
     return this.executeQuery(async () => {
       const s = getSql()
       const result = await s`
-        UPDATE activation_codes SET status = 'sold', sold_at = NOW() WHERE locked_by = ${orderNo} RETURNING *
+        UPDATE activation_codes SET status = 'sold', sold_at = NOW() WHERE locked_by = ${orderNo} AND LOWER(status) = 'locked' RETURNING *
       `
       return result[0] || null
     }, null)
@@ -390,7 +390,7 @@ export class Database {
     return this.executeQuery(async () => {
       const s = getSql()
       const result = await s`
-        UPDATE activation_codes SET status = 'sold', sold_at = NOW() WHERE locked_by = ${orderNo} RETURNING *
+        UPDATE activation_codes SET status = 'sold', sold_at = NOW() WHERE locked_by = ${orderNo} AND LOWER(status) = 'locked' RETURNING *
       `
       return result as ActivationCode[]
     }, [])
@@ -400,6 +400,32 @@ export class Database {
     await this.executeQuery(async () => {
       const s = getSql()
       await s`UPDATE activation_codes SET status = 'available', locked_by = NULL, locked_at = NULL WHERE locked_by = ${orderNo}`
+    })
+  }
+
+  static async claimOrderForDelivery(orderNo: string): Promise<boolean> {
+    return this.executeQuery(async () => {
+      const s = getSql()
+      const result = await s`
+        UPDATE orders
+        SET delivery_status = 'delivering', updated_at = CURRENT_TIMESTAMP
+        WHERE out_trade_no = ${orderNo}
+          AND COALESCE(delivery_status, 'not_delivered') = 'not_delivered'
+        RETURNING out_trade_no
+      `
+      return (Array.isArray(result) ? result : result?.rows || []).length > 0
+    }, false)
+  }
+
+  static async releaseDeliveryClaim(orderNo: string): Promise<void> {
+    await this.executeQuery(async () => {
+      const s = getSql()
+      await s`
+        UPDATE orders
+        SET delivery_status = 'not_delivered', updated_at = CURRENT_TIMESTAMP
+        WHERE out_trade_no = ${orderNo}
+          AND delivery_status = 'delivering'
+      `
     })
   }
 

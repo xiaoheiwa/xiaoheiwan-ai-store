@@ -95,8 +95,8 @@ export async function POST(request: Request) {
     }
 
     // 检查适用产品
-    if (coupon.applicable_products && coupon.applicable_products.length > 0 && product_id) {
-      if (!coupon.applicable_products.includes(product_id)) {
+    if (coupon.applicable_products && coupon.applicable_products.length > 0) {
+      if (!product_id || !coupon.applicable_products.includes(product_id)) {
         return NextResponse.json({ success: false, error: "此优惠码不适用于当前产品" }, { status: 400 })
       }
     }

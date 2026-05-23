@@ -6,6 +6,12 @@ function getDb() {
   return neon(process.env.DATABASE_URL!)
 }
 
+function toProductArrayParam(value: unknown) {
+  if (!Array.isArray(value) || value.length === 0) return null
+  const productIds = value.map((id) => String(id).replaceAll("\\", "\\\\").replaceAll('"', '\\"'))
+  return `{${productIds.map((id) => `"${id}"`).join(",")}}`
+}
+
 // 获取优惠码列表（包含推广用户信息）
 export async function GET(request: NextRequest) {
   const authError = await requireAdmin(request)
@@ -56,7 +62,8 @@ export async function POST(request: NextRequest) {
       valid_until = null,
       notes = null,
       referrer_id = null,
-      commission_rate = null
+      commission_rate = null,
+      applicable_products = null
     } = body
 
     // 验证必填字段
@@ -69,6 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const upperCode = code.trim().toUpperCase()
+    const applicableProductsValue = toProductArrayParam(applicable_products)
 
     // 检查优惠码是否已存在
     const existing = await sql`SELECT id FROM coupon_codes WHERE code = ${upperCode}`
@@ -81,7 +89,7 @@ export async function POST(request: NextRequest) {
       INSERT INTO coupon_codes (
         code, discount_type, discount_value, min_order_amount, max_discount_amount,
         usage_limit, per_user_limit, valid_from, valid_until, 
-        status, notes, referrer_id, commission_rate, used_count
+        status, notes, referrer_id, commission_rate, used_count, applicable_products
       ) VALUES (
         ${upperCode}, 
         ${discount_type}, 
@@ -96,7 +104,8 @@ export async function POST(request: NextRequest) {
         ${notes || null}, 
         ${referrer_id ? Number(referrer_id) : null}, 
         ${commission_rate ? Number(commission_rate) : null},
-        0
+        0,
+        ${applicableProductsValue}
       ) RETURNING *
     `
 

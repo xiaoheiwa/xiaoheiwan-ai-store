@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       console.log("[v0] Payment successful, processing order")
 
       const orderNo = data.trade_order_id
+      let claimedByThisCallback = false
 
       try {
         // Fetch order first to get product_id
@@ -42,6 +43,13 @@ export async function POST(request: NextRequest) {
           return new NextResponse("success", { status: 200 })
         }
 
+        const claimed = await Database.claimOrderForDelivery(orderNo)
+        if (!claimed) {
+          console.log("[v0] Order delivery already claimed by another callback, skipping:", orderNo)
+          return new NextResponse("success", { status: 200 })
+        }
+        claimedByThisCallback = true
+
         // Lock code based on product_id
         const lockedCode = order.product_id
           ? await Database.lockCodeByProduct(orderNo, order.product_id)
@@ -49,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         if (!lockedCode) {
           console.log("[v0] No activation codes available")
-          await updateOrder(orderNo, { status: "failed", gateway_resp: "No stock available" })
+          await updateOrder(orderNo, { status: "failed", gateway_resp: "No stock available", delivery_status: "delivery_failed" })
           return new NextResponse("success", { status: 200 })
         }
 
@@ -57,6 +65,7 @@ export async function POST(request: NextRequest) {
         if (!soldCode) {
           console.error("[v0] Failed to sell locked code for order:", orderNo)
           await Database.releaseLockedCode(orderNo)
+          await updateOrder(orderNo, { delivery_status: "delivery_failed" })
           return new NextResponse("success", { status: 200 })
         }
 
@@ -66,6 +75,7 @@ export async function POST(request: NextRequest) {
           paid_at: new Date(),
           fulfilled_at: new Date(),
           gateway_resp: JSON.stringify(data),
+          delivery_status: "delivered",
         })
 
         // Send email notification
@@ -111,6 +121,13 @@ export async function POST(request: NextRequest) {
 
         console.log("[v0] Order processed successfully")
       } catch (error) {
+        if (claimedByThisCallback) {
+          try {
+            await Database.releaseDeliveryClaim(orderNo)
+          } catch (releaseError) {
+            console.error("[v0] Failed to release Xunhupay delivery claim:", releaseError)
+          }
+        }
         console.error("[v0] Order processing error:", error)
       }
     } else {

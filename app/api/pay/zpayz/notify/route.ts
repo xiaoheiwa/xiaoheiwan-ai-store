@@ -27,6 +27,7 @@ async function processZpayzNotification(params: Record<string, string>) {
   const orderNo = params.out_trade_no
   const tradeNo = params.trade_no
   const amount = Number.parseFloat(params.money)
+  let claimedByThisCallback = false
 
   console.log("[v0] Processing successful ZPAYZ payment:", { orderNo, tradeNo, amount })
 
@@ -43,6 +44,13 @@ async function processZpayzNotification(params: Record<string, string>) {
       return new Response("success", { status: 200 })
     }
 
+    const claimed = await Database.claimOrderForDelivery(orderNo)
+    if (!claimed) {
+      console.log("[v0] Order delivery already claimed by another callback, skipping:", orderNo)
+      return new Response("success", { status: 200 })
+    }
+    claimedByThisCallback = true
+
     // Lock code based on product_id
     console.log("[v0] Attempting to allocate activation code for product:", order.product_id || "global")
     const lockedCode = order.product_id
@@ -51,7 +59,7 @@ async function processZpayzNotification(params: Record<string, string>) {
 
     if (!lockedCode) {
       console.log("[v0] No activation codes available")
-      await updateOrder(orderNo, { status: "failed", gateway_resp: "No stock available" })
+      await updateOrder(orderNo, { status: "failed", gateway_resp: "No stock available", delivery_status: "delivery_failed" })
       return new Response("success", { status: 200 })
     }
 
@@ -59,6 +67,7 @@ async function processZpayzNotification(params: Record<string, string>) {
     if (!soldCode) {
       console.error("[v0] Failed to sell locked code for order:", orderNo)
       await Database.releaseLockedCode(orderNo)
+      await updateOrder(orderNo, { delivery_status: "delivery_failed" })
       return new Response("success", { status: 200 })
     }
 
@@ -72,6 +81,7 @@ async function processZpayzNotification(params: Record<string, string>) {
       paid_at: new Date().toISOString(),
       fulfilled_at: new Date().toISOString(),
       gateway_resp: JSON.stringify(params),
+      delivery_status: "delivered",
     })
     console.log("[v0] Order updated successfully to paid status")
 
@@ -103,6 +113,13 @@ async function processZpayzNotification(params: Record<string, string>) {
     console.log("[v0] ZPAYZ payment processing completed successfully")
     return new Response("success", { status: 200 })
   } catch (processingError: any) {
+    if (claimedByThisCallback) {
+      try {
+        await Database.releaseDeliveryClaim(orderNo)
+      } catch (releaseError) {
+        console.error("[v0] Failed to release ZPAYZ delivery claim:", releaseError)
+      }
+    }
     console.error("[v0] Critical error during ZPAYZ payment processing:", processingError)
     console.error("[v0] Error details:", {
       message: processingError.message,

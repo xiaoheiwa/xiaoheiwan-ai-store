@@ -325,6 +325,7 @@ export async function sellGlobalInventoryCodes(orderNo: string): Promise<GlobalI
       delivered_at = NOW(),
       delivery_order_no = ${orderNo}
     WHERE locked_by = ${orderNo}
+      AND LOWER(status) = 'locked'
     RETURNING id, code, status, product_id
   `
 

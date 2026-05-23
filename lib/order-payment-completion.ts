@@ -1,4 +1,5 @@
 import { Database } from "@/lib/database"
+import { neon } from "@/lib/db-client"
 import {
   getRequiredConfirmations,
   lockGlobalInventoryCodes,
@@ -10,11 +11,14 @@ import { sendCodeMail, sendGlobalDeliveryMail } from "@/lib/resend"
 import { checkOrderHighRisk } from "@/lib/risk-control"
 import { notifyGlobalOrderSuccess, notifyHighRiskOrder, notifyLowStock, notifyOrderSuccess } from "@/lib/telegram"
 
+const sql = neon(process.env.DATABASE_URL)
+
 interface CompletePaidOrderOptions {
   orderNo: string
   paymentMethod: "alipay" | "usdt"
   gatewayResp: unknown
   cryptoStatus?: string
+  allowDeliveryRetry?: boolean
 }
 
 async function getProductName(productId?: string | null) {
@@ -30,35 +34,67 @@ function readGatewayNotify(gatewayResp: unknown) {
   return notify && typeof notify === "object" ? (notify as Record<string, unknown>) : wrapped
 }
 
+async function releaseGlobalDeliveryClaim(orderNo: string) {
+  await sql`
+    UPDATE orders
+    SET delivery_status = 'not_delivered', updated_at = CURRENT_TIMESTAMP
+    WHERE out_trade_no = ${orderNo}
+      AND market = 'GLOBAL'
+      AND delivery_status = 'delivering'
+  `
+}
+
 async function completeGlobalPaidOrder(options: CompletePaidOrderOptions, order: any) {
   if (order.status === "paid" && (order.fulfilled_at || order.delivery_status === "delivered")) {
     return { ok: true, reason: "global_already_fulfilled" }
   }
-  if (order.status === "paid" && order.delivery_status === "manual_review") {
+  const paymentStatus = String(order.payment_status || "").toLowerCase()
+  if (
+    order.delivery_status === "manual_review" ||
+    order.status === "manual_review" ||
+    ["underpaid", "overpaid", "failed", "expired"].includes(paymentStatus)
+  ) {
     return { ok: true, reason: "global_already_manual_review" }
   }
 
-  const notify = readGatewayNotify(options.gatewayResp)
-  const paymentNetwork = normalizePaymentNetwork(order.payment_network)
-  const txHash = String(notify.block_transaction_id || notify.tx_hash || order.tx_hash || order.crypto_tx_hash || "")
-  const receivedAmount = Number(notify.actual_amount || order.received_amount || order.expected_amount || order.amount || 0)
-  const paymentAddress = String(notify.token || order.payment_address || "")
-  const confirmations = getRequiredConfirmations(paymentNetwork)
-  const gateway_resp = JSON.stringify(options.gatewayResp)
-  const productName = order.product_title_snapshot || order.subject || (await getProductName(order.product_id))
-
-  const paidUpdates = {
-    status: "paid",
-    paid_at: new Date(),
-    gateway_resp,
-    crypto_status: options.cryptoStatus || "bepusdt_verified",
-    payment_status: "paid",
-    received_amount: receivedAmount || Number(order.expected_amount || order.amount || 0),
-    tx_hash: txHash || null,
-    crypto_tx_hash: txHash || null,
-    confirmations,
-    payment_address: paymentAddress || order.payment_address || null,
+  const retryDeliveryStatus = options.allowDeliveryRetry ? "delivery_failed" : "__not_retryable__"
+  const claim = await sql`
+    UPDATE orders
+    SET delivery_status = 'delivering', updated_at = CURRENT_TIMESTAMP
+    WHERE out_trade_no = ${options.orderNo}
+      AND market = 'GLOBAL'
+      AND (
+        COALESCE(delivery_status, 'not_delivered') = 'not_delivered'
+        OR delivery_status = ${retryDeliveryStatus}
+      )
+    RETURNING out_trade_no
+  `
+  if (claim.length === 0) {
+    return { ok: true, reason: "global_delivery_in_progress_or_done" }
   }
+
+  try {
+    const notify = readGatewayNotify(options.gatewayResp)
+    const paymentNetwork = normalizePaymentNetwork(order.payment_network)
+    const txHash = String(notify.block_transaction_id || notify.tx_hash || order.tx_hash || order.crypto_tx_hash || "")
+    const receivedAmount = Number(notify.actual_amount || order.received_amount || order.expected_amount || order.amount || 0)
+    const paymentAddress = String(notify.token || order.payment_address || "")
+    const confirmations = getRequiredConfirmations(paymentNetwork)
+    const gateway_resp = JSON.stringify(options.gatewayResp)
+    const productName = order.product_title_snapshot || order.subject || (await getProductName(order.product_id))
+
+    const paidUpdates = {
+      status: "paid",
+      paid_at: new Date(),
+      gateway_resp,
+      crypto_status: options.cryptoStatus || "bepusdt_verified",
+      payment_status: "paid",
+      received_amount: receivedAmount || Number(order.expected_amount || order.amount || 0),
+      tx_hash: txHash || null,
+      crypto_tx_hash: txHash || null,
+      confirmations,
+      payment_address: paymentAddress || order.payment_address || null,
+    }
 
   if ((order.delivery_type || "auto") === "manual") {
     const reviewReason = "Manual service order. Payment confirmed, waiting for support handling."
@@ -209,7 +245,15 @@ async function completeGlobalPaidOrder(options: CompletePaidOrderOptions, order:
     console.error("[PaymentComplete] Global Telegram notification failed:", error)
   }
 
-  return { ok: true, reason: "global_paid_fulfilled", codes: soldCodes.map((code) => code.id) }
+    return { ok: true, reason: "global_paid_fulfilled", codes: soldCodes.map((code) => code.id) }
+  } catch (error) {
+    try {
+      await releaseGlobalDeliveryClaim(options.orderNo)
+    } catch (releaseError) {
+      console.error("[PaymentComplete] Failed to release global delivery claim:", releaseError)
+    }
+    throw error
+  }
 }
 
 export async function completePaidOrder(options: CompletePaidOrderOptions) {
@@ -228,16 +272,23 @@ export async function completePaidOrder(options: CompletePaidOrderOptions) {
     return { ok: true, reason: "already_paid_manual" }
   }
 
-  const orderQuantity = order.quantity || 1
-  const orderDeliveryType = order.delivery_type || "auto"
-  const productName = await getProductName(order.product_id)
-  const gateway_resp = JSON.stringify(options.gatewayResp)
+  const claimed = await Database.claimOrderForDelivery(options.orderNo)
+  if (!claimed) {
+    return { ok: true, reason: "delivery_already_claimed" }
+  }
+
+  try {
+    const orderQuantity = order.quantity || 1
+    const orderDeliveryType = order.delivery_type || "auto"
+    const productName = await getProductName(order.product_id)
+    const gateway_resp = JSON.stringify(options.gatewayResp)
 
   if (orderDeliveryType === "manual") {
     await Database.updateOrder(options.orderNo, {
       status: "paid",
       paid_at: new Date(),
       gateway_resp,
+      delivery_status: "manual_review",
       ...(options.cryptoStatus ? { crypto_status: options.cryptoStatus } : {}),
     })
 
@@ -290,6 +341,7 @@ export async function completePaidOrder(options: CompletePaidOrderOptions) {
       is_high_risk: true,
       risk_reason: riskCheck.reasons.join("; "),
       review_status: "pending_review",
+      delivery_status: "manual_review",
       ...(options.cryptoStatus ? { crypto_status: options.cryptoStatus } : {}),
     })
 
@@ -319,6 +371,7 @@ export async function completePaidOrder(options: CompletePaidOrderOptions) {
       status: "paid",
       paid_at: new Date(),
       gateway_resp,
+      delivery_status: "delivery_failed",
       ...(options.cryptoStatus ? { crypto_status: `${options.cryptoStatus}_stock_missing` } : {}),
     })
 
@@ -342,6 +395,7 @@ export async function completePaidOrder(options: CompletePaidOrderOptions) {
   const soldCodes = await Database.sellMultipleCodes(options.orderNo)
   if (soldCodes.length === 0) {
     await Database.releaseLockedCode(options.orderNo)
+    await Database.updateOrder(options.orderNo, { delivery_status: "delivery_failed" })
     return { ok: false, reason: "code_sell_failed" }
   }
 
@@ -354,6 +408,7 @@ export async function completePaidOrder(options: CompletePaidOrderOptions) {
     paid_at: new Date(),
     fulfilled_at: new Date(),
     gateway_resp,
+    delivery_status: "delivered",
     ...(options.cryptoStatus ? { crypto_status: options.cryptoStatus } : {}),
   })
 
@@ -403,5 +458,13 @@ export async function completePaidOrder(options: CompletePaidOrderOptions) {
     console.error("[PaymentComplete] Telegram notification failed:", error)
   }
 
-  return { ok: true, reason: "paid_fulfilled", codes: allCodes }
+    return { ok: true, reason: "paid_fulfilled", codes: allCodes }
+  } catch (error) {
+    try {
+      await Database.releaseDeliveryClaim(options.orderNo)
+    } catch (releaseError) {
+      console.error("[PaymentComplete] Failed to release delivery claim:", releaseError)
+    }
+    throw error
+  }
 }

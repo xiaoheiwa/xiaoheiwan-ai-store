@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
         paymentMethod: "usdt",
         gatewayResp: order.gateway_resp || { admin_action: "retry_delivery" },
         cryptoStatus: order.crypto_status || "admin_retry",
+        allowDeliveryRetry: true,
       })
       return NextResponse.json({
         success: Boolean(result.ok),

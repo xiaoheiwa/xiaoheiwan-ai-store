@@ -9,6 +9,7 @@ import { getEnv } from "@/lib/env"
 import { ZPayz } from "@/lib/zpayz-client"
 import { neon } from "@/lib/db-client"
 import { checkRisk } from "@/lib/risk-control"
+import { calculateCouponDiscount, getCouponRejectionReason } from "@/lib/coupon-order-validation"
 
 interface PriceTier {
   min_qty: number
@@ -111,16 +112,11 @@ export async function POST(req: Request) {
       `
       if (couponResult.length > 0) {
         const coupon = couponResult[0]
-        // 重新计算折扣金额以防篡改
-        if (coupon.discount_type === "fixed") {
-          verifiedDiscount = Math.min(Number(coupon.discount_value), expectedSubtotal)
-        } else if (coupon.discount_type === "percent") {
-          verifiedDiscount = expectedSubtotal * (Number(coupon.discount_value) / 100)
-          if (coupon.max_discount_amount && verifiedDiscount > Number(coupon.max_discount_amount)) {
-            verifiedDiscount = Number(coupon.max_discount_amount)
-          }
+        const couponError = await getCouponRejectionReason(sqlConn, coupon, { productId, email, subtotal: expectedSubtotal })
+        if (couponError) {
+          return NextResponse.json({ error: couponError }, { status: 400 })
         }
-        verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+        verifiedDiscount = calculateCouponDiscount(coupon, expectedSubtotal)
         verifiedReferrerId = coupon.referrer_id
       }
     } else if (referralCode && discountAmount > 0) {
@@ -146,15 +142,11 @@ export async function POST(req: Request) {
       `
       if (couponResult.length > 0) {
         const coupon = couponResult[0]
-        if (coupon.discount_type === "fixed") {
-          verifiedDiscount = Math.min(Number(coupon.discount_value), expectedSubtotal)
-        } else if (coupon.discount_type === "percent") {
-          verifiedDiscount = expectedSubtotal * (Number(coupon.discount_value) / 100)
-          if (coupon.max_discount_amount && verifiedDiscount > Number(coupon.max_discount_amount)) {
-            verifiedDiscount = Number(coupon.max_discount_amount)
-          }
+        const couponError = await getCouponRejectionReason(sqlConn, coupon, { productId, email, subtotal: expectedSubtotal })
+        if (couponError) {
+          return NextResponse.json({ error: couponError }, { status: 400 })
         }
-        verifiedDiscount = Math.min(verifiedDiscount, expectedSubtotal)
+        verifiedDiscount = calculateCouponDiscount(coupon, expectedSubtotal)
         verifiedReferrerId = coupon.referrer_id
       }
     }

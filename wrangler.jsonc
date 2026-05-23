@@ -45,6 +45,8 @@
   ],
   "vars": {
     "NEXTJS_ENV": "production",
-    "DATABASE_PROVIDER": "d1"
+    "DATABASE_PROVIDER": "d1",
+    "GLOBAL_STORE_ENABLED": "true",
+    "GLOBAL_SUPPORT_TELEGRAM": "https://t.me/jialiao2025"
   }
 }

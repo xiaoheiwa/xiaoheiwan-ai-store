@@ -1,6 +1,9 @@
 import Link from "next/link"
-import { ArrowRight, Check, Mail, PackageCheck, ShieldCheck, Terminal, WalletCards } from "lucide-react"
+import { ArrowRight, Check, Mail, MessageCircle, PackageCheck, ShieldCheck, Terminal, WalletCards } from "lucide-react"
 import type { MarketProductCard } from "@/lib/global-market"
+import { GlobalMobileNav } from "./global-mobile-nav"
+
+const SUPPORT_TELEGRAM_URL = process.env.GLOBAL_SUPPORT_TELEGRAM?.trim()
 
 const trustBadges = [
   "USDT-TRC20 / BEP20 Payment",
@@ -37,6 +40,7 @@ export function GlobalHeader() {
             China Store
           </Link>
         </nav>
+        <GlobalMobileNav />
       </div>
     </header>
   )
@@ -68,7 +72,20 @@ export function GlobalFooter() {
         </div>
         <div className="grid gap-2">
           <p className="font-medium text-neutral-950">Support</p>
-          <p>Telegram support is for order issues only.</p>
+          {SUPPORT_TELEGRAM_URL ? (
+            <a
+              href={SUPPORT_TELEGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-neutral-950 hover:underline"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              Telegram support
+            </a>
+          ) : (
+            <p>Telegram support details are provided with your order.</p>
+          )}
+          <p>Use Telegram only for order issues, with your order ID.</p>
           <p>We never ask for private keys or seed phrases.</p>
         </div>
       </div>
@@ -285,9 +302,20 @@ export function ContactStrip() {
       <Mail className="mb-5 h-5 w-5" />
       <p className="mb-2 text-xl font-semibold">Need help with an order?</p>
       <p className="max-w-2xl text-sm leading-6 text-neutral-300">
-        Contact official Telegram support with your order ID. We do not accept screenshots as payment proof and we never
+        Contact our Telegram support with your order ID. We do not accept screenshots as payment proof and we never
         ask for private keys.
       </p>
+      {SUPPORT_TELEGRAM_URL && (
+        <a
+          href={SUPPORT_TELEGRAM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex items-center gap-2 border border-white px-5 py-3 text-sm font-medium text-white hover:bg-white hover:text-neutral-950"
+        >
+          <MessageCircle className="h-4 w-4" />
+          Open Telegram support
+        </a>
+      )}
     </div>
   )
 }

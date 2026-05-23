@@ -13,6 +13,7 @@ async function handle(params: Record<string, string>) {
   console.log("[v0] ============ PAYMENT NOTIFICATION START ============")
   console.log("[v0] Payment notification received:", params)
   console.log("[v0] Payment notification timestamp:", new Date().toISOString())
+  let deliveryClaimOrderNo: string | null = null
 
   try {
     const clientIP = params.client_ip || params.remote_addr
@@ -102,6 +103,13 @@ async function handle(params: Record<string, string>) {
       return "success" // Idempotent
     }
 
+    const claimed = await Database.claimOrderForDelivery(orderNo)
+    if (!claimed) {
+      console.log("[v0] Order delivery already claimed by another callback, skipping:", orderNo)
+      return "success"
+    }
+    deliveryClaimOrderNo = orderNo
+
     const orderQuantity = order.quantity || 1
     const orderDeliveryType = order.delivery_type || "auto"
     console.log("[v0] Order delivery type:", orderDeliveryType, "quantity:", orderQuantity)
@@ -113,6 +121,7 @@ async function handle(params: Record<string, string>) {
         status: "paid",
         paid_at: new Date(),
         gateway_resp: JSON.stringify(params),
+        delivery_status: "manual_review",
       })
 
       // Send payment confirmation email with WeChat contact info for manual service
@@ -186,6 +195,7 @@ async function handle(params: Record<string, string>) {
         is_high_risk: true,
         risk_reason: riskCheck.reasons.join("; "),
         review_status: "pending_review",
+        delivery_status: "manual_review",
       })
       
       // 发送 Telegram 告警
@@ -233,6 +243,7 @@ async function handle(params: Record<string, string>) {
       await Database.updateOrder(orderNo, {
         status: "failed",
         gateway_resp: "No stock available",
+        delivery_status: "delivery_failed",
       })
       return "success"
     }
@@ -248,6 +259,7 @@ async function handle(params: Record<string, string>) {
     if (soldCodes.length === 0) {
       console.error("[v0] Failed to sell locked codes for order:", orderNo)
       await Database.releaseLockedCode(orderNo)
+      await Database.updateOrder(orderNo, { delivery_status: "delivery_failed" })
       return "success"
     }
 
@@ -262,6 +274,7 @@ async function handle(params: Record<string, string>) {
       paid_at: new Date(),
       fulfilled_at: new Date(),
       gateway_resp: JSON.stringify(params),
+      delivery_status: "delivered",
     })
 
     console.log("[v0] Order updated successfully:", {
@@ -345,6 +358,13 @@ async function handle(params: Record<string, string>) {
     console.log("[v0] Payment processed successfully for order:", orderNo, "via", gatewayType)
     return "success"
   } catch (error: any) {
+    if (deliveryClaimOrderNo) {
+      try {
+        await Database.releaseDeliveryClaim(deliveryClaimOrderNo)
+      } catch (releaseError) {
+        console.error("[v0] Failed to release payment delivery claim:", releaseError)
+      }
+    }
     console.error("[v0] ============ PAYMENT NOTIFICATION ERROR ============")
     console.error("[v0] Payment notification error:", {
       error,

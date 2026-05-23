@@ -24,15 +24,20 @@ interface CardVerifyResult {
 }
 
 interface TaskAccount {
-  account: string
-  status: "pending" | "processing" | "success" | "failed" | "cancelled"
-  result?: string
-  error?: string
+  id: number
+  line_number: number
+  email: string
+  status: "pending" | "running" | "processing" | "success" | "failed" | "cancelled"
+  message?: string
+  result_link?: string
+  queue_position?: number
+  updated_at?: string
 }
 
 interface TaskResult {
   task_id: string
-  status: "pending" | "processing" | "completed" | "partial"
+  status: "pending" | "running" | "processing" | "completed" | "partial"
+  total_accounts: number
   accounts: TaskAccount[]
   created_at: string
 }
@@ -43,6 +48,7 @@ export default function PixelActivatePage() {
   const [cardInfo, setCardInfo] = useState<CardVerifyResult | null>(null)
   const [accountsText, setAccountsText] = useState("")
   const [taskId, setTaskId] = useState<string | null>(null)
+  const [taskToken, setTaskToken] = useState("")
   const [taskResult, setTaskResult] = useState<TaskResult | null>(null)
 
   const [verifying, setVerifying] = useState(false)
@@ -55,11 +61,11 @@ export default function PixelActivatePage() {
   const [message, setMessage] = useState<{ text: string; type: MessageType } | null>(null)
 
   // 通过代理 API 调用，隐藏实际地址
-  async function pixelApi(endpoint: string, payload: Record<string, unknown>) {
+  async function pixelApi(action: string, payload: Record<string, unknown>) {
     const res = await fetch("/api/pixel/proxy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint, ...payload })
+      body: JSON.stringify({ action, ...payload })
     })
     return res.json()
   }
@@ -73,7 +79,7 @@ export default function PixelActivatePage() {
     setVerifying(true)
     setMessage(null)
     try {
-      const data = await pixelApi("/api/verify-card", { card_key: cardKey.trim() })
+      const data = await pixelApi("verify", { card_key: cardKey.trim() })
       if (data.valid) {
         setCardInfo(data)
         setMessage({ text: `卡密验证成功！剩余额度: ${data.remaining_quota_units} 个账号`, type: "success" })
@@ -107,18 +113,19 @@ export default function PixelActivatePage() {
     setSubmitting(true)
     setMessage(null)
     try {
-      const data = await pixelApi("/api/submit-task", { 
+      const data = await pixelApi("submit", {
         card_key: cardKey.trim(),
-        accounts: accounts 
+        accounts_text: accounts.join("\n"),
       })
-      if (data.task_id) {
+      if (data.task_id && data.task_token) {
         setTaskId(data.task_id)
-        setMessage({ text: "任务提交成功，正在处理中...", type: "success" })
+        setTaskToken(data.task_token)
+        setMessage({ text: data.message || "任务提交成功，正在处理中...", type: "success" })
         setStep(3)
-        // 开始轮询任务状态
-        pollTaskStatus(data.task_id)
+        pollTaskStatus(data.task_id, data.task_token)
       } else {
-        setMessage({ text: data.message || data.error || "提交失败", type: "error" })
+        const detail = Array.isArray(data.detail) ? data.detail.map((d: any) => d.msg).join("; ") : data.detail
+        setMessage({ text: detail || data.message || data.error || "提交失败", type: "error" })
       }
     } catch (error) {
       setMessage({ text: "提交失败，请稍后重试", type: "error" })
@@ -127,27 +134,36 @@ export default function PixelActivatePage() {
   }
 
   // 轮询任务状态
-  async function pollTaskStatus(tid: string) {
+  async function pollTaskStatus(tid: string, token: string) {
     setPolling(true)
+    let consecutiveErrors = 0
     const poll = async () => {
       try {
-        const data = await pixelApi("/api/query-task", { 
+        const data = await pixelApi("query", {
+          task_id: tid,
           card_key: cardKey.trim(),
-          task_id: tid 
+          task_token: token,
         })
         if (data.task_id) {
+          consecutiveErrors = 0
           setTaskResult(data)
-          // 如果还在处理中，继续轮询
-          if (data.status === "pending" || data.status === "processing") {
+          const isActive = data.status === "pending" || data.status === "processing" || data.status === "running"
+          if (isActive) {
             setTimeout(() => poll(), 3000)
           } else {
             setPolling(false)
-            // 更新卡密信息
             refreshCardInfo()
           }
+        } else {
+          throw new Error("查询任务返回无效数据")
         }
       } catch (error) {
-        console.error("查询任务失败", error)
+        consecutiveErrors += 1
+        if (consecutiveErrors >= 5) {
+          setPolling(false)
+          setMessage({ text: "查询任务多次失败，请稍后手动刷新", type: "error" })
+          return
+        }
         setTimeout(() => poll(), 5000)
       }
     }
@@ -157,7 +173,7 @@ export default function PixelActivatePage() {
   // 刷新卡密信息
   async function refreshCardInfo() {
     try {
-      const data = await pixelApi("/api/verify-card", { card_key: cardKey.trim() })
+      const data = await pixelApi("verify", { card_key: cardKey.trim() })
       if (data.valid) {
         setCardInfo(data)
       }
@@ -167,19 +183,20 @@ export default function PixelActivatePage() {
   }
 
   // 取消账号
-  async function handleCancelAccount(account: string) {
+  async function handleCancelAccount(accountId: number) {
+    if (!taskId) return
     try {
-      const data = await pixelApi("/api/cancel-account", { 
-        card_key: cardKey.trim(),
+      const data = await pixelApi("cancel", {
         task_id: taskId,
-        account 
+        account_id: accountId,
+        card_key: cardKey.trim(),
+        task_token: taskToken,
       })
-      if (data.success) {
-        setMessage({ text: "已取消该账号，额度已回补", type: "success" })
-        // 刷新任务状态
-        if (taskId) pollTaskStatus(taskId)
+      if (data.success || data.message) {
+        setMessage({ text: data.message || "已取消该账号，额度已回补", type: "success" })
+        pollTaskStatus(taskId, taskToken)
       } else {
-        setMessage({ text: data.message || "取消失败", type: "error" })
+        setMessage({ text: data.detail || data.error || "取消失败", type: "error" })
       }
     } catch (error) {
       setMessage({ text: "取消失败，请稍后重试", type: "error" })
@@ -201,6 +218,7 @@ export default function PixelActivatePage() {
       case "failed":
         return <XCircle className="w-4 h-4 text-red-500" />
       case "processing":
+      case "running":
         return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
       case "cancelled":
         return <XCircle className="w-4 h-4 text-gray-400" />
@@ -214,7 +232,8 @@ export default function PixelActivatePage() {
     switch (status) {
       case "success": return "成功"
       case "failed": return "失败"
-      case "processing": return "处理中"
+      case "processing":
+      case "running": return "处理中"
       case "cancelled": return "已取消"
       default: return "排队中"
     }
@@ -539,7 +558,7 @@ export default function PixelActivatePage() {
       />
 
       {/* 提示消息 */}
-      {message && <AlertMessage type={message.type} message={message.text} />}
+      {message && <AlertMessage type={message.type}>{message.text}</AlertMessage>}
 
       {/* 步骤 1: 验证卡密 */}
       {step === 1 && (
@@ -638,7 +657,7 @@ export default function PixelActivatePage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => taskId && pollTaskStatus(taskId)}
+                      onClick={() => taskId && taskToken && pollTaskStatus(taskId, taskToken)}
                       disabled={polling}
                     >
                       <RefreshCw className={`w-4 h-4 ${polling ? "animate-spin" : ""}`} />
@@ -654,7 +673,7 @@ export default function PixelActivatePage() {
               <div className="space-y-2">
                 {taskResult.accounts.map((acc, index) => (
                   <div
-                    key={index}
+                    key={acc.id ?? index}
                     className="p-3 rounded-lg bg-card border border-border"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -662,30 +681,33 @@ export default function PixelActivatePage() {
                         <div className="flex items-center gap-2 mb-1">
                           {getStatusIcon(acc.status)}
                           <span className="text-sm font-medium truncate">
-                            {acc.account.split("----")[0]}
+                            {acc.email}
                           </span>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
                             acc.status === "success" ? "bg-green-500/10 text-green-500" :
                             acc.status === "failed" ? "bg-red-500/10 text-red-500" :
-                            acc.status === "processing" ? "bg-blue-500/10 text-blue-500" :
+                            acc.status === "processing" || acc.status === "running" ? "bg-blue-500/10 text-blue-500" :
                             acc.status === "cancelled" ? "bg-gray-500/10 text-gray-500" :
                             "bg-yellow-500/10 text-yellow-500"
                           }`}>
                             {getStatusText(acc.status)}
                           </span>
+                          {acc.status === "pending" && typeof acc.queue_position === "number" && acc.queue_position > 0 && (
+                            <span className="text-xs text-muted-foreground">#{acc.queue_position}</span>
+                          )}
                         </div>
-                        {acc.result && (
+                        {acc.result_link && (
                           <div className="flex items-center gap-2 mt-2">
                             <input
                               type="text"
                               readOnly
-                              value={acc.result}
+                              value={acc.result_link}
                               className="flex-1 text-xs bg-secondary/50 border border-border rounded px-2 py-1 font-mono truncate"
                             />
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleCopy(acc.result!, index)}
+                              onClick={() => handleCopy(acc.result_link!, index)}
                               className="shrink-0"
                             >
                               {copiedIndex === index ? (
@@ -696,15 +718,15 @@ export default function PixelActivatePage() {
                             </Button>
                           </div>
                         )}
-                        {acc.error && (
-                          <p className="text-xs text-red-500 mt-1">{acc.error}</p>
+                        {acc.status === "failed" && acc.message && (
+                          <p className="text-xs text-red-500 mt-1">{acc.message}</p>
                         )}
                       </div>
                       {acc.status === "pending" && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleCancelAccount(acc.account)}
+                          onClick={() => handleCancelAccount(acc.id)}
                           className="text-red-500 hover:text-red-600"
                         >
                           <Trash2 className="w-4 h-4" />
