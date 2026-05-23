@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react"
 
 const links = [
   { href: "/global/products", label: "Products" },
+  { href: "/global/activate/gpt", label: "Activate Code" },
   { href: "/global/track-order", label: "Track Order" },
   { href: "/global/refund-policy", label: "Refund Policy" },
 ]

@@ -32,6 +32,12 @@ const trackPath = [
   { title: "Get support", body: "If manual review is needed, contact support with your order ID." },
 ]
 
+const activatePath = [
+  { title: "Receive your code", body: "Activation begins only after your digital delivery is complete." },
+  { title: "Open Activation Desk", body: "Enter your delivered ChatGPT code in the global activation page." },
+  { title: "Review before submitting", body: "Some products require account session data; the warning is shown before submission." },
+]
+
 const faqs = [
   {
     question: "Why is the price lower?",
@@ -62,6 +68,11 @@ const faqs = [
     question: "Is a screenshot enough as payment proof?",
     answer:
       "No. Only confirmed on-chain transactions are valid. Underpaid or overpaid orders go to manual review.",
+  },
+  {
+    question: "How do I activate a delivered ChatGPT code?",
+    answer:
+      "Use the Global Activation Desk after delivery. Some ChatGPT activations require account session data, so review the on-page warning before you submit anything.",
   },
 ]
 
@@ -97,6 +108,12 @@ export default async function GlobalHomePage() {
               >
                 Track Order
               </Link>
+              <Link
+                href="/global/activate/gpt"
+                className="inline-flex items-center justify-center gap-2 border border-neutral-300 bg-white px-6 py-3 text-sm font-medium text-neutral-950 hover:border-neutral-950"
+              >
+                Activate Code
+              </Link>
             </div>
           </div>
           <TerminalOrderCard />
@@ -122,12 +139,12 @@ export default async function GlobalHomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-12 sm:py-16">
-          <SectionHeader
-            eyebrow="How it works"
-            title="Two paths, no surprises"
-            description="Place an order and track delivery without mixing payment networks or support expectations."
+        <SectionHeader
+          eyebrow="How it works"
+          title="Three clear stages"
+          description="Purchase, activate delivered codes when required, and track delivery without mixing payment networks or support expectations."
         />
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-3">
           <PathCard
             badge="Buy"
             title="Order a new code"
@@ -135,6 +152,13 @@ export default async function GlobalHomePage() {
             ctaHref="/global/products"
             steps={buyPath}
             primary
+          />
+          <PathCard
+            badge="Activate"
+            title="Use a delivered code"
+            cta="Activate code"
+            ctaHref="/global/activate/gpt"
+            steps={activatePath}
           />
           <PathCard
             badge="Track"
