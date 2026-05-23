@@ -6,7 +6,7 @@ import { Menu, X } from "lucide-react"
 
 const links = [
   { href: "/global/products", label: "Products" },
-  { href: "/global/activate/gpt", label: "Activate Code" },
+  { href: "/global/activate/gpt", label: "Activate Code", reloadDocument: true },
   { href: "/global/track-order", label: "Track Order" },
   { href: "/global/refund-policy", label: "Refund Policy" },
 ]
@@ -61,16 +61,26 @@ export function GlobalMobileNav() {
               </button>
             </div>
             <nav className="grid gap-2">
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="border border-neutral-200 bg-white px-4 py-3 text-base font-medium text-neutral-950 hover:border-neutral-950"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {links.map((link) =>
+                link.reloadDocument ? (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="border border-neutral-200 bg-white px-4 py-3 text-base font-medium text-neutral-950 hover:border-neutral-950"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className="border border-neutral-200 bg-white px-4 py-3 text-base font-medium text-neutral-950 hover:border-neutral-950"
+                  >
+                    {link.label}
+                  </Link>
+                ),
+              )}
               <Link
                 href="/"
                 onClick={() => setOpen(false)}

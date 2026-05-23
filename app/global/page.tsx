@@ -108,12 +108,12 @@ export default async function GlobalHomePage() {
               >
                 Track Order
               </Link>
-              <Link
+              <a
                 href="/global/activate/gpt"
                 className="inline-flex items-center justify-center gap-2 border border-neutral-300 bg-white px-6 py-3 text-sm font-medium text-neutral-950 hover:border-neutral-950"
               >
                 Activate Code
-              </Link>
+              </a>
             </div>
           </div>
           <TerminalOrderCard />
@@ -159,6 +159,7 @@ export default async function GlobalHomePage() {
             cta="Activate code"
             ctaHref="/global/activate/gpt"
             steps={activatePath}
+            reloadDocument
           />
           <PathCard
             badge="Track"
@@ -219,6 +220,7 @@ function PathCard({
   cta,
   ctaHref,
   primary,
+  reloadDocument,
 }: {
   badge: string
   title: string
@@ -226,7 +228,14 @@ function PathCard({
   cta: string
   ctaHref: string
   primary?: boolean
+  reloadDocument?: boolean
 }) {
+  const ctaClassName = `mt-7 inline-flex items-center justify-center gap-2 border border-neutral-950 px-5 py-3 text-sm font-medium ${
+    primary
+      ? "bg-neutral-950 text-white hover:bg-white hover:text-neutral-950"
+      : "bg-white text-neutral-950 hover:bg-neutral-950 hover:text-white"
+  }`
+
   return (
     <article
       className={`flex flex-col border ${
@@ -248,17 +257,17 @@ function PathCard({
           </li>
         ))}
       </ol>
-      <Link
-        href={ctaHref}
-        className={`mt-7 inline-flex items-center justify-center gap-2 border border-neutral-950 px-5 py-3 text-sm font-medium ${
-          primary
-            ? "bg-neutral-950 text-white hover:bg-white hover:text-neutral-950"
-            : "bg-white text-neutral-950 hover:bg-neutral-950 hover:text-white"
-        }`}
-      >
-        {cta}
-        <ArrowRight className="h-4 w-4" />
-      </Link>
+      {reloadDocument ? (
+        <a href={ctaHref} className={ctaClassName}>
+          {cta}
+          <ArrowRight className="h-4 w-4" />
+        </a>
+      ) : (
+        <Link href={ctaHref} className={ctaClassName}>
+          {cta}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
     </article>
   )
 }
