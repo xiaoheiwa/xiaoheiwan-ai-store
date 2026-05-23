@@ -1,148 +1,37 @@
-# Cloudflare Database Migration Assessment
+# Cloudflare D1 迁移状态说明
 
-Date: 2026-05-20
+更新日期：2026-05-23
 
-## Current production status
+## 当前状态
 
-- The app is running on Cloudflare Workers at `https://xiaoheiwan-ai-store.ileeken.workers.dev`.
-- The active Cloudflare Worker version after the D1-backed deploy is `76776db8-6b3d-4743-9c47-302a6e410654`.
-- Uploads are configured to use Cloudflare R2.
-- The Cloudflare test Worker is now configured to use Cloudflare D1.
-- The public domain `upgrade.xiaoheiwan.com` is still on Vercel. This is intentional until final cutover.
-- Verified checks:
-  - Homepage returns 200.
-  - `/api/products` returns 200 and reads 19 active products from D1.
-  - `/api/products/[id]` returns 200 and preserves product JSON fields such as `price_tiers`.
-  - `/api/categories` returns 200 and reads 5 categories from D1.
-  - `/api/blog` returns 200 and preserves blog tags as arrays.
-  - `/api/blog?tag=...` returns 200 against D1 tag data.
-  - `/api/price`, `/api/stock`, `/api/config/payment`, and `/api/tools-config` return 200.
-  - A test order was created and read successfully on D1, then deleted.
-  - A test payment callback successfully changed a test order to paid, fulfilled it with an activation code, and was then cleaned up.
-  - The D1 order count returned to 846 after cleanup.
-  - Admin login works on the Cloudflare test Worker.
-  - Admin orders, codes, products, finance, blog, and stats endpoints return 200 against D1.
-  - `/api/admin/stats` returns 401 without login.
-  - `/api/cron/daily-report` returns 401 without the cron secret.
+- 正式站已切换到 Cloudflare Workers。
+- 生产数据访问已切换到 Cloudflare D1。
+- 上传文件与构建缓存使用 Cloudflare R2。
+- 全球商城与中国商城共享后台，并通过市场字段隔离商品与订单。
 
-## Production database inventory
+本文档只保留公开部署所需的技术结论，不记录生产订单、库存、用户数据数量或运行密钥。
 
-The latest D1 import contains 29 public tables. Important table counts:
+## 为什么迁移需要兼容层
 
-| Table | Rows |
-| --- | ---: |
-| activation_codes | 911 |
-| admin_audit_log | 11 |
-| affiliate_links | 6 |
-| blog_posts | 23 |
-| chat_messages | 422 |
-| chat_sessions | 88 |
-| coupon_codes | 1 |
-| coupon_usage | 0 |
-| email_templates | 1 |
-| ip_whitelist | 0 |
-| notifications | 3 |
-| orders | 846 |
-| price_config | 1 |
-| product_categories | 5 |
-| products | 22 |
-| promoter_applications | 2 |
-| purchase_batches | 86 |
-| referral_orders | 0 |
-| referral_withdrawals | 0 |
-| referrers | 0 |
-| risk_blacklist | 1 |
-| risk_config | 12 |
-| risk_logs | 5 |
-| risk_whitelist | 1 |
-| security_alerts | 17 |
-| site_config | 3 |
-| system_settings | 1 |
-| telegram_users | 2 |
-| withdrawal_requests | 0 |
+项目早期使用 PostgreSQL 语义，Cloudflare D1 使用 SQLite 语义。迁移时需要关注：
 
-## Why D1 is not a direct drop-in replacement
+- 字段类型和默认值差异。
+- 日期、数组、JSON 以及编号生成方式差异。
+- 订单创建、付款确认和库存扣减过程中的并发安全。
+- 后台统计查询与筛选查询的数据库兼容性。
 
-Cloudflare D1 uses SQLite semantics, while the current app is written for PostgreSQL through Neon.
+## 已覆盖的核心方向
 
-The current code and schema use PostgreSQL-specific features that need conversion:
+- D1 数据库访问适配。
+- 商品、订单与后台读取流程。
+- 全球商城所需的市场、付款和交付字段。
+- Cloudflare Worker、R2 与定时任务配置。
+- 付款通知后的发货保护与人工审核路径。
 
-- Types: `uuid`, `jsonb`, arrays, `numeric`, `SERIAL`, `BIGINT`, timestamp variants.
-- Functions: `gen_random_uuid()`, `NOW()`, `DATE_TRUNC()`.
-- Syntax: `::jsonb`, `::uuid`, `::int`, `ANY(...)`, `INTERVAL`, some `RETURNING` usage.
-- Behavior: order fulfillment and stock locking depend on transactional update patterns that must be re-tested carefully on D1.
+## 后续维护原则
 
-## Recommended safe migration path
-
-### Phase 1: Completed
-
-Move the web app runtime to Cloudflare while keeping Neon as the production database.
-
-This is now working and verified.
-
-### Phase 2: Completed
-
-Create a D1 database, convert and import Neon data, and run the Cloudflare test Worker against D1.
-
-This is now working for public read flows, basic order creation, payment callback fulfillment, and key admin read flows.
-
-### Phase 3: Remaining before final domain cutover
-
-1. Re-sync Neon to D1 immediately before cutover so no late orders are missed.
-2. Test manual fulfillment and any admin write workflows that will be used immediately after cutover.
-3. Freeze writes briefly on Neon for final sync.
-4. Switch `upgrade.xiaoheiwan.com` to Cloudflare.
-5. Keep Neon unchanged for rollback until D1 has proven stable.
-
-## Cutover warning
-
-Do not point `upgrade.xiaoheiwan.com` to Cloudflare D1-backed code until order creation, payment callbacks, and activation-code stock locking pass tests against D1.
-
-## 2026-05-20 D1 migration progress
-
-Generated a D1-compatible export from Neon with:
-
-```bash
-rtk env PATH=/Users/lijian/.nvm/versions/node/v22.22.2/bin:$PATH node scripts/export-neon-to-d1.mjs --env-file .env.local --out-dir /private/tmp/xiaoheiwan-d1
-```
-
-Outputs:
-
-- `/private/tmp/xiaoheiwan-d1/schema.sql`
-- `/private/tmp/xiaoheiwan-d1/data.sql`
-- `/private/tmp/xiaoheiwan-d1/r2-assets.json`
-
-The data file contains production orders and activation codes. Do not commit it.
-
-Created the remote D1 database:
-
-- Name: `xiaoheiwan-ai-store-db`
-- ID: `2a270288-2bb8-4be3-a577-20cd96ab849e`
-- Region: WNAM
-
-Imported schema and data into remote D1:
-
-- `products`: 22 rows
-- `activation_codes`: 911 rows
-- `orders`: 846 rows
-- `blog_posts`: 23 rows
-- `chat_messages`: 422 rows
-
-Five large inline blog images were extracted from database rows and uploaded to R2 under `blog-assets/`. The public file API returned 200 for an extracted image.
-
-The Cloudflare Worker now includes this D1 binding:
-
-```bash
-env.DB -> xiaoheiwan-ai-store-db
-```
-
-Latest verification on 2026-05-20:
-
-- Re-exported Neon data; order count remained 846.
-- Re-imported the latest schema and data into D1.
-- Verified automatic payment callback flow on D1.
-- Fixed D1 handling for numbered SQL parameters used by multi-field order updates.
-- Fixed the finance endpoint to avoid database-specific month generation.
-- Verified major admin read endpoints against D1.
-
-The formal domain has not been cut over yet.
+1. 所有数据库变更先在测试数据上验证，再进入生产。
+2. 新字段优先采用向后兼容方式，避免旧订单无法查询。
+3. 支付和交付逻辑变更必须验证重复通知、异常付款和库存唯一交付。
+4. 生产导出文件、日志、密钥和顾客信息不得提交到代码仓库。
+5. 对外文档只描述必要架构，不披露运营数据明细。

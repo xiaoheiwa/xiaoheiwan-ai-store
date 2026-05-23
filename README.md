@@ -1,232 +1,146 @@
 # 小黑丸 AI Store
 
-> XiaoHeiWan AI Store - 一站式 AI 服务激活码销售平台
+> 一个后台、两个市场的数字商品商城：中文本地购买体验与 Global USDT Self-Service Store。
 
-支持 Claude Pro、ChatGPT Plus、Grok Premium 等 AI 服务的激活码自动发货，开箱即用的**开源**商城系统。
+[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+[![Cloudflare](https://img.shields.io/badge/deploy-Cloudflare-F38020)](https://www.cloudflare.com/)
+[![Database](https://img.shields.io/badge/database-D1-F38020)](https://developers.cloudflare.com/d1/)
 
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Next.js](https://img.shields.io/badge/Next.js-16-black)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-v4-38B2AC)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
+## 在线站点
 
-## 演示站点
+- 中国站：[upgrade.xiaoheiwan.com](https://upgrade.xiaoheiwan.com)
+- 全球站：[upgrade.xiaoheiwan.com/global](https://upgrade.xiaoheiwan.com/global)
 
-**在线演示**: [upgrade.xiaoheiwan.com](https://upgrade.xiaoheiwan.com)
+中国站保留中文说明、本地支付与中文服务体验；全球站提供英文界面、USDT 付款、订单查询与自助交付体验。两个市场共享同一个后台，但商品展示、价格、支付方式和订单归属相互隔离。
 
-## 功能特性
+## 当前能力
 
-### 商品销售
-- 多产品支持 - Claude、ChatGPT、Grok、GitHub Copilot、Apple ID 等
-- 多支付方式 - 支付宝、微信支付、USDT (TRC20 / BEP20)
-- 自动发货 - 支付成功后自动发送激活码
-- 人工发货 - 支持需要人工处理的商品
-- 区域选择 - 多区域商品支持（如不同国家的 Apple ID）
-- 阶梯定价 - 批量购买折扣价格
+### 双市场商城
 
-### 激活服务
-- Claude Pro 激活 - 自助激活流程
-- ChatGPT Plus 激活 - 对接第三方 API
-- Grok Premium 激活 - X/Twitter 会员激活
-- GitHub Copilot 激活 - 套壳代理激活平台
-- GPT Team 兑换 - 邀请链接自动兑换
-- Telegram Premium - 代开会员服务
-- Pixel 优惠提取 - Google Pixel 专属优惠链接提取
+- 中国站与全球站使用独立的展示配置和价格体系。
+- 全球商品仅在 `/global` 展示，不会把全球价格混入中国站。
+- 全球订单支持 USDT-TRC20 与 USDT-BEP20 网络选择。
+- 全球订单提供付款页面、倒计时、订单查询和英文政策页面。
+
+### 订单与交付
+
+- 支持自动交付与人工处理的数字商品。
+- 支付回调、订单状态、发货状态和风险审核分开记录。
+- 邮件交付通过 Resend 发送，Telegram 可用于订单通知与客服支持。
+- ChatGPT 全球激活页面可处理已交付的激活码；某些激活流程会明确提示用户提交账户会话资料的用途和风险。
 
 ### 后台管理
-- 商品管理 - CRUD、库存、阶梯定价、区域选项
-- 订单管理 - 订单详情、手动发货、状态筛选
-- 分类管理 - 商品分类、图标、排序
-- 支付配置 - 多支付通道配置
-- 财务统计 - 销售数据、收入图表
-- 博客系统 - 内置博客，支持 AI 辅助写作
-- 风控系统 - 订单风险评估、白名单管理
 
-### 通知系统
-- Telegram Bot - 订单通知、库存预警、每日报告
-- 邮件通知 - 自动发送激活码到用户邮箱
-- Webhook - 支持 Bot 命令交互
+- 商品、分类、库存、订单、优惠券和支付配置管理。
+- 中国站 / 全球站订单与商品筛选。
+- 人工审核、手动发货、财务与报税辅助功能。
+- Telegram 通知测试、风控管理与内容管理。
 
-### 实用工具
-- 2FA 验证器 - TOTP 双因素认证码生成
-- Gmail 检测 - 批量检测邮箱状态
-- 图片分割 - 外链 AI 拼贴图分割工具
+## 页面入口
 
-### 其他特性
-- 在线客服 - 实时聊天客服系统
-- SEO 优化 - 完整的 SEO 配置
-- 响应式设计 - 移动端 + 桌面端
-- 深色模式 - 明暗主题切换
-- 订单密码重置 - 后台支持重置用户查询密码
+| 入口 | 用途 |
+| --- | --- |
+| `/` | 中国站商城 |
+| `/global` | 全球 USDT 商城 |
+| `/global/products` | 全球商品列表 |
+| `/global/track-order` | 全球订单查询 |
+| `/global/activate/gpt` | 已交付 ChatGPT 激活码的全球激活页面 |
+| `/admin` | 统一后台 |
 
-## 技术栈
+## 运行架构
 
-| 类型 | 技术 |
-|------|------|
-| 框架 | Next.js 16 (App Router) |
-| 语言 | TypeScript 5 |
-| 数据库 | PostgreSQL (Neon) |
-| 缓存 | Upstash Redis |
-| 样式 | Tailwind CSS v4 + shadcn/ui |
+| 类别 | 当前方案 |
+| --- | --- |
+| 应用框架 | Next.js 16 App Router + React 19 + TypeScript |
+| 界面 | Tailwind CSS v4 + 项目内组件 |
+| 生产运行环境 | Cloudflare Workers，通过 OpenNext 构建 |
+| 生产数据库 | Cloudflare D1 |
+| 文件与构建缓存 | Cloudflare R2 |
 | 邮件 | Resend |
-| 支付 | 虎皮椒 / ZPayz / EPay / USDT / 微信支付 |
-| 部署 | Vercel |
+| 通知 | Telegram Bot |
+| 全球付款 | USDT，经现有网关与订单校验流程处理 |
 
-## 快速开始
+仓库中仍保留部分兼容旧运行环境与迁移过程的代码。生产部署以 `wrangler.jsonc` 和 Cloudflare 绑定为准。
 
-### 1. 克隆项目
+## 本地开发
+
+### 准备环境
+
+- Node.js 22
+- pnpm
+- 自己的开发数据库与第三方服务配置
+
+### 启动项目
 
 ```bash
 git clone https://github.com/xiaoheiwa/xiaoheiwan-ai-store.git
 cd xiaoheiwan-ai-store
-```
-
-### 2. 安装依赖
-
-```bash
 pnpm install
-```
-
-### 3. 配置环境变量
-
-```bash
 cp .env.example .env.local
-```
-
-编辑 `.env.local` 填写配置。
-
-### 4. 初始化数据库
-
-执行 `scripts/` 目录下的 SQL 文件创建表结构。
-
-### 5. 启动开发服务器
-
-```bash
 pnpm dev
 ```
 
-访问 http://localhost:3000
+开发地址默认为 `http://localhost:3000`。
 
-## 环境变量
+### 环境变量
 
-<details>
-<summary><strong>点击展开完整配置</strong></summary>
+请从 `.env.example` 开始配置，只填写你自己的测试或生产信息。主要配置分为：
 
-### 数据库（必需）
+| 类别 | 变量示例 |
+| --- | --- |
+| 登录与后台 | `ADMIN_PASSWORD`、`JWT_SECRET` |
+| 数据库 | `DATABASE_URL` 或 Cloudflare D1 绑定 |
+| 邮件 | `RESEND_API_KEY`、`RESEND_FROM_EMAIL` |
+| Telegram | `TELEGRAM_BOT_TOKEN`、`TELEGRAM_CHAT_ID`、`GLOBAL_SUPPORT_TELEGRAM` |
+| 全球商城 | `GLOBAL_STORE_ENABLED`、`GLOBAL_ORDER_EXPIRE_MINUTES` |
+| USDT / 支付网关 | `BEPUSDT_BASE_URL`、`BEPUSDT_API_TOKEN` 及网络配置 |
+| 定时任务与接口保护 | `CRON_SECRET`、`PIXEL_TASK_SIGNING_SECRET` |
 
-```env
-DATABASE_URL=postgresql://user:password@host/database
+不要提交 `.env.local`、`.env.cloudflare`、API Token、钱包私钥或助记词。
+
+## Cloudflare 部署
+
+生产环境使用 Cloudflare Workers、D1 与 R2。部署自己的实例前，请先创建自己的 Cloudflare 资源，并将 `wrangler.jsonc` 中的绑定替换为你自己的配置。
+
+```bash
+pnpm install
+pnpm build
+pnpm exec opennextjs-cloudflare build
+pnpm deploy
 ```
 
-### 管理员（必需）
+敏感变量应使用 Cloudflare Secrets 写入，而不是直接写在仓库中。可参考 [Cloudflare 部署说明](docs/cloudflare-migration.md)。
 
-```env
-ADMIN_PASSWORD=your_admin_password
-JWT_SECRET=your_jwt_secret_at_least_32_chars
+## 数据库与迁移
+
+- 生产版本当前使用 Cloudflare D1。
+- `scripts/` 中包含项目演进过程中的建表和兼容脚本。
+- 不要未经审核将迁移脚本直接执行到生产数据库。
+- 订单、库存、支付回调和自动交付属于高风险数据流程，变更前应备份并验证。
+
+## 安全与合规提示
+
+- 本项目销售数字交付商品，不应将钱包私钥、助记词或第三方账户密码交给站点。
+- 部分第三方激活服务可能要求会话资料；页面必须在提交前清楚告知用户，并仅用于该次服务处理。
+- 支付完成和发货应以系统确认结果为准，不以截图作为付款证明。
+- 运营者需要自行遵守当地法律、税务要求与第三方平台条款。
+
+## 发布前检查
+
+当前可用的生产构建检查：
+
+```bash
+pnpm build
 ```
 
-### 邮件服务
-
-```env
-RESEND_API_KEY=re_xxxx
-EMAIL_FROM=noreply@yourdomain.com
-```
-
-### Telegram 通知
-
-```env
-TELEGRAM_BOT_TOKEN=123456:ABC-xxx
-TELEGRAM_CHAT_ID=123456789
-```
-
-### 支付配置
-
-```env
-# 虎皮椒
-XUNHUPAY_API_URL=https://api.xunhupay.com/payment/do.html
-XUNHUPAY_APP_ID=your_app_id
-XUNHUPAY_APP_SECRET=your_app_secret
-
-# ZPayz
-ZPAYZ_PID=your_pid
-ZPAYZ_PKEY=your_pkey
-ZPAYZ_WXPAY_CID=your_wxpay_channel_id
-
-# EPay
-EPAY_API_URL=https://your-epay-url/mapi.php
-EPAY_PID=your_pid
-EPAY_KEY=your_key
-
-# USDT
-USDT_WALLET_ADDRESS=TRC20_wallet_address
-TRON_API_KEY=your_trongrid_api_key
-USDT_TO_CNY_RATE=7.2
-
-# BEpusdt（可选，配置后 USDT 会跳转 BEpusdt 收银台，支持 TRC20 / BEP20）
-BEPUSDT_BASE_URL=https://your-bepusdt-domain.com
-BEPUSDT_API_TOKEN=your_bepusdt_api_token
-# 默认网络：usdt.trc20 或 usdt.bep20；购买页会按用户选择覆盖
-BEPUSDT_TRADE_TYPE=usdt.trc20
-BEPUSDT_FIAT=CNY
-BEPUSDT_TIMEOUT=1200
-```
-
-### 定时任务
-
-```env
-CRON_SECRET=your_cron_secret
-```
-
-</details>
-
-## 项目结构
-
-```
-├── app/
-│   ├── admin/              # 后台管理
-│   ├── api/                # API 路由
-│   ├── activate/           # 激活页面
-│   ├── blog/               # 博客
-│   └── purchase/           # 购买页面
-├── components/
-│   └── ui/                 # shadcn/ui 组件
-├── lib/
-│   ├── database.ts         # 数据库操作
-│   ├── risk-control.ts     # 风控系统
-│   └── telegram.tsx        # Telegram 通知
-└── scripts/
-    └── *.sql               # 数据库迁移
-```
-
-## 后台管理
-
-访问 `/admin`，使用 `ADMIN_PASSWORD` 登录。
-
-**功能模块**：仪表盘 / 商品管理 / 订单管理 / 分类管理 / 支付配置 / Telegram 通知 / 博客管理 / 风控管理
-
-## 部署
-
-### Vercel（推荐）
-
-1. Fork 本项目
-2. 在 Vercel 导入项目
-3. 添加 Neon 数据库集成
-4. 配置环境变量
-5. 部署完成
-
-### 数据库
-
-推荐 [Neon](https://neon.tech) 免费 PostgreSQL。
-
-## 联系方式
-
-- **技术支持**: Telegram [@jialiao2025](https://t.me/jialiao2025)
-- **问题反馈**: [GitHub Issues](https://github.com/xiaoheiwa/xiaoheiwan-ai-store/issues)
+本仓库现有的 `lint` 与完整类型检查仍有待清理的历史问题；在将它们作为合并门槛前，应先修复这些存量报错。
 
 ## License
 
-本项目采用 [MIT License](LICENSE) 开源协议，可自由使用、修改和分发。
+本项目基于 [MIT License](LICENSE) 发布。
 
----
+## 联系
 
-**Made with Next.js, Tailwind CSS, and shadcn/ui**
+- Telegram 支持：[@jialiao2025](https://t.me/jialiao2025)
+- 问题反馈：[GitHub Issues](https://github.com/xiaoheiwa/xiaoheiwan-ai-store/issues)
