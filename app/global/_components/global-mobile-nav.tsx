@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react"
 const links = [
   { href: "/global/products", label: "Products" },
   { href: "/global/activate/gpt", label: "Activate Code", reloadDocument: true },
-  { href: "/global/track-order", label: "Track Order" },
+  { href: "/global/track-order", label: "Track Order", reloadDocument: true },
   { href: "/global/refund-policy", label: "Refund Policy" },
 ]
 

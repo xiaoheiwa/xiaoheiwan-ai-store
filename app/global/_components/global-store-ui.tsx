@@ -33,9 +33,9 @@ export function GlobalHeader() {
           <a href="/global/activate/gpt" className="hover:text-neutral-950">
             Activate Code
           </a>
-          <Link href="/global/track-order" className="hover:text-neutral-950">
+          <a href="/global/track-order" className="hover:text-neutral-950">
             Track Order
-          </Link>
+          </a>
           <Link href="/global/refund-policy" className="hover:text-neutral-950">
             Refund Policy
           </Link>

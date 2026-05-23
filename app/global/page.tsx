@@ -102,12 +102,12 @@ export default async function GlobalHomePage() {
                 Browse Products
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
+              <a
                 href="/global/track-order"
                 className="inline-flex items-center justify-center gap-2 border border-neutral-950 bg-white px-6 py-3 text-sm font-medium text-neutral-950 hover:bg-neutral-950 hover:text-white"
               >
                 Track Order
-              </Link>
+              </a>
               <a
                 href="/global/activate/gpt"
                 className="inline-flex items-center justify-center gap-2 border border-neutral-300 bg-white px-6 py-3 text-sm font-medium text-neutral-950 hover:border-neutral-950"
@@ -167,6 +167,7 @@ export default async function GlobalHomePage() {
             cta="Track order"
             ctaHref="/global/track-order"
             steps={trackPath}
+            reloadDocument
           />
         </div>
       </section>

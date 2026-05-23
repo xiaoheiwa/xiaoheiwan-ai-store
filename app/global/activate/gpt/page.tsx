@@ -63,13 +63,13 @@ export default function GlobalGptActivatePage() {
               ))}
             </div>
 
-            <Link
+            <a
               href="/global/track-order"
               className="mt-8 inline-flex items-center gap-2 border border-neutral-950 bg-white px-5 py-3 text-sm font-medium text-neutral-950 hover:bg-neutral-950 hover:text-white"
             >
               Track an order first
               <ArrowRight className="h-4 w-4" />
-            </Link>
+            </a>
           </div>
           <GlobalGptActivateForm />
         </div>

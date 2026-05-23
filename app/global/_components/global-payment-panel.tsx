@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
 import { Check, Copy, ExternalLink, RefreshCw, TriangleAlert } from "lucide-react"
 import type { GlobalOrder } from "@/lib/global-orders"
 
@@ -95,9 +94,9 @@ export function GlobalPaymentPanel({ order }: { order: GlobalOrder }) {
         <div className="border border-neutral-200 bg-white p-5">
           <p className="mb-2 text-sm font-semibold text-neutral-950">{order.product_title_snapshot || order.subject}</p>
           <p className="text-sm leading-6 text-neutral-600">Use the same email and order ID to track payment and delivery status.</p>
-          <Link href="/global/track-order" className="mt-5 inline-flex text-sm font-medium text-neutral-950 hover:underline">
+          <a href="/global/track-order" className="mt-5 inline-flex text-sm font-medium text-neutral-950 hover:underline">
             Track Order
-          </Link>
+          </a>
         </div>
       </aside>
     </div>
