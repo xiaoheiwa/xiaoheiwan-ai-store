@@ -11,6 +11,8 @@ import { neon } from "@/lib/db-client"
 import { checkRisk } from "@/lib/risk-control"
 import { calculateCouponDiscount, getCouponRejectionReason } from "@/lib/coupon-order-validation"
 
+const PAYMENT_GATEWAY_EMERGENCY_HOLD = process.env.PAYMENT_GATEWAY_EMERGENCY_HOLD === "true"
+
 interface PriceTier {
   min_qty: number
   price: number
@@ -47,6 +49,15 @@ export async function POST(req: Request) {
 
     if (!email || !paymentMethod || !amount) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
+    }
+
+    // Automatic delivery through the current CN payment gateways is paused until
+    // the previously exposed payment credentials have been rotated.
+    if (PAYMENT_GATEWAY_EMERGENCY_HOLD) {
+      return NextResponse.json(
+        { error: "支付渠道安全维护中，请选择 USDT 支付或联系客服" },
+        { status: 503 },
+      )
     }
 
     // 风控检查

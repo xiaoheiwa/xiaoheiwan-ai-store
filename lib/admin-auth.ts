@@ -30,6 +30,7 @@ setInterval(() => {
 
 function getClientIP(request: NextRequest): string {
   return (
+    request.headers.get("cf-connecting-ip") ||
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
     "unknown"
@@ -155,11 +156,42 @@ export async function verifyAdminRequest(request: NextRequest): Promise<boolean>
 export async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
   const isValid = await verifyAdminRequest(request)
   if (!isValid) {
+    const ip = getClientIP(request)
+    const path = request.nextUrl.pathname
+    try {
+      const { logAttackAttempt, countRecentByType, notifyAttack } = await import("@/lib/security-alert")
+      await logAttackAttempt({
+        type: "admin_unauthorized",
+        ip,
+        detail: `未授权访问 ${request.method} ${path}`,
+      })
+      const count = await countRecentByType({
+        type: "admin_unauthorized",
+        ip,
+        windowMinutes: 5,
+      })
+      if (count >= 5) {
+        await notifyAttack({
+          type: "admin_unauthorized",
+          ip,
+          count,
+          windowLabel: "5 分钟",
+          detail: `最近路径: ${path}`,
+        })
+      }
+    } catch (alertError) {
+      console.error("[SecurityAlert] admin_unauthorized alert failed:", alertError)
+    }
     return NextResponse.json(
       { error: "未授权访问，请重新登录" },
       { status: 401 }
     )
   }
+  console.info("[SecurityAudit] Admin API access", {
+    method: request.method,
+    path: request.nextUrl.pathname,
+    clientIp: getClientIP(request),
+  })
   return null
 }
 

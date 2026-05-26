@@ -45,7 +45,7 @@ function normalizeSql(query: string): string {
   return query
     .replace(/\?\s*=\s*ANY\s*\(([^)]+)\)/gi, "EXISTS (SELECT 1 FROM json_each($1) WHERE value = ?)")
     .replace(/\bNOW\(\)\s*-\s*INTERVAL\s+'1 day'\s*\*\s*\?/gi, "datetime('now', '-' || ? || ' days')")
-    .replace(/\bNOW\(\)\s*-\s*INTERVAL\s+'(\d+)\s+(hour|hours|day|days|month|months)'/gi, (_, amount, unit) => `datetime('now', '-${amount} ${unit}')`)
+    .replace(/\bNOW\(\)\s*-\s*INTERVAL\s+'(\d+)\s+(minute|minutes|hour|hours|day|days|month|months)'/gi, (_, amount, unit) => `datetime('now', '-${amount} ${unit}')`)
     .replace(/\bDATE_TRUNC\('month',\s*NOW\(\)\)\s*-\s*INTERVAL\s+'(\d+)\s+months?'/gi, (_, amount) => `date('now', 'start of month', '-${amount} months')`)
     .replace(/\bDATE_TRUNC\('month',\s*(?:NOW\(\)|CURRENT_DATE)\)/gi, "date('now', 'start of month')")
     .replace(/\bEXTRACT\s*\(\s*HOUR\s+FROM\s+([^)]+)\)/gi, "CAST(strftime('%H', $1) AS INTEGER)")

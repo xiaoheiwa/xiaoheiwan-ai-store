@@ -2,8 +2,21 @@ import type { NextRequest } from "next/server"
 import { ZPayz } from "@/lib/zpayz-client"
 import { Database, updateOrder, getOrder } from "@/lib/database"
 import { sendCodeMail as sendActivationCodeEmail } from "@/lib/resend"
+import { notifyAttack, logAttackAttempt } from "@/lib/security-alert"
 
-async function processZpayzNotification(params: Record<string, string>) {
+const PAYMENT_GATEWAY_EMERGENCY_HOLD = process.env.PAYMENT_GATEWAY_EMERGENCY_HOLD === "true"
+
+function extractClientIp(request?: NextRequest): string | undefined {
+  if (!request) return undefined
+  return (
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    undefined
+  )
+}
+
+async function processZpayzNotification(params: Record<string, string>, clientIp?: string) {
   console.log("[v0] ZPAYZ notification params:", JSON.stringify(params, null, 2))
 
   if (!params.sign) {
@@ -16,12 +29,26 @@ async function processZpayzNotification(params: Record<string, string>) {
 
   if (!isValidSignature) {
     console.log("[v0] Invalid signature - ZPAYZ notification rejected")
+    try {
+      const detail = `ZPAYZ 直接回调签名失败,订单号 ${params.out_trade_no || "unknown"}`
+      await logAttackAttempt({ type: "payment_forgery", ip: clientIp, detail })
+      await notifyAttack({ type: "payment_forgery", ip: clientIp, detail })
+    } catch (alertError) {
+      console.error("[SecurityAlert] zpayz forgery alert failed:", alertError)
+    }
     return new Response("fail", { status: 400 })
   }
 
   if (params.trade_status !== "TRADE_SUCCESS") {
     console.log("[v0] Payment not successful, status:", params.trade_status)
     return new Response("success", { status: 200 })
+  }
+
+  if (PAYMENT_GATEWAY_EMERGENCY_HOLD) {
+    console.error("[SecurityAudit] ZPAYZ delivery paused pending credential rotation", {
+      orderNo: params.out_trade_no,
+    })
+    return new Response("fail", { status: 503 })
   }
 
   const orderNo = params.out_trade_no
@@ -146,7 +173,7 @@ export async function POST(request: NextRequest) {
     })
 
     console.log("[v0] 📋 Extracted POST params count:", Object.keys(params).length)
-    return await processZpayzNotification(params)
+    return await processZpayzNotification(params, extractClientIp(request))
   } catch (error) {
     console.error("[v0] ❌ ZPAYZ POST notification processing error:", error)
     return new Response("fail", { status: 500 })
@@ -166,7 +193,7 @@ export async function GET(request: NextRequest) {
     })
 
     console.log("[v0] 📋 Extracted GET params count:", Object.keys(params).length)
-    return await processZpayzNotification(params)
+    return await processZpayzNotification(params, extractClientIp(request))
   } catch (error) {
     console.error("[v0] ❌ ZPAYZ GET notification processing error:", error)
     return new Response("fail", { status: 500 })

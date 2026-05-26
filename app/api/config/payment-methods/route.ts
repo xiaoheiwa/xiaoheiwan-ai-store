@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { neon } from "@/lib/db-client"
 
-// 支付方式配置缓存 5 分钟
-export const revalidate = 300
+export const dynamic = "force-dynamic"
 
 const sql = neon(process.env.DATABASE_URL!)
+const PAYMENT_GATEWAY_EMERGENCY_HOLD = process.env.PAYMENT_GATEWAY_EMERGENCY_HOLD === "true"
 
 // GET - Get enabled payment methods
 export async function GET() {
@@ -30,10 +30,11 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json(PAYMENT_GATEWAY_EMERGENCY_HOLD ? { ...result, alipay: false, wxpay: false } : result)
   } catch (error) {
     console.error("Get payment methods error:", error)
-    // Return safe defaults on error - only alipay enabled
-    return NextResponse.json({ alipay: true, usdt: false, wxpay: false })
+    return NextResponse.json(PAYMENT_GATEWAY_EMERGENCY_HOLD
+      ? { alipay: false, usdt: false, wxpay: false }
+      : { alipay: true, usdt: false, wxpay: false })
   }
 }

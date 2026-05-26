@@ -178,6 +178,39 @@ async function logRiskEvent(params: {
       INSERT INTO risk_logs (order_no, email, client_ip, fingerprint, risk_type, risk_reason, risk_score)
       VALUES (${params.orderNo || null}, ${params.email}, ${params.clientIp || null}, ${params.fingerprint || null}, ${params.riskType}, ${params.riskReason}, ${params.riskScore})
     `
+
+    // 仅"被拦截"事件参与攻击告警判断,警告类不触发
+    if (params.riskType !== 'blocked') return
+    if (!params.clientIp && !params.email) return
+
+    let count = 0
+    if (params.clientIp) {
+      const rows = await sql`
+        SELECT COUNT(*)::int as count FROM risk_logs
+        WHERE risk_type = 'blocked' AND client_ip = ${params.clientIp}
+          AND created_at > NOW() - INTERVAL '5 minutes'
+      `
+      count = rows[0]?.count || 0
+    } else {
+      const rows = await sql`
+        SELECT COUNT(*)::int as count FROM risk_logs
+        WHERE risk_type = 'blocked' AND email = ${params.email}
+          AND created_at > NOW() - INTERVAL '5 minutes'
+      `
+      count = rows[0]?.count || 0
+    }
+
+    if (count >= 3) {
+      const { notifyAttack } = await import('@/lib/security-alert')
+      await notifyAttack({
+        type: 'risk_repeated_block',
+        ip: params.clientIp,
+        email: params.email,
+        count,
+        windowLabel: '5 分钟',
+        detail: `最近一次原因: ${params.riskReason}`,
+      })
+    }
   } catch (error) {
     console.error('[RiskControl] Failed to log risk event:', error)
   }

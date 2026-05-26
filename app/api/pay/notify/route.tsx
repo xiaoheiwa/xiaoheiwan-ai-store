@@ -8,6 +8,9 @@ import { getEnv } from "@/lib/env"
 import { ZPayz } from "@/lib/zpayz-client"
 import { notifyOrderSuccess, notifyLowStock, notifyHighRiskOrder } from "@/lib/telegram"
 import { checkOrderHighRisk } from "@/lib/risk-control"
+import { notifyAttack, logAttackAttempt } from "@/lib/security-alert"
+
+const PAYMENT_GATEWAY_EMERGENCY_HOLD = process.env.PAYMENT_GATEWAY_EMERGENCY_HOLD === "true"
 
 async function handle(params: Record<string, string>) {
   console.log("[v0] ============ PAYMENT NOTIFICATION START ============")
@@ -64,6 +67,21 @@ async function handle(params: Record<string, string>) {
     if (!isValidSignature) {
       console.error("[v0] Invalid signature - payment notification rejected")
       console.error("[v0] Gateway type:", gatewayType)
+      try {
+        const detail = `网关 ${gatewayType} 签名验证失败,订单号 ${params.out_trade_no || "unknown"}`
+        await logAttackAttempt({
+          type: "payment_forgery",
+          ip: clientIP,
+          detail,
+        })
+        await notifyAttack({
+          type: "payment_forgery",
+          ip: clientIP,
+          detail,
+        })
+      } catch (alertError) {
+        console.error("[SecurityAlert] payment_forgery alert failed:", alertError)
+      }
       return "fail"
     }
 
@@ -84,6 +102,14 @@ async function handle(params: Record<string, string>) {
 
     const orderNo = params.out_trade_no!
     console.log("[v0] Processing payment for order:", orderNo, "via", gatewayType)
+
+    if (PAYMENT_GATEWAY_EMERGENCY_HOLD) {
+      console.error("[SecurityAudit] Automatic payment callback processing paused pending credential rotation", {
+        gatewayType,
+        orderNo,
+      })
+      return "fail"
+    }
 
     const order = await Database.getOrder(orderNo)
     if (!order) {

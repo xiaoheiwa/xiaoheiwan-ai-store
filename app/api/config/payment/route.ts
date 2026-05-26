@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { neon } from "@/lib/db-client"
 
 const sql = neon(process.env.DATABASE_URL!)
+const PAYMENT_GATEWAY_EMERGENCY_HOLD = process.env.PAYMENT_GATEWAY_EMERGENCY_HOLD === "true"
 
 // Public API to get payment method settings
 export async function GET() {
@@ -27,10 +28,11 @@ export async function GET() {
       }
     }
     
-    return NextResponse.json(config)
+    return NextResponse.json(PAYMENT_GATEWAY_EMERGENCY_HOLD ? { ...config, alipay: false, wxpay: false } : config)
   } catch (error) {
     console.error("Payment config fetch error:", error)
-    // Return defaults on error
-    return NextResponse.json({ alipay: true, usdt: true, wxpay: false })
+    return NextResponse.json(PAYMENT_GATEWAY_EMERGENCY_HOLD
+      ? { alipay: false, usdt: true, wxpay: false }
+      : { alipay: true, usdt: true, wxpay: false })
   }
 }

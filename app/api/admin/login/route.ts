@@ -6,8 +6,18 @@ import {
   recordFailedLogin,
   clearFailedLogins,
 } from "@/lib/admin-auth"
+import { logAttackAttempt, countRecentByType, notifyAttack } from "@/lib/security-alert"
 
 export const runtime = "nodejs"
+
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,6 +48,24 @@ export async function POST(request: NextRequest) {
     if (!verifyPassword(password)) {
       recordFailedLogin(request)
       const afterFail = checkRateLimit(request)
+
+      const ip = getClientIp(request)
+      await logAttackAttempt({
+        type: "admin_brute_force",
+        ip,
+        detail: `失败密码尝试 (UA: ${(request.headers.get("user-agent") || "").slice(0, 80)})`,
+      })
+      const count = await countRecentByType({ type: "admin_brute_force", ip, windowMinutes: 5 })
+      if (count >= 5) {
+        await notifyAttack({
+          type: "admin_brute_force",
+          ip,
+          count,
+          windowLabel: "5 分钟",
+          detail: "5 分钟内连续多次密码错误,疑似撞库/爆破",
+        })
+      }
+
       return NextResponse.json(
         {
           error: "密码错误",

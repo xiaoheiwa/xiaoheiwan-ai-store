@@ -65,13 +65,27 @@ export async function sendTelegramMessage(message: string): Promise<boolean> {
       }
     )
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error("[Telegram] Failed to send message:", error)
+    const bodyText = await response.text()
+    let payload: any = null
+    try {
+      payload = JSON.parse(bodyText)
+    } catch {
+      // non-JSON body
+    }
+
+    if (!response.ok || !payload?.ok) {
+      console.error("[Telegram] sendMessage failed:", {
+        httpStatus: response.status,
+        apiOk: payload?.ok,
+        description: payload?.description,
+        errorCode: payload?.error_code,
+        rawBody: bodyText.slice(0, 300),
+        chatIdHint: String(TELEGRAM_CHAT_ID).slice(0, 4) + "***",
+      })
       return false
     }
 
-    console.log("[Telegram] Message sent successfully")
+    console.log("[Telegram] Message sent successfully, message_id:", payload?.result?.message_id)
     return true
   } catch (error) {
     console.error("[Telegram] Error sending message:", error)
